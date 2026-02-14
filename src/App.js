@@ -215,21 +215,28 @@ const WritingStudio = () => {
 
     const CaseLibrary = () => {
         const cases = [
-            { name: "The Rohingya (Myanmar)", theme: "Human Rights / Identity", facts: ["800k+ displaced", "Denial of citizenship (1982 Act)", "Structural violence examples."] },
-            { name: "Syrian Civil War", theme: "Sovereignty / Conflict", facts: ["Proxy war dynamics", "Erosion of state authority", "Intervention vs Sovereignty tension."] },
-            { name: "Ukraine (2022-Present)", theme: "Security / Interdependence", facts: ["Westphalian sovereignty breach", "Economic interdependence as a weapon", "NATO vs Realism."] }
+            { name: "G20 & Global South", theme: "Power + Development", facts: ["India's presidency focus", "AU permanent membership", "Debt restructuring tensions."] },
+            { name: "Israel-Palestine", theme: "Identity + Security", facts: ["Relational identity conflict", "Security vs Human Rights", "Legitimacy of non-state actors."] },
+            { name: "Belt and Road Initiative", theme: "Power + Interdependence", facts: ["Sovereignty vs Debt", "Soft power expansion", "Infrastructure-led development."] },
+            { name: "WTO & Green Subsidies", theme: "Trade + Sustainability", facts: ["US Inflation Reduction Act", "EU-China trade tensions", "Environment vs Free Trade."] },
+            { name: "Meta/EU Big Tech", theme: "Sovereignty + Power", facts: ["GDPR as digital sovereignty", "Data privacy as HR", "Platform power vs State control."] },
+            { name: "Nigeria & Boko Haram", theme: "Development + Security", facts: ["Structural violence roots", "Underdevelopment fuels insurgency", "Military vs Social intervention."] },
+            { name: "COP28 & Oil Interests", theme: "Interdependence + Sustainability", facts: ["Transition away from fuels", "Global stocktake", "Environment vs Economy."] },
+            { name: "NATO's 'Arctic Sentry'", theme: "Security + Environment", facts: ["Melting ice strategic shifts", "Russian High North expansion", "Climate-militarization."] },
+            { name: "Myanmar's Elections", theme: "Legitimacy + Coercive Power", facts: ["Fraudulent junta polls", "Rule by force vs rule by law", "Civilian resistance movements."] },
+            { name: "Türkiye's Autonomy", theme: "Identity + Security", facts: ["Strategic balancing (West vs BRICS)", "Middle power diplomacy", "NATO-Russia relations."] }
         ];
         return (
             <div className="space-y-4">
-                <h3 className="text-lg font-bold text-emerald-400">Case Study Rapid Reference</h3>
-                <div className="grid gap-4">
+                <h3 className="text-lg font-bold text-emerald-400">Case Library: The Intersection Series</h3>
+                <div className="grid gap-4 md:grid-cols-2">
                     {cases.map((c, i) => (
-                        <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                            <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-bold text-white">{c.name}</h4>
-                                <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-md">{c.theme}</span>
+                        <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-lg hover:border-emerald-500/30 transition-all">
+                            <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-bold text-white leading-tight">{c.name}</h4>
+                                <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded uppercase tracking-tighter shrink-0 ml-2">{c.theme}</span>
                             </div>
-                            <ul className="text-sm text-gray-400 list-disc list-inside space-y-1">
+                            <ul className="text-xs text-gray-400 list-disc list-inside space-y-1">
                                 {c.facts.map((f, j) => <li key={j}>{f}</li>)}
                             </ul>
                         </div>
@@ -291,7 +298,7 @@ const DrillMode = () => {
             challenges: ["Sustainability", "Human Rights", "Equality", "Cultural Identity"]
         },
         {
-            prompt: "Peace is defined simply as the absence of armed conflict (Negative Peace).",
+            prompt: "Peace is defined simply as the absence of armed conflict.",
             supports: ["Ceasefire", "Stability", "Deterrence"],
             challenges: ["Structural Violence", "Inequality", "Justice", "Positive Peace"]
         },
@@ -299,59 +306,35 @@ const DrillMode = () => {
             prompt: "Human Rights are universal and transcend cultural boundaries.",
             supports: ["Justice", "Liberty", "Human Dignity"],
             challenges: ["Sovereignty", "Relativism", "Legitimacy", "Religious Tradition"]
-        },
-        {
-            prompt: "Globalization creates a level playing field for all nations.",
-            supports: ["Interdependence", "Communication", "Free Trade"],
-            challenges: ["Inequality", "Digital Divide", "Protectionism", "Power Asymmetry"]
-        },
-        {
-            prompt: "Violence only occurs through direct physical force.",
-            supports: ["Conflict", "War", "State Force"],
-            challenges: ["Structural Violence", "Cultural Violence", "Inequality", "Poverty"]
-        },
-        {
-            prompt: "Sustainability requires halting all economic expansion.",
-            supports: ["Conservation", "Resource Management", "Ecology"],
-            challenges: ["Development", "Innovation", "Green Growth", "Technology"]
-        },
-        {
-            prompt: "Legitimacy is derived solely from democratic elections.",
-            supports: ["Consent", "Rule of Law", "Liberty"],
-            challenges: ["Tradition", "Charisma", "Performance", "Basic Needs"]
-        },
-        {
-            prompt: "Interdependence makes war obsolete between trading partners.",
-            supports: ["Liberalism", "Complex Interdependence", "Cooperation"],
-            challenges: ["Realism", "Power", "Security Dilemma", "Nationalism"]
         }
     ];
 
     const [currentIdx, setCurrentIdx] = useState(0);
     const [score, setScore] = useState(0);
-    const [selected, setSelected] = useState([]);
+    const [selections, setSelections] = useState({ supports: [], challenges: [] });
     const [finished, setFinished] = useState(false);
 
     const currentDrill = drills[currentIdx];
     const allOptions = [...currentDrill.supports, ...currentDrill.challenges].sort();
 
-    const toggleOption = (opt) => {
-        if (selected.includes(opt)) {
-            setSelected(selected.filter(o => o !== opt));
-        } else {
-            setSelected([...selected, opt]);
-        }
+    const toggleOption = (opt, type) => {
+        const otherType = type === 'supports' ? 'challenges' : 'supports';
+        setSelections({
+            [type]: selections[type].includes(opt) ? selections[type].filter(o => o !== opt) : [...selections[type], opt],
+            [otherType]: selections[otherType].filter(o => o !== opt)
+        });
     };
 
     const checkAnswer = () => {
-        const correctSupports = selected.filter(o => currentDrill.supports.includes(o)).length;
-        const incorrectChoices = selected.filter(o => currentDrill.challenges.includes(o)).length;
+        let currentPoints = 0;
+        selections.supports.forEach(o => { if (currentDrill.supports.includes(o)) currentPoints++; else currentPoints--; });
+        selections.challenges.forEach(o => { if (currentDrill.challenges.includes(o)) currentPoints++; else currentPoints--; });
 
-        setScore(score + (correctSupports - incorrectChoices));
+        setScore(score + currentPoints);
 
         if (currentIdx < drills.length - 1) {
             setCurrentIdx(currentIdx + 1);
-            setSelected([]);
+            setSelections({ supports: [], challenges: [] });
         } else {
             setFinished(true);
         }
@@ -360,7 +343,7 @@ const DrillMode = () => {
     if (finished) {
         return (
             <Card className="text-center animate-in zoom-in-95">
-                <h3 className="text-2xl font-bold mb-2">Drill Complete!</h3>
+                <h3 className="text-2xl font-bold mb-2 text-white">Drill Complete!</h3>
                 <p className="text-gray-400 mb-6">Your Scholarship Score: <span className="text-blue-400 font-bold">{score}</span></p>
                 <Button onClick={() => { setCurrentIdx(0); setScore(0); setFinished(false); }} className="mx-auto">
                     Try Again
@@ -380,24 +363,44 @@ const DrillMode = () => {
                     <p className="text-xl font-bold text-white italic">"{currentDrill.prompt}"</p>
                 </div>
 
-                <p className="text-sm text-gray-500 mb-4">Select all concepts that <span className="text-emerald-400">SUPPORT</span> this claim. Avoid those that challenge it.</p>
-
-                <div className="flex flex-wrap gap-2 mb-8">
-                    {allOptions.map(opt => (
-                        <button
-                            key={opt}
-                            onClick={() => toggleOption(opt)}
-                            className={`px-4 py-2 rounded-full border transition-all ${selected.includes(opt)
-                                ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20"
-                                : "border-glopo-border hover:border-gray-500 text-gray-400"
-                                }`}
-                        >
-                            {opt}
-                        </button>
-                    ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
+                        <h3 className="text-sm font-bold text-emerald-400 mb-3 uppercase tracking-widest">Support / Reinforce</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {allOptions.map(opt => (
+                                <button
+                                    key={`sup-${opt}`}
+                                    onClick={() => toggleOption(opt, 'supports')}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selections.supports.includes(opt)
+                                        ? "bg-emerald-600 border-emerald-500 text-white"
+                                        : "border-emerald-500/20 text-emerald-500/50 hover:border-emerald-500/50"
+                                        }`}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl">
+                        <h3 className="text-sm font-bold text-red-400 mb-3 uppercase tracking-widest">Against / Challenge</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {allOptions.map(opt => (
+                                <button
+                                    key={`chal-${opt}`}
+                                    onClick={() => toggleOption(opt, 'challenges')}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${selections.challenges.includes(opt)
+                                        ? "bg-red-600 border-red-500 text-white"
+                                        : "border-red-500/20 text-red-500/50 hover:border-red-500/50"
+                                        }`}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
-                <Button onClick={checkAnswer} className="w-full" disabled={selected.length === 0}>
+                <Button onClick={checkAnswer} className="w-full" disabled={selections.supports.length === 0 && selections.challenges.length === 0}>
                     Submit Analysis <ChevronRight size={18} />
                 </Button>
             </Card>
