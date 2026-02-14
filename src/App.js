@@ -1014,8 +1014,60 @@ export default function App() {
                     {activeTab === 'warroom' && <WarRoom />}
                 </main>
 
-                <footer className="mt-16 pt-8 border-t border-glopo-border text-center text-gray-600 text-sm">
-                    <p>&copy; 2026 IB Global Politics Study Suite. Designed for Level 7 Scholars.</p>
+                <footer className="mt-16 pt-12 pb-20 border-t border-cyan-500/30 text-center">
+                    <div className="mb-8 p-4 bg-cyan-950/30 border border-cyan-500/20 rounded-xl inline-block max-w-lg">
+                        <p className="text-cyan-300 text-xs font-bold tracking-widest uppercase mb-2">Non-Commercial Educational Tool</p>
+                        <p className="text-white/60 text-xs leading-relaxed">
+                            This project is a 100% academic tool created by **Stephen Martinez (Project Lead & IB Global Politics Teacher)**
+                            to support scholars in the IB Global Politics 2026 Syllabus.
+                            It is not a commercial product and provides free pedagogical resources.
+                        </p>
+                    </div>
+                    <p className="mb-6 text-cyan-400 text-sm font-black tracking-widest uppercase animate-pulse">
+                        &copy; 2026 IB Global Politics Study Suite. Designed for Level 7 Scholars.
+                    </p>
+                    <div className="flex flex-col items-center gap-6">
+                        <a
+                            href="/CODE_OF_CONDUCT.md"
+                            className="text-white px-6 py-2 rounded-full font-black text-xs tracking-tighter hover:scale-110 transition-transform shadow-[0_0_20px_rgba(255,0,255,0.6)] border-2 border-magenta-400"
+                            style={{ backgroundColor: '#ff00ff' }}
+                        >
+                            VIEW PROJECT CODE OF CONDUCT
+                        </a>
+
+                        <div className="flex flex-col items-center gap-2 mt-4">
+                            <span className="text-white/80 text-[10px] font-black tracking-[0.2em] uppercase">This site is powered by Netlify</span>
+                            <a
+                                href="https://www.netlify.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    background: '#fff',
+                                    padding: '12px 24px',
+                                    borderRadius: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    transition: 'all 0.3s ease',
+                                    border: '4px solid #00f2ff',
+                                    boxShadow: '0 0 30px #00f2ff, inset 0 0 10px #00f2ff'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1.1) rotate(-1deg)';
+                                    e.currentTarget.style.boxShadow = '0 0 50px #00f2ff';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+                                    e.currentTarget.style.boxShadow = '0 0 30px #00f2ff';
+                                }}
+                            >
+                                <img
+                                    src="https://www.netlify.com/img/global/badges/netlify-color-accent.svg"
+                                    alt="Deploys by Netlify"
+                                    style={{ height: '32px', width: 'auto' }}
+                                />
+                            </a>
+                        </div>
+                    </div>
                 </footer>
             </div>
         </div>
