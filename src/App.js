@@ -126,7 +126,11 @@ const WritingStudio = () => {
             { year: "2021", theme: "Development", text: "Examine the claim that development is best achieved through a top-down approach." },
             { year: "2020", theme: "Peace", text: "Discuss why non-violent protest is sometimes able to achieve success against even the most powerful opponents." },
             { year: "2019", theme: "Peace", text: "Structural violence is increasingly important to achieving lasting peace. To what extent do you agree?" },
-            { year: "2018", theme: "Development", text: "Discuss the claim that development is as much about people as it is about economies." }
+            { year: "2018", theme: "Development", text: "Discuss the claim that development is as much about people as it is about economies." },
+            { year: "2025 (Spec)", theme: "Power", text: "To what extent is the 'rise of the rest' fundamentally challenging the liberal international order?" },
+            { year: "2025 (Spec)", theme: "Human Rights", text: "Evaluate the claim that the digital divide is the most significant barrier to the realization of human rights today." },
+            { year: "2024", theme: "Development", text: "Discuss the view that environmental sustainability is often sacrificed for the sake of economic development." },
+            { year: "2024", theme: "Peace", text: "Examine the claim that internal conflicts are more difficult to resolve than interstate conflicts in the 21st century." }
         ];
 
         const filtered = filter === 'All' ? questions : questions.filter(q => q.theme === filter);
@@ -178,6 +182,123 @@ const WritingStudio = () => {
                     { label: "Statist", text: "State sovereignty is the ultimate shield; R2P is often a trojan horse for western interventionism." },
                     { label: "Cosmopolitan", text: "Individual rights transcend borders; sovereignty is conditional upon the protection of the populace." },
                     { label: "Relativist", text: "HR frameworks are culturally specific; universal enforcement ignores legitimate local identity and law." }
+                ]
+            },
+            {
+                id: 3,
+                question: "To what extent is economic globalization a threat to state sovereignty?",
+                paths: [
+                    { label: "Hyperglobalist", text: "The state is becoming a hollow shell as global markets and TNCs dictate domestic policy and economic choice." },
+                    { label: "Skeptic", text: "States remain the primary architects of globalization; they choose to open markets to enhance their own national power." },
+                    { label: "Transformationalist", text: "Sovereignty isn't disappearing, but shifting; states are now 'competition states' adapting to a networked world." }
+                ]
+            },
+            {
+                id: 4,
+                question: "Should the international community intervene militarily in sovereign states to prevent human rights atrocities?",
+                paths: [
+                    { label: "Realist", text: "Intervention is often a cloak for hegemony; states only intervene when it serves their strategic geopolitical interests." },
+                    { label: "Liberal", text: "The doctrine of 'Responsibility to Protect' (R2P) creates a moral and legal duty to safeguard human dignity beyond borders." },
+                    { label: "Constructivist", text: "The definition of 'humanitarian' is socially constructed and evolves; today's intervention is yesterday's colonialism." }
+                ]
+            },
+            {
+                id: 5,
+                question: "Is international cooperation the most effective way to combat climate change?",
+                paths: [
+                    { label: "Institutionalist", text: "Global regimes like the Paris Agreement create the necessary transparency and peer pressure for collective action." },
+                    { label: "Realist", text: "Climate change is a tragedy of the commons; states will prioritize their own industrial growth over global carbon targets." },
+                    { label: "Critical", text: "Current cooperation models favor the Global North; true solutions require dismantling the extractive capitalist system." }
+                ]
+            },
+            {
+                id: 6,
+                question: "Does the rise of China fundamentally challenge the US-led liberal international order?",
+                paths: [
+                    { label: "Power Transition", text: "A rising challenger naturally creates instability; the 'Thucydides Trap' makes conflict or radical shift likely." },
+                    { label: "Integrationist", text: "China is too deeply embedded in global institutions and trade to destroy the system that facilitated its own rise." },
+                    { label: "Civilizational", text: "China offers a 'Beijing Consensus'—authoritarian development as an alternative to the Western democratic model." }
+                ]
+            },
+            {
+                id: 7,
+                question: "Evaluate the claim that non-state actors (NGOs, TNCs) are becoming as powerful as states.",
+                paths: [
+                    { label: "Pluralist", text: "Power is diffused; TNCs control wealth and NGOs shape norms, often bypassing state authority entirely." },
+                    { label: "Statist", text: "States still hold the monopoly on legitimate violence and law-making; non-state actors only operate within state-granted space." },
+                    { label: "Network", text: "Power is now 'relational'; it's not who is stronger, but who is best connected in the global technological web." }
+                ]
+            },
+            {
+                id: 8,
+                question: "To what extent can peace be achieved solely through the balance of power?",
+                paths: [
+                    { label: "Realist", text: "Deterrence is the only check on aggression; a balance of power ensures that no state finds war profitable." },
+                    { label: "Liberal", text: "A balance of power is a 'cold peace'; lasting peace requires democratic values, trade, and shared institutions." },
+                    { label: "Critical", text: "Balance of power ignores structural violence; it maintains an unjust status quo for those at the top." }
+                ]
+            },
+            {
+                id: 9,
+                question: "Is development better achieved through top-down or bottom-up approaches?",
+                paths: [
+                    { label: "Neoliberal", text: "Top-down institutional reform and FDI are essential to create the infrastructure and stability for growth." },
+                    { label: "Human-Centric", text: "Development must be bottom-up; empowering local communities ensures sustainability and respects human rights." },
+                    { label: "Dependency", text: "Neither works if the core-periphery structure remains; development requires a total break from global exploitation." }
+                ]
+            },
+            {
+                id: 10,
+                question: "Does the rise of cyber warfare necessitate a fundamental change in the concept of security?",
+                paths: [
+                    { label: "Traditionalist", text: "Cyber is just a new tool for the same old power politics; states still prioritize physical territory and military might." },
+                    { label: "Cyber-Revolutionist", text: "The 'borderless' nature of cyber-attacks makes traditional geographic defense and Westphalian sovereignty obsolete." },
+                    { label: "Constructivist", text: "Security is what we define it as; 'securitizing' the internet allows states to expand surveillance and control." }
+                ]
+            },
+            {
+                id: 11,
+                question: "Are universal human rights a form of Western cultural imperialism?",
+                paths: [
+                    { label: "Universalist", text: "Human dignity is inherent to all people; rights are not 'Western' but a shared shield against all forms of tyranny." },
+                    { label: "Cultural Relativist", text: "Rights are historically and culturally situated; imposing one model ignores valid local traditions and social values." },
+                    { label: "Post-Colonial", text: "The 'Universal' label masks the continued dominance of Western norms over the lived experiences of the Global South." }
+                ]
+            },
+            {
+                id: 12,
+                question: "Is the nation-state still the most important actor in global politics?",
+                paths: [
+                    { label: "Realist", text: "Absolutely; only states have the legitimacy and military force to protect citizens and maintain global order." },
+                    { label: "Globalist", text: "No; global issues like climate and finance require global solutions that states are increasingly unable to provide." },
+                    { label: "Constructivist", text: "The state is a powerful 'imagined community', but its importance depends on whether people continue to believe in it." }
+                ]
+            },
+            {
+                id: 13,
+                question: "Does increased interconnectedness reduce the likelihood of armed conflict between states?",
+                paths: [
+                    { label: "Liberal", text: "Economic interdependence makes war 'mutually assured destruction' for economies; trade promotes peace." },
+                    { label: "Realist", text: "Dependence creates vulnerability; states may go to war to secure critical resources they no longer control at home." },
+                    { label: "Constructivist", text: "Interconnectedness can breed 'clash of identities' or 'shared global identity'; it's the quality of interaction that matters." }
+                ]
+            },
+            {
+                id: 14,
+                question: "Should democratic transition be a goal of international development aid?",
+                paths: [
+                    { label: "Liberal", text: "Democracy is the ultimate engine of development; it provides the accountability and law needed for long-term growth." },
+                    { label: "Realist", text: "Stability is more important than democracy; forcing transitions often leads to failed states and regional chaos." },
+                    { label: "Critical", text: "Development aid is often used as a tool for 'liberal interventionism' to ensure countries follow Western economic models." }
+                ]
+            },
+            {
+                id: 15,
+                question: "Is the United Nations still relevant in a multi-polar world?",
+                paths: [
+                    { label: "Institutionalist", text: "The UN remains the only platform for universal legitimacy and the coordination of responses to global crises." },
+                    { label: "Realist", text: "The UN is crippled by the P5 veto; it only functions when great powers agree, making it ineffective in true crises." },
+                    { label: "Constructivist", text: "The UN's power is normative; it defines what is 'legal' and 'legitimate' even if it cannot always enforce its will." }
                 ]
             }
         ];
