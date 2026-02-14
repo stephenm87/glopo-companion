@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, PenTool, Zap, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, BookOpen } from 'lucide-react';
+import { Shield, PenTool, Zap, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, BookOpen, MessageSquare } from 'lucide-react';
 
 // --- Components ---
 
