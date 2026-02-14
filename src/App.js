@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+// Version: 1.0.2 - Fixed MessageSquare import
 import { Shield, PenTool, Zap, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, BookOpen, MessageSquare } from 'lucide-react';
 
 // --- Components ---
