@@ -106,93 +106,167 @@ const PolicyEngine = () => {
     );
 };
 
-// --- Tab 2: Essay Architect ---
-const EssayArchitect = () => {
-    const [step, setStep] = useState(1);
-    const [data, setData] = useState({
-        concept: '',
-        definition: '',
-        caseA: '',
-        caseB: '',
-        thesis: ''
-    });
+// --- Tab 2: Writing Studio ---
+const WritingStudio = () => {
+    const [subTab, setSubTab] = useState('bank');
 
-    const updateData = (key, val) => setData({ ...data, [key]: val });
+    // --- Sub-Tab components ---
 
-    const renderStep = () => {
-        switch (step) {
-            case 1:
-                return (
+    const QuestionBank = () => {
+        const questions = [
+            { year: "2024", text: "Effective enforcement of Human Rights undermines state sovereignty. To what extent do you agree?" },
+            { year: "2023", text: "Discuss the extent to which cultural relativism can be used to justify different concepts of human rights." },
+            { year: "2022", text: "Examine the claim that increased interactions and interconnectedness have fundamentally changed the nature of sovereignty." },
+            { year: "2021", text: "Evaluate the claim that sovereign states become less powerful when they join IGOs." },
+            { year: "2020", text: "Discuss why non-violent protest is sometimes able to achieve success against even the most powerful opponents." },
+            { year: "2019", text: "Structural violence is increasingly important to achieving lasting peace. To what extent do you agree?" }
+        ];
+        return (
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-emerald-400">Paper 2 Question Bank (2014-2024)</h3>
+                <div className="grid gap-3">
+                    {questions.map((q, i) => (
+                        <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-lg hover:border-emerald-500/50 transition-colors cursor-pointer group">
+                            <span className="text-xs font-bold text-emerald-500/70 uppercase mb-1 block">May {q.year}</span>
+                            <p className="text-gray-200 group-hover:text-white">"{q.text}"</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const IntroWizard = () => {
+        const [step, setStep] = useState(1);
+        const [data, setData] = useState({ concept: '', definition: '', caseA: '', caseB: '', thesis: '' });
+        const updateData = (key, val) => setData({ ...data, [key]: val });
+
+        if (step === 3) return (
+            <div className="space-y-4 animate-in zoom-in-95 duration-300">
+                <div className="bg-emerald-900/20 border border-emerald-500/30 p-6 rounded-xl leading-relaxed text-gray-300">
+                    <p>
+                        "The central tension in this enquiry lies in the evolution of <strong className="text-white">{data.concept || '[Concept]'}</strong>, fundamentally defined as <span className="italic">{data.definition || '[Definition]'}</span>.
+                        While globalist perspectives suggest that <strong className="text-white">{data.concept}</strong> is being eroded by transnational challenges, statists argue it remains the bedrock of world order.
+                        This essay will bridge these perspectives by synthesising the case studies of <strong className="text-white">{data.caseA || '[Case A]'}</strong> and <strong className="text-white">{data.caseB || '[Case B]'}</strong> to demonstrate
+                        that {data.thesis || '[Thesis Statement]'}. Underpinning this analysis is the recognition of a 'power gap' that necessitates a shift in how we conceptualise authority in the 21st century."
+                    </p>
+                </div>
+                <Button variant="outline" onClick={() => setStep(1)}><RefreshCw size={16} /> Start Over</Button>
+            </div>
+        );
+
+        return (
+            <div className="space-y-4">
+                <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-bold text-emerald-400">Golden Thread Intro Builder</h3>
+                    <span className="text-xs text-gray-500">Step {step} of 2</span>
+                </div>
+                {step === 1 ? (
                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Step 1: Define the Tension</h3>
-                        <input
-                            className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3"
-                            placeholder="Key Concept (e.g., Sovereignty)"
-                            onChange={(e) => updateData('concept', e.target.value)}
-                        />
-                        <textarea
-                            className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-24"
-                            placeholder="Basic Definition..."
-                            onChange={(e) => updateData('definition', e.target.value)}
-                        />
+                        <input className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3" placeholder="Key Concept (e.g., Legitimacy)" onChange={(e) => updateData('concept', e.target.value)} />
+                        <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-24" placeholder="Basic Definition..." onChange={(e) => updateData('definition', e.target.value)} />
                         <Button onClick={() => setStep(2)}>Next <ChevronRight size={18} /></Button>
                     </div>
-                );
-            case 2:
-                return (
+                ) : (
                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Step 2: Select Evidence</h3>
                         <div className="flex gap-4">
-                            <input
-                                className="flex-1 bg-glopo-dark border border-glopo-border rounded-lg p-3"
-                                placeholder="Case Study A"
-                                onChange={(e) => updateData('caseA', e.target.value)}
-                            />
-                            <input
-                                className="flex-1 bg-glopo-dark border border-glopo-border rounded-lg p-3"
-                                placeholder="Case Study B"
-                                onChange={(e) => updateData('caseB', e.target.value)}
-                            />
+                            <input className="flex-1 bg-glopo-dark border border-glopo-border rounded-lg p-3" placeholder="Case Study A" onChange={(e) => updateData('caseA', e.target.value)} />
+                            <input className="flex-1 bg-glopo-dark border border-glopo-border rounded-lg p-3" placeholder="Case Study B" onChange={(e) => updateData('caseB', e.target.value)} />
                         </div>
-                        <textarea
-                            className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-24"
-                            placeholder="What is your main claim? (Thesis)"
-                            onChange={(e) => updateData('thesis', e.target.value)}
-                        />
+                        <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-24" placeholder="Thesis Statement (Main Claim)" onChange={(e) => updateData('thesis', e.target.value)} />
                         <div className="flex gap-2">
                             <Button variant="secondary" onClick={() => setStep(1)}>Back</Button>
                             <Button onClick={() => setStep(3)}>Generate Intro</Button>
                         </div>
                     </div>
-                );
-            case 3:
-                return (
-                    <div className="space-y-4">
-                        <h3 className="text-emerald-400 font-bold mb-2 flex items-center gap-2">
-                            <PenTool size={18} /> Level 3: Golden Thread Introduction
-                        </h3>
-                        <div className="bg-glopo-dark border border-glopo-border p-6 rounded-xl leading-relaxed text-gray-300">
-                            <p>
-                                "The central tension in this enquiry lies in the evolution of <strong className="text-white">{data.concept || '[Concept]'}</strong>, fundamentally defined as <span className="italic">{data.definition || '[Definition]'}</span>.
-                                While globalist perspectives suggest that <strong className="text-white">{data.concept}</strong> is being eroded by transnational challenges, statists argue it remains the bedrock of world order.
-                                This essay will bridge these perspectives by synthesising the case studies of <strong className="text-white">{data.caseA || '[Case A]'}</strong> and <strong className="text-white">{data.caseB || '[Case B]'}</strong> to demonstrate
-                                that {data.thesis || '[Thesis Statement]'}. Underpinning this analysis is the recognition of a 'power gap' that necessitates a shift in how we conceptualise authority in the 21st century."
-                            </p>
-                        </div>
-                        <Button variant="outline" onClick={() => setStep(1)}><RefreshCw size={16} /> Start Over</Button>
+                )}
+            </div>
+        );
+    };
+
+    const PeelLab = () => {
+        const [data, setData] = useState({ point: '', evidence: '', explanation: '', link: '' });
+        const updateData = (key, val) => setData({ ...data, [key]: val });
+        const [showResult, setShowResult] = useState(false);
+
+        return (
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-emerald-400">PEEL Paragraph Lab</h3>
+                {!showResult ? (
+                    <div className="grid gap-3">
+                        <input className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3" placeholder="P (Point): Your claim" onChange={(e) => updateData('point', e.target.value)} />
+                        <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-20" placeholder="E (Evidence): Case study facts" onChange={(e) => updateData('evidence', e.target.value)} />
+                        <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-24" placeholder="E (Explanation): How evidence proves the point" onChange={(e) => updateData('explanation', e.target.value)} />
+                        <input className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3" placeholder="L (Link): Connection back to thesis" onChange={(e) => updateData('link', e.target.value)} />
+                        <Button onClick={() => setShowResult(true)}>Build Paragraph</Button>
                     </div>
-                );
-            default: return null;
-        }
+                ) : (
+                    <div className="space-y-4">
+                        <div className="bg-emerald-900/20 border border-emerald-500/30 p-6 rounded-xl text-gray-300 leading-relaxed">
+                            <span className="font-bold text-white uppercase text-xs mb-2 block tracking-widest text-emerald-500">Structured Analysis</span>
+                            <p>{data.point} {data.evidence} {data.explanation} Consequently, this {data.link}.</p>
+                        </div>
+                        <Button variant="outline" onClick={() => setShowResult(false)}><RefreshCw size={16} /> Edit Details</Button>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const CaseLibrary = () => {
+        const cases = [
+            { name: "The Rohingya (Myanmar)", theme: "Human Rights / Identity", facts: ["800k+ displaced", "Denial of citizenship (1982 Act)", "Structural violence examples."] },
+            { name: "Syrian Civil War", theme: "Sovereignty / Conflict", facts: ["Proxy war dynamics", "Erosion of state authority", "Intervention vs Sovereignty tension."] },
+            { name: "Ukraine (2022-Present)", theme: "Security / Interdependence", facts: ["Westphalian sovereignty breach", "Economic interdependence as a weapon", "NATO vs Realism."] }
+        ];
+        return (
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-emerald-400">Case Study Rapid Reference</h3>
+                <div className="grid gap-4">
+                    {cases.map((c, i) => (
+                        <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-lg">
+                            <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-bold text-white">{c.name}</h4>
+                                <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-md">{c.theme}</span>
+                            </div>
+                            <ul className="text-sm text-gray-400 list-disc list-inside space-y-1">
+                                {c.facts.map((f, j) => <li key={j}>{f}</li>)}
+                            </ul>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
     };
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <PenTool className="text-emerald-500" /> Essay Architect
+                <PenTool className="text-emerald-500" /> Writing Studio
             </h2>
-            <Card>
-                {renderStep()}
+
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                {[
+                    { id: 'bank', label: 'Q-Bank', icon: BookOpen },
+                    { id: 'intro', label: 'Intro Builder', icon: Zap },
+                    { id: 'peel', label: 'PEEL Lab', icon: PenTool },
+                    { id: 'cases', label: 'Case Library', icon: Shield }
+                ].map(b => (
+                    <button
+                        key={b.id}
+                        onClick={() => setSubTab(b.id)}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shrink-0 ${subTab === b.id ? "bg-emerald-600 text-white" : "bg-white/5 text-gray-500 hover:bg-white/10"}`}
+                    >
+                        <b.icon size={14} /> {b.label}
+                    </button>
+                ))}
+            </div>
+
+            <Card className="border-emerald-500/20">
+                {subTab === 'bank' && <QuestionBank />}
+                {subTab === 'intro' && <IntroWizard />}
+                {subTab === 'peel' && <PeelLab />}
+                {subTab === 'cases' && <CaseLibrary />}
             </Card>
         </div>
     );
@@ -490,7 +564,7 @@ export default function App() {
                 <nav className="flex flex-wrap gap-2 mb-8 justify-center">
                     {[
                         { id: 'policy', label: 'Policy Engine', icon: Shield },
-                        { id: 'essay', label: 'Essay Architect', icon: PenTool },
+                        { id: 'writing', label: 'Writing Studio', icon: PenTool },
                         { id: 'drill', label: 'Drill Mode', icon: Zap },
                         { id: 'warroom', label: 'War Room', icon: AlertTriangle },
                     ].map(tab => (
@@ -509,7 +583,7 @@ export default function App() {
 
                 <main className="min-h-[400px]">
                     {activeTab === 'policy' && <PolicyEngine />}
-                    {activeTab === 'essay' && <EssayArchitect />}
+                    {activeTab === 'writing' && <WritingStudio />}
                     {activeTab === 'drill' && <DrillMode />}
                     {activeTab === 'warroom' && <WarRoom />}
                 </main>
