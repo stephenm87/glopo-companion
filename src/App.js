@@ -113,25 +113,114 @@ const WritingStudio = () => {
     // --- Sub-Tab components ---
 
     const QuestionBank = () => {
+        const [filter, setFilter] = useState('All');
         const questions = [
-            { year: "2024", text: "Effective enforcement of Human Rights undermines state sovereignty. To what extent do you agree?" },
-            { year: "2023", text: "Discuss the extent to which cultural relativism can be used to justify different concepts of human rights." },
-            { year: "2022", text: "Examine the claim that increased interactions and interconnectedness have fundamentally changed the nature of sovereignty." },
-            { year: "2021", text: "Evaluate the claim that sovereign states become less powerful when they join IGOs." },
-            { year: "2020", text: "Discuss why non-violent protest is sometimes able to achieve success against even the most powerful opponents." },
-            { year: "2019", text: "Structural violence is increasingly important to achieving lasting peace. To what extent do you agree?" }
+            { year: "2024", theme: "Human Rights", text: "Effective enforcement of Human Rights undermines state sovereignty. To what extent do you agree?" },
+            { year: "2024", theme: "Power", text: "Transnational corporations have more power than most states in the 21st century. Discuss." },
+            { year: "2023", theme: "Human Rights", text: "Discuss the extent to which cultural relativism can be used to justify different concepts of human rights." },
+            { year: "2023", theme: "Development", text: "Evaluate the claim that economic growth is the most important factor in achieving sustainable development." },
+            { year: "2022", theme: "Power", text: "Examine the claim that increased interactions and interconnectedness have fundamentally changed the nature of sovereignty." },
+            { year: "2022", theme: "Peace", text: "Discuss the view that peace can only be achieved through a balance of power between states." },
+            { year: "2021", theme: "Power", text: "Evaluate the claim that sovereign states become less powerful when they join IGOs." },
+            { year: "2021", theme: "Development", text: "Examine the claim that development is best achieved through a top-down approach." },
+            { year: "2020", theme: "Peace", text: "Discuss why non-violent protest is sometimes able to achieve success against even the most powerful opponents." },
+            { year: "2019", theme: "Peace", text: "Structural violence is increasingly important to achieving lasting peace. To what extent do you agree?" },
+            { year: "2018", theme: "Development", text: "Discuss the claim that development is as much about people as it is about economies." }
         ];
+
+        const filtered = filter === 'All' ? questions : questions.filter(q => q.theme === filter);
+
         return (
             <div className="space-y-4">
-                <h3 className="text-lg font-bold text-emerald-400">Paper 2 Question Bank (2014-2024)</h3>
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                    <h3 className="text-lg font-bold text-emerald-400">Paper 2 Question Bank</h3>
+                    <div className="flex gap-2 text-[10px]">
+                        {['All', 'Power', 'Human Rights', 'Development', 'Peace'].map(f => (
+                            <button key={f} onClick={() => setFilter(f)} className={`px-2 py-1 rounded border transition-all ${filter === f ? "bg-emerald-500 border-emerald-500 text-white" : "border-white/10 text-gray-400 hover:border-white/30"}`}>{f}</button>
+                        ))}
+                    </div>
+                </div>
                 <div className="grid gap-3">
-                    {questions.map((q, i) => (
-                        <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-lg hover:border-emerald-500/50 transition-colors cursor-pointer group">
-                            <span className="text-xs font-bold text-emerald-500/70 uppercase mb-1 block">May {q.year}</span>
-                            <p className="text-gray-200 group-hover:text-white">"{q.text}"</p>
+                    {filtered.map((q, i) => (
+                        <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-lg hover:border-emerald-500/50 transition-colors group">
+                            <div className="flex justify-between items-start mb-1">
+                                <span className="text-[10px] font-bold text-emerald-500/70 uppercase">May {q.year}</span>
+                                <span className="text-[10px] bg-white/10 text-gray-400 px-1.5 py-0.5 rounded uppercase">{q.theme}</span>
+                            </div>
+                            <p className="text-gray-200 group-hover:text-white text-sm">"{q.text}"</p>
                         </div>
                     ))}
                 </div>
+            </div>
+        );
+    };
+
+    const DebateLab = () => {
+        const [selectedQ, setSelectedQ] = useState(null);
+        const [thesis, setThesis] = useState('');
+        const [showDebate, setShowDebate] = useState(false);
+
+        const debates = [
+            {
+                id: 1,
+                question: "To what extent can international law be enforced effectively in an anarchic global system?",
+                paths: [
+                    { label: "Realist", text: "International law is secondary to national interest; it is only followed when it serves the power of the state." },
+                    { label: "Institutionalist", text: "Law provides the framework for soft power; and acts as a leveling tool for smaller states against giants." },
+                    { label: "Constructivist", text: "Effectiveness is based on changing norms; what counts as 'permissible' is constantly being socially reconstructed." }
+                ]
+            },
+            {
+                id: 2,
+                question: "Effective enforcement of Human Rights undermines state sovereignty. Discuss.",
+                paths: [
+                    { label: "Statist", text: "State sovereignty is the ultimate shield; R2P is often a trojan horse for western interventionism." },
+                    { label: "Cosmopolitan", text: "Individual rights transcend borders; sovereignty is conditional upon the protection of the populace." },
+                    { label: "Relativist", text: "HR frameworks are culturally specific; universal enforcement ignores legitimate local identity and law." }
+                ]
+            }
+        ];
+
+        return (
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-emerald-400">Debate Lab: Multi-Perspective Analysis</h3>
+                {!showDebate ? (
+                    <div className="space-y-4">
+                        <p className="text-xs text-gray-400">Select a prompt and input your claim to see opposing analytical paths.</p>
+                        <select
+                            onChange={(e) => setSelectedQ(debates.find(d => d.id === parseInt(e.target.value)))}
+                            className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 text-sm"
+                        >
+                            <option value="">-- Choose a Debate Prompt --</option>
+                            {debates.map(d => <option key={d.id} value={d.id}>{d.question}</option>)}
+                        </select>
+                        {selectedQ && (
+                            <textarea
+                                className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-24 text-sm"
+                                placeholder="Input your thesis or main claim here..."
+                                onChange={(e) => setThesis(e.target.value)}
+                            />
+                        )}
+                        <Button disabled={!selectedQ || !thesis} onClick={() => setShowDebate(true)}>Reveal Counter-Perspectives</Button>
+                    </div>
+                ) : (
+                    <div className="space-y-4 animate-in fade-in duration-500">
+                        <div className="p-4 bg-white/5 border-l-4 border-emerald-500 rounded-r-lg">
+                            <span className="text-[10px] font-bold text-emerald-500 uppercase block mb-1">Your Claim</span>
+                            <p className="text-sm italic text-gray-300">"{thesis}"</p>
+                        </div>
+                        <h4 className="text-sm font-bold text-white mt-6 mb-2">Myriad Perspectives to Consider:</h4>
+                        <div className="grid gap-3">
+                            {selectedQ.paths.map((p, i) => (
+                                <div key={i} className="p-4 bg-emerald-900/10 border border-emerald-500/20 rounded-xl">
+                                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block mb-1">{p.label} Perspective</span>
+                                    <p className="text-xs text-gray-400 leading-relaxed">{p.text}</p>
+                                </div>
+                            ))}
+                        </div>
+                        <Button variant="outline" onClick={() => { setShowDebate(false); setThesis(''); }}>Try different Prompt</Button>
+                    </div>
+                )}
             </div>
         );
     };
@@ -255,6 +344,7 @@ const WritingStudio = () => {
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
                 {[
                     { id: 'bank', label: 'Q-Bank', icon: BookOpen },
+                    { id: 'debate', label: 'Debate Lab', icon: MessageSquare },
                     { id: 'intro', label: 'Intro Builder', icon: Zap },
                     { id: 'peel', label: 'PEEL Lab', icon: PenTool },
                     { id: 'cases', label: 'Case Library', icon: Shield }
@@ -271,6 +361,7 @@ const WritingStudio = () => {
 
             <Card className="border-emerald-500/20">
                 {subTab === 'bank' && <QuestionBank />}
+                {subTab === 'debate' && <DebateLab />}
                 {subTab === 'intro' && <IntroWizard />}
                 {subTab === 'peel' && <PeelLab />}
                 {subTab === 'cases' && <CaseLibrary />}
