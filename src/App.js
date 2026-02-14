@@ -210,6 +210,46 @@ const DrillMode = () => {
             prompt: "The UN is the primary actor in global governance.",
             supports: ["Legitimacy", "International Law", "Diplomacy"],
             challenges: ["Sovereignty", "Realism", "Regional Blocs", "Power Dynamics"]
+        },
+        {
+            prompt: "Development is measured purely by economic growth (GDP).",
+            supports: ["Industrialization", "Modernization", "Trade"],
+            challenges: ["Sustainability", "Human Rights", "Equality", "Cultural Identity"]
+        },
+        {
+            prompt: "Peace is defined simply as the absence of armed conflict (Negative Peace).",
+            supports: ["Ceasefire", "Stability", "Deterrence"],
+            challenges: ["Structural Violence", "Inequality", "Justice", "Positive Peace"]
+        },
+        {
+            prompt: "Human Rights are universal and transcend cultural boundaries.",
+            supports: ["Justice", "Liberty", "Human Dignity"],
+            challenges: ["Sovereignty", "Relativism", "Legitimacy", "Religious Tradition"]
+        },
+        {
+            prompt: "Globalization creates a level playing field for all nations.",
+            supports: ["Interdependence", "Communication", "Free Trade"],
+            challenges: ["Inequality", "Digital Divide", "Protectionism", "Power Asymmetry"]
+        },
+        {
+            prompt: "Violence only occurs through direct physical force.",
+            supports: ["Conflict", "War", "State Force"],
+            challenges: ["Structural Violence", "Cultural Violence", "Inequality", "Poverty"]
+        },
+        {
+            prompt: "Sustainability requires halting all economic expansion.",
+            supports: ["Conservation", "Resource Management", "Ecology"],
+            challenges: ["Development", "Innovation", "Green Growth", "Technology"]
+        },
+        {
+            prompt: "Legitimacy is derived solely from democratic elections.",
+            supports: ["Consent", "Rule of Law", "Liberty"],
+            challenges: ["Tradition", "Charisma", "Performance", "Basic Needs"]
+        },
+        {
+            prompt: "Interdependence makes war obsolete between trading partners.",
+            supports: ["Liberalism", "Complex Interdependence", "Cooperation"],
+            challenges: ["Realism", "Power", "Security Dilemma", "Nationalism"]
         }
     ];
 
@@ -293,10 +333,60 @@ const DrillMode = () => {
 
 // --- Tab 4: War Room Simulator ---
 const WarRoom = () => {
+    const scenarios = [
+        {
+            title: "South China Sea Dispute",
+            text: "A border dispute in the South China Sea is escalating between local fishermen and regional coast guards."
+        },
+        {
+            title: "Sahel Climate Crisis",
+            text: "Climate refugees are crossing borders in the Sahel, leading to resource conflict and ethnic spanning tensions."
+        },
+        {
+            title: "Estonian Cyber Siege",
+            text: "A massive cyber-attack has crippled Estonia's power grid, suspected to be backed by a neighboring superpower."
+        },
+        {
+            title: "Horn of Africa Famine",
+            text: "Total crop failure in the Horn of Africa is causing mass migration and the collapse of local markets."
+        },
+        {
+            title: "BRI Debt Trap",
+            text: "A Belt and Road partner is facing a massive debt default, threatening its control over strategic port infrastructure."
+        },
+        {
+            title: "The Nile Water War",
+            text: "Ethiopia and Egypt are at a standstill over water flow rights from the Grand Ethiopian Renaissance Dam."
+        },
+        {
+            title: "AI Weaponization",
+            text: "Autonomous weapon systems have been detected in a proxy conflict, operated by non-state actors."
+        },
+        {
+            title: "Sinking Island Sovereignty",
+            text: "A Small Island Developing State is losing land to sea-level rise, threatening its legal claim to exclusive economic zones."
+        },
+        {
+            title: "The Darien Gap Surge",
+            text: "Unauthorized migration flows through the Darien Gap are overwhelming regional security and human rights agencies."
+        },
+        {
+            title: "Sanctions Evasion",
+            text: "A sanctioned regime is using cryptocurrency and shadow tankers to fund a massive conventional military buildup."
+        }
+    ];
+
+    const [currentScenarioIdx, setCurrentScenarioIdx] = useState(0);
     const [proposal, setProposal] = useState('');
     const [grade, setGrade] = useState(null);
 
-    const scenario = "A border dispute in the South China Sea is escalating between local fishermen and regional coast guards.";
+    const scenario = scenarios[currentScenarioIdx];
+
+    const nextScenario = () => {
+        setCurrentScenarioIdx((currentScenarioIdx + 1) % scenarios.length);
+        setProposal('');
+        setGrade(null);
+    };
 
     const runGrading = () => {
         const input = proposal.toLowerCase();
@@ -343,8 +433,8 @@ const WarRoom = () => {
             </h2>
             <Card>
                 <div className="bg-red-900/10 border border-red-500/20 p-4 rounded-lg mb-6">
-                    <p className="text-sm text-red-400 font-bold mb-1 uppercase tracking-wider">Active Scenario</p>
-                    <p className="text-lg text-white font-medium italic">"{scenario}"</p>
+                    <p className="text-sm text-red-400 font-bold mb-1 uppercase tracking-wider">Active Scenario: {scenario.title}</p>
+                    <p className="text-lg text-white font-medium italic">"{scenario.text}"</p>
                 </div>
 
                 <p className="text-sm text-gray-400 mb-2">Draft your policy proposal below:</p>
@@ -358,12 +448,16 @@ const WarRoom = () => {
                 <Button onClick={runGrading} className="w-full bg-red-600 hover:bg-red-700" disabled={!proposal.trim()}>
                     Submit to Command Center
                 </Button>
+
+                <Button onClick={nextScenario} variant="outline" className="w-full mt-2 border-red-500/30 text-red-400 hover:bg-red-900/10">
+                    Switch Scenario
+                </Button>
             </Card>
 
             {grade && (
                 <div className={`mt-8 p-6 rounded-xl border animate-in zoom-in-95 duration-300 ${grade.level === 3 ? "bg-emerald-900/20 border-emerald-500/30 text-emerald-100" :
-                        grade.level === 2 ? "bg-blue-900/20 border-blue-500/30 text-blue-100" :
-                            "bg-amber-900/20 border-amber-500/30 text-amber-100"
+                    grade.level === 2 ? "bg-blue-900/20 border-blue-500/30 text-blue-100" :
+                        "bg-amber-900/20 border-amber-500/30 text-amber-100"
                     }`}>
                     <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
                         {grade.level === 3 ? <CheckCircle /> : grade.level === 2 ? <Shield /> : <AlertTriangle />}
