@@ -760,6 +760,134 @@ const WarRoom = () => {
     );
 };
 
+// --- Tab 5: Test Prep ---
+const TestPrep = () => {
+    const [subTab, setSubTab] = useState('paper1');
+
+    const Paper1 = () => (
+        <div className="space-y-6">
+            <h3 className="text-xl font-bold text-blue-400">Paper 1: Stimulus-Based Paper</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Writing Response Goals</h4>
+                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
+                        <li>Show direct engagement with the provided sources.</li>
+                        <li>Identify perspectives, biases, and limitations in the stimulus material.</li>
+                        <li>Synthesize information from multiple sources to answer the prompt.</li>
+                    </ul>
+                </div>
+                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Core Strategies</h4>
+                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
+                        <li><strong>Annotate First:</strong> Spend 10 mins reading and marking key actors and claims.</li>
+                        <li><strong>Source-Claim Mapping:</strong> Identify which sources support or challenge the question.</li>
+                        <li><strong>Synthesis:</strong> Don't just list sources; group them by the arguments they make.</li>
+                    </ul>
+                </div>
+            </div>
+            <div className="p-4 bg-blue-900/10 border border-blue-500/20 rounded-xl">
+                <h4 className="text-sm font-bold text-blue-400 mb-2 uppercase tracking-wider">Question-Specific Strategy: The 10-Mark Synthesis</h4>
+                <p className="text-xs text-gray-300 leading-relaxed italic">
+                    "Use at least 3 sources. Use the 'Two-Sided Synthesis' structure: Paragraph 1 (Sources A & B prove X), Paragraph 2 (Sources C & D challenge X). Conclude by evaluating which side is stronger based on the source quality."
+                </p>
+            </div>
+        </div>
+    );
+
+    const Paper2 = () => (
+        <div className="space-y-6">
+            <h3 className="text-xl font-bold text-emerald-400">Paper 2: Extended Response (Essays)</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Writing Response Goals</h4>
+                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
+                        <li>Concept-led analysis (Sovereignty, Power, etc.).</li>
+                        <li>Effective use of relevant, contemporary case studies.</li>
+                        <li>Critical evaluation of different political perspectives.</li>
+                    </ul>
+                </div>
+                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Core Strategies</h4>
+                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
+                        <li><strong>Bifurcation:</strong> Always present two opposing arguments forEvery claim.</li>
+                        <li><strong>Case Study Depth:</strong> Use 'PEEL' to connect case facts back to the thesis.</li>
+                        <li><strong>The 'Golden Thread':</strong> Ensure every paragraph re-engages with the specific wording of the prompt.</li>
+                    </ul>
+                </div>
+            </div>
+            <div className="p-4 bg-emerald-900/10 border border-emerald-500/20 rounded-xl">
+                <h4 className="text-sm font-bold text-emerald-400 mb-2 uppercase tracking-wider">Scholar Tip: The Multi-Perspective Check</h4>
+                <p className="text-xs text-gray-300 leading-relaxed italic">
+                    "To hit Level 7, your evaluation must go beyond 'some say X, others say Y'. You must explain WHY they differ (e.g., due to Realist vs Liberal assumptions) and evaluate the implications of these different views."
+                </p>
+            </div>
+        </div>
+    );
+
+    const Paper3 = () => (
+        <div className="space-y-6">
+            <h3 className="text-xl font-bold text-red-400">Paper 3: HL Global Challenges</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Writing Response Goals</h4>
+                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
+                        <li>Explaining the interconnections between different global challenges.</li>
+                        <li>Applying multiple HL Topics (Poverty, Identity, etc.) to one situation.</li>
+                        <li>Identifying limitations and implications of proposed policy responses.</li>
+                    </ul>
+                </div>
+                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Core Strategies</h4>
+                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
+                        <li><strong>Link and Reconnect:</strong> Use the bridging case study to show how two topics interact.</li>
+                        <li><strong>Risk Mitigation:</strong> For every solution, identify a potential drawback or unintended consequence.</li>
+                        <li><strong>Systems Thinking:</strong> Show how local challenges have global roots or vice versa.</li>
+                    </ul>
+                </div>
+            </div>
+            <div className="p-4 bg-red-900/10 border border-red-500/20 rounded-xl">
+                <h4 className="text-sm font-bold text-red-400 mb-2 uppercase tracking-wider">Critical Step: Question 2 (Policy Implications)</h4>
+                <p className="text-xs text-gray-300 leading-relaxed italic">
+                    "Examiners are looking for you to recognize that 'there are no perfect solutions, only trade-offs'. Identifying the loser in a policy victory is the key to the top mark band."
+                </p>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                <BookOpen className="text-blue-500" /> Test Prep: Writing Strategy
+            </h2>
+
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                {[
+                    { id: 'paper1', label: 'Paper 1', color: 'blue' },
+                    { id: 'paper2', label: 'Paper 2', color: 'emerald' },
+                    { id: 'paper3', label: 'Paper 3', color: 'red' }
+                ].map(b => (
+                    <button
+                        key={b.id}
+                        onClick={() => setSubTab(b.id)}
+                        className={`px-6 py-3 rounded-xl text-sm font-bold transition-all border-2 ${subTab === b.id
+                            ? `bg-${b.color}-600/10 border-${b.color}-500 text-white shadow-lg shadow-${b.color}-500/10`
+                            : "bg-white/5 border-transparent text-gray-500 hover:bg-white/10"
+                            }`}
+                    >
+                        {b.label}
+                    </button>
+                ))}
+            </div>
+
+            <Card className={subTab === 'paper1' ? "border-blue-500/20" : subTab === 'paper2' ? "border-emerald-500/20" : "border-red-500/20"}>
+                {subTab === 'paper1' && <Paper1 />}
+                {subTab === 'paper2' && <Paper2 />}
+                {subTab === 'paper3' && <Paper3 />}
+            </Card>
+        </div>
+    );
+};
+
 // --- Main App ---
 export default function App() {
     const [activeTab, setActiveTab] = useState('policy');
@@ -781,6 +909,7 @@ export default function App() {
                     {[
                         { id: 'policy', label: 'Policy Engine', icon: Shield },
                         { id: 'writing', label: 'Writing Studio', icon: PenTool },
+                        { id: 'testprep', label: 'Test Prep', icon: BookOpen },
                         { id: 'drill', label: 'Drill Mode', icon: Zap },
                         { id: 'warroom', label: 'War Room', icon: AlertTriangle },
                     ].map(tab => (
@@ -800,6 +929,7 @@ export default function App() {
                 <main className="min-h-[400px]">
                     {activeTab === 'policy' && <PolicyEngine />}
                     {activeTab === 'writing' && <WritingStudio />}
+                    {activeTab === 'testprep' && <TestPrep />}
                     {activeTab === 'drill' && <DrillMode />}
                     {activeTab === 'warroom' && <WarRoom />}
                 </main>
