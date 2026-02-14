@@ -765,91 +765,171 @@ const TestPrep = () => {
     const [subTab, setSubTab] = useState('paper1');
 
     const Paper1 = () => (
-        <div className="space-y-6">
-            <h3 className="text-xl font-bold text-blue-400">Paper 1: Stimulus-Based Paper</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Writing Response Goals</h4>
-                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
-                        <li>Show direct engagement with the provided sources.</li>
-                        <li>Identify perspectives, biases, and limitations in the stimulus material.</li>
-                        <li>Synthesize information from multiple sources to answer the prompt.</li>
-                    </ul>
-                </div>
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Core Strategies</h4>
-                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
-                        <li><strong>Annotate First:</strong> Spend 10 mins reading and marking key actors and claims.</li>
-                        <li><strong>Source-Claim Mapping:</strong> Identify which sources support or challenge the question.</li>
-                        <li><strong>Synthesis:</strong> Don't just list sources; group them by the arguments they make.</li>
-                    </ul>
+        <div className="space-y-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                <h3 className="text-xl font-bold text-blue-400 text-glow">Paper 1: Stimulus-Based Paper</h3>
+                <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-xs font-bold uppercase tracking-tighter">
+                    Assessment: 1h 15m | 24 Marks
                 </div>
             </div>
-            <div className="p-4 bg-blue-900/10 border border-blue-500/20 rounded-xl">
-                <h4 className="text-sm font-bold text-blue-400 mb-2 uppercase tracking-wider">Question-Specific Strategy: The 10-Mark Synthesis</h4>
-                <p className="text-xs text-gray-300 leading-relaxed italic">
-                    "Use at least 3 sources. Use the 'Two-Sided Synthesis' structure: Paragraph 1 (Sources A & B prove X), Paragraph 2 (Sources C & D challenge X). Conclude by evaluating which side is stronger based on the source quality."
-                </p>
+
+            <div className="grid gap-6">
+                {[
+                    {
+                        q: "Question 1",
+                        marks: "3 Marks",
+                        goal: "Identify three distinct points from Source A.",
+                        strategy: "List three separate, numbered points directly from the text. Use brief, direct quotes or clear paraphrasing. Do not over-explain.",
+                        tip: "Quick wins—aim to finish this in under 5 minutes."
+                    },
+                    {
+                        q: "Question 2",
+                        marks: "4 Marks",
+                        goal: "Explain one claim from Source B.",
+                        strategy: "Identify the claim (1 mark), provide supporting evidence from the source (1 mark), and use own knowledge to explain its broader context or limitation (2 marks).",
+                        tip: "Success follows the 'S-E-K-L' pattern: Source, Evidence, Knowledge, Link."
+                    },
+                    {
+                        q: "Question 3",
+                        marks: "8 Marks",
+                        goal: "Compare and contrast two sources.",
+                        strategy: "Identify 3 thematic points. Aim for at least 1 comparison and 1 contrast. Use connectives like 'conversely' or 'similarly' to link source ideas.",
+                        tip: "Avoid listing Source C then Source D. Group by theme (e.g., 'Both sources agree that sovereignty is...')."
+                    },
+                    {
+                        q: "Question 4",
+                        marks: "10-12 Marks",
+                        goal: "Synthesis Essay using sources & own knowledge.",
+                        strategy: "Formulate a clear thesis. Use at least 3 sources. Balance source evidence with detailed contemporary case studies from your own knowledge.",
+                        tip: "Evaluate the sources themselves. NGO reports may have different biases than government data."
+                    }
+                ].map((item, idx) => (
+                    <div key={idx} className="p-4 bg-white/5 border border-white/10 rounded-2xl hover:border-blue-500/30 transition-colors group">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-bold text-white group-hover:text-blue-400 transition-colors">{item.q}</h4>
+                            <span className="text-[10px] font-black bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded uppercase">{item.marks}</span>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <p className="text-[10px] text-gray-500 uppercase font-black mb-1">Goal</p>
+                                <p className="text-xs text-gray-300">{item.goal}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] text-gray-500 uppercase font-black mb-1">Strategy</p>
+                                <p className="text-xs text-gray-400 leading-relaxed">{item.strategy}</p>
+                            </div>
+                            <div className="pt-2 border-t border-white/5">
+                                <p className="text-[10px] text-blue-400/70 font-bold italic">💡 Pro Tip: {item.tip}</p>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
 
     const Paper2 = () => (
-        <div className="space-y-6">
-            <h3 className="text-xl font-bold text-emerald-400">Paper 2: Extended Response (Essays)</h3>
+        <div className="space-y-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                <h3 className="text-xl font-bold text-emerald-400 text-glow">Paper 2: Extended Response (Essays)</h3>
+                <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-xs font-bold uppercase tracking-tighter">
+                    Assessment: 1h 45m | 50 Marks (2 x 25)
+                </div>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2">
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Writing Response Goals</h4>
-                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
-                        <li>Concept-led analysis (Sovereignty, Power, etc.).</li>
-                        <li>Effective use of relevant, contemporary case studies.</li>
-                        <li>Critical evaluation of different political perspectives.</li>
+                <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
+                    <h4 className="text-xs font-black text-white mb-3 uppercase tracking-widest text-emerald-400">Essay Response Goals</h4>
+                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-3">
+                        <li>Concept-led analysis (Sovereignty, Power, Legitimacy).</li>
+                        <li>Effective use of relevant, contemporary case studies (last 10 years).</li>
+                        <li>Critical evaluation of different political perspectives (Realist vs Liberal).</li>
+                        <li>Clear, sustained argument that directly answers the prompt.</li>
                     </ul>
                 </div>
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Core Strategies</h4>
-                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
-                        <li><strong>Bifurcation:</strong> Always present two opposing arguments forEvery claim.</li>
-                        <li><strong>Case Study Depth:</strong> Use 'PEEL' to connect case facts back to the thesis.</li>
-                        <li><strong>The 'Golden Thread':</strong> Ensure every paragraph re-engages with the specific wording of the prompt.</li>
+                <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
+                    <h4 className="text-xs font-black text-white mb-3 uppercase tracking-widest text-emerald-400">Winning Strategies</h4>
+                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-3">
+                        <li><strong>The 'Golden Thread':</strong> Re-engage with prompt keywords in every single paragraph.</li>
+                        <li><strong>Bifurcation:</strong> For every claim, present a counter-argument to show complex thinking.</li>
+                        <li><strong>Case Study Depth:</strong> Don't just mention a case; use 'PEEL' to prove its relevance.</li>
+                        <li><strong>Evaluation:</strong> Conclude each section by judging which perspective holds more weight.</li>
                     </ul>
                 </div>
             </div>
-            <div className="p-4 bg-emerald-900/10 border border-emerald-500/20 rounded-xl">
-                <h4 className="text-sm font-bold text-emerald-400 mb-2 uppercase tracking-wider">Scholar Tip: The Multi-Perspective Check</h4>
+
+            <div className="p-5 bg-emerald-900/10 border border-emerald-500/20 rounded-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-2 opacity-10">
+                    <Zap size={48} className="text-emerald-400" />
+                </div>
+                <h4 className="text-xs font-black text-emerald-400 mb-2 uppercase tracking-widest">Scholar Tip: Level 7 Evaluation</h4>
                 <p className="text-xs text-gray-300 leading-relaxed italic">
-                    "To hit Level 7, your evaluation must go beyond 'some say X, others say Y'. You must explain WHY they differ (e.g., due to Realist vs Liberal assumptions) and evaluate the implications of these different views."
+                    "To hit Level 7, your evaluation must go beyond 'some say X, others say Y'. You must explain WHY they differ (e.g., due to different theoretical assumptions) and evaluate the real-world implications of these disagreements."
                 </p>
             </div>
         </div>
     );
 
     const Paper3 = () => (
-        <div className="space-y-6">
-            <h3 className="text-xl font-bold text-red-400">Paper 3: HL Global Challenges</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Writing Response Goals</h4>
-                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
-                        <li>Explaining the interconnections between different global challenges.</li>
-                        <li>Applying multiple HL Topics (Poverty, Identity, etc.) to one situation.</li>
-                        <li>Identifying limitations and implications of proposed policy responses.</li>
-                    </ul>
-                </div>
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-                    <h4 className="text-sm font-bold text-white mb-2 uppercase tracking-wider">Core Strategies</h4>
-                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-2">
-                        <li><strong>Link and Reconnect:</strong> Use the bridging case study to show how two topics interact.</li>
-                        <li><strong>Risk Mitigation:</strong> For every solution, identify a potential drawback or unintended consequence.</li>
-                        <li><strong>Systems Thinking:</strong> Show how local challenges have global roots or vice versa.</li>
-                    </ul>
+        <div className="space-y-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                <h3 className="text-xl font-bold text-red-400 text-glow">Paper 3: HL Global Challenges</h3>
+                <div className="px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-red-400 text-xs font-bold uppercase tracking-tighter">
+                    Assessment: 1h 30m | 36 Marks
                 </div>
             </div>
-            <div className="p-4 bg-red-900/10 border border-red-500/20 rounded-xl">
-                <h4 className="text-sm font-bold text-red-400 mb-2 uppercase tracking-wider">Critical Step: Question 2 (Policy Implications)</h4>
-                <p className="text-xs text-gray-300 leading-relaxed italic">
-                    "Examiners are looking for you to recognize that 'there are no perfect solutions, only trade-offs'. Identifying the loser in a policy victory is the key to the top mark band."
-                </p>
+
+            <div className="grid gap-6">
+                {[
+                    {
+                        q: "Question 1",
+                        marks: "4 Marks",
+                        goal: "Data/Source Identification and Application.",
+                        strategy: "Identify 2 key trends or facts from the provided data (2 marks). Provide a concrete real-world example that illustrates each point (2 marks).",
+                        tip: "Think of this as: 'Data Point + Real World proof'."
+                    },
+                    {
+                        q: "Question 2a",
+                        marks: "6 Marks",
+                        goal: "Policy Formulation/Case Study Analysis.",
+                        strategy: "Propose a specific, feasible action based on the stimulus. Clearly identify WHICH actor (state, NGO, IGO) should act and HOW.",
+                        tip: "Specificity is key. Instead of 'States should fix it', say 'G20 states should implement X via a treaty'."
+                    },
+                    {
+                        q: "Question 2b",
+                        marks: "6 Marks",
+                        goal: "Policy Evaluation & Limitations.",
+                        strategy: "Identify one major strength and one major limitation of your proposal. Explain why the limitation exists (e.g., lack of enforcement power).",
+                        tip: "Be your own harshest critic. No policy is perfect; identifying the trade-off gets you the points."
+                    },
+                    {
+                        q: "Question 3",
+                        marks: "15 Marks",
+                        goal: "Global Challenge Synthesis Essay.",
+                        strategy: "Synthesize 2 global challenges (e.g., Poverty and Identity) using the provided case study. Use the 'Link and Reconnect' strategy.",
+                        tip: "Use bridge sentences to show how Challenge A directly intensifies Challenge B. This is the synthesis examiners crave."
+                    }
+                ].map((item, idx) => (
+                    <div key={idx} className="p-4 bg-white/5 border border-white/10 rounded-2xl hover:border-red-500/30 transition-colors group">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-bold text-white group-hover:text-red-400 transition-colors">{item.q}</h4>
+                            <span className="text-[10px] font-black bg-red-500/20 text-red-400 px-2 py-0.5 rounded uppercase">{item.marks}</span>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <p className="text-[10px] text-gray-500 uppercase font-black mb-1">Goal</p>
+                                <p className="text-xs text-gray-300">{item.goal}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] text-gray-500 uppercase font-black mb-1">Strategy</p>
+                                <p className="text-xs text-gray-400 leading-relaxed">{item.strategy}</p>
+                            </div>
+                            <div className="pt-2 border-t border-white/5">
+                                <p className="text-[10px] text-red-400/70 font-bold italic">💡 Pro Tip: {item.tip}</p>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
