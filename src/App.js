@@ -1,6 +1,341 @@
 import React, { useState, useEffect } from 'react';
 // Version: 1.0.3 - Restored React hooks import
-import { Shield, PenTool, Zap, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, BookOpen, MessageSquare } from 'lucide-react';
+import { Shield, PenTool, Zap, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, BookOpen, MessageSquare, FileText, Clock } from 'lucide-react';
+import { paper1Exams, paper2Exams, paper3Exams } from './examBank';
+
+// --- Global Data Constants ---
+const GLOSSARY_TERMS = ["Power", "Sovereignty", "Legitimacy", "Interdependence", "Human Rights", "Justice", "Liberty", "Equality", "Development", "Sustainability", "Peace", "Conflict", "Violence", "Non-violence", "Globalization", "Borders"];
+
+const GLOBAL_CASES = [
+    {
+        name: "South China Sea Dispute", theme: "Sovereignty + Power",
+        facts: ["Overlapping territorial claims", "Nine-Dash Line", "Freedom of Navigation operations."],
+        fiveWH: {
+            who: "Primary: China (PRC), Philippines, Vietnam, Malaysia. Secondary: USA (Freedom of Navigation), ASEAN.",
+            what: "Overlapping territorial claims and maritime rights (Exclusive Economic Zones) involving the \"Nine-Dash Line.\"",
+            where: "The South China Sea, specifically the Spratly Islands, Paracel Islands, and Scarborough Shoal.",
+            when: "Ongoing; critical milestone in 2016 (PCA Ruling) and continuous island reclamation/militarization.",
+            why: "Strategic: Controlling major maritime choke points. Economic: Access to 12% of global fish catch and untapped oil/gas reserves.",
+            how: "China utilizes Hard Power (island building/naval presence) vs. Philippines/Vietnam using International Law (UNCLOS)."
+        },
+        ibLinkage: { core: ["Sovereignty (Contested)", "Power (Realism)"], challenge: ["Security", "Environment"] },
+        theoryInsights: {
+            Realism: "The South China Sea is a classic textbook case of Realism. China's 'Nine-Dash Line' and island reclamation represent a rational pursuit of national interest in an anarchic system. For realists, this is not a 'dispute' but a struggle for maritime supremacy and strategic depth. The involvement of the US (FOIA operations) highlights the 'Security Dilemma'—where one state's defensive buildup is seen as offensive by another.",
+            Liberalism: "Liberals point to the 2016 Permanent Court of Arbitration ruling as the relevant framework. They argue that the dispute should be resolved through UNCLOS and international law rather than 'might makes right'. For a liberal, the tragedy here is the failure of regional institutions (ASEAN) to create a binding Code of Conduct that constrains the unilateral power of great states.",
+            Structuralism: "A structuralist analysis focuses on how China is now behaving like a established 'Core' power, asserting its right to control its regional 'Periphery'. The dispute isn't just about rocks; it's about who sets the rules for the global maritime commons—rules that were historically designed by Western core powers and are now being challenged by a rising Eastern core."
+        }
+    },
+    {
+        name: "G20 & Global South", theme: "Power + Development",
+        facts: ["India's presidency focus", "AU permanent membership", "Debt restructuring tensions."],
+        fiveWH: {
+            who: "Primary: India (2023 presidency), African Union, Brazil, China. Secondary: G7 nations, IMF, World Bank.",
+            what: "India's G20 presidency pushed for Global South representation, AU permanent membership, and debt restructuring for developing nations.",
+            where: "New Delhi (summit), but impacts global governance structures — especially Africa, South Asia, and Latin America.",
+            when: "2023 presidency; AU admitted as permanent member September 2023. Debt and SDR reform debates ongoing.",
+            why: "The Global South sought greater voice in institutions designed by post-WWII Western powers. India leveraged presidency to position itself as a bridge between developing and developed worlds.",
+            how: "Diplomatic coalition-building among middle powers; 'Voice of the Global South' summits; reform proposals for MDBs and IMF voting quotas."
+        },
+        ibLinkage: { core: ["Power (Structural)", "Legitimacy"], challenge: ["Poverty", "Equality"] },
+        theoryInsights: {
+            Structuralism: "India's push for African Union membership in the G20 is a direct attempt to challenge the Core-Periphery hierarchy. From a structuralist view, the G7 represents the 'Core' that has historically dictated terms of development. By positioning itself as a leader of the 'Global South', India is trying to restructure the global governance framework to reduce peripheral dependency.",
+            Liberalism: "For liberals, the inclusion of the AU in the G20 demonstrates the evolution of international institutions toward greater inclusivity. It shows that states can reform existing multilateral frameworks from within to improve global legitimacy and manage collective problems like debt and systemic poverty.",
+            Constructivism: "Constructivists would focus on the 'Voice of the Global South' narrative. India is actively constructing a new global identity—a 'civilizational state' that acts as a bridge. This narrative shift changes how states see their interests, moving from binary Cold War-era alignments to a more fluid, multipolar sense of shared identity."
+        }
+    },
+    {
+        name: "Israel-Palestine", theme: "Identity + Security",
+        facts: ["Relational identity conflict", "Security vs Human Rights", "Legitimacy of non-state actors."],
+        fiveWH: {
+            who: "Primary: Israel (state), Palestinian Authority, Hamas. Secondary: USA, Iran, UN, ICJ, Arab League.",
+            what: "Protracted conflict over territory, statehood, and self-determination rooted in competing national identities and security narratives.",
+            where: "Gaza Strip, West Bank, East Jerusalem, and the broader Middle East region.",
+            when: "Ongoing since 1948; major escalations in 1967, 2008, 2014, 2021, and October 2023.",
+            why: "Competing claims to sovereignty and self-determination. Israel cites security; Palestinians cite occupation and human rights violations. Identity is relational — each group defines itself partly in opposition to the other.",
+            how: "Israel uses military force and settlement expansion. Palestinians employ diplomacy (UN statehood bids), resistance movements, and international law (ICJ advisory opinions)."
+        },
+        ibLinkage: { core: ["Sovereignty (Contested)", "Human Rights", "Legitimacy"], challenge: ["Security", "Equality"] },
+        theoryInsights: {
+            Realism: "In Israel-Palestine, realists see a zero-sum struggle for land and security where state survival is the ultimate goal. The conflict is driven by the 'anarchy' of the regional system where no external power can enforce a two-state solution. Hard power (military force, barriers) is the primary currency, and security for one group is viewed as insecurity for the other.",
+            Constructivism: "Constructivism is vital here: the conflict is sustained by deeply embedded, mutually exclusive identities. The narratives of 'Occupier' vs 'Defender' or 'Indigenous' vs 'Settler' are socially constructed and reinforced through education and media. Peace requires a fundamental 'identity shift' that moves beyond the historical narratives of trauma and exclusion.",
+            Feminism: "A feminist lens highlights how the conflict is framed almost entirely in patriarchal, militarized terms. It asks: where are the women in the peace process, and how does the focus on 'border security' ignore the human security of families on both sides? Feminists argue that the masculine culture of statehood and military defense perpetuates the cycle of violence.",
+            Postcolonialism: "Postcolonialism frames this as the 'unfinished business' of the 20th-century mandates. It analyzes the power imbalance between a sovereign, recognized state and an occupied population as a continuation of colonial-era hierarchies. The focus is on self-determination and the dismantling of structural inequalities that mirror historical imperial patterns."
+        }
+    },
+    {
+        name: "Belt and Road Initiative", theme: "Power + Interdependence",
+        facts: ["Sovereignty vs Debt", "Soft power expansion", "Infrastructure-led development."],
+        fiveWH: {
+            who: "Primary: China (PRC), recipient states (Sri Lanka, Pakistan, Kenya, Laos). Secondary: USA, EU, World Bank, local communities.",
+            what: "China's massive infrastructure investment program ($1 trillion+) spanning 140+ countries, building ports, railways, and digital networks.",
+            where: "Asia, Africa, Latin America, and Europe — key corridors include the China-Pakistan Economic Corridor (CPEC) and the Maritime Silk Road.",
+            when: "Launched 2013 by Xi Jinping. Expanded steadily; criticism grew after Hambantota Port (Sri Lanka) 99-year lease in 2017.",
+            why: "China seeks to expand economic interdependence, secure trade routes and resource access, and build geopolitical influence through debt-financed infrastructure.",
+            how: "Bilateral infrastructure loans (often criticized as 'debt-trap diplomacy'); state-owned enterprise construction; digital infrastructure (5G, smart cities)."
+        },
+        ibLinkage: { core: ["Power (Soft/Economic)", "Sovereignty", "Interdependence"], challenge: ["Poverty", "Environment"] },
+        theoryInsights: {
+            Realism: "Realists view the BRI as 'Economic Statecraft' designed to create a Sino-centric order. By building infrastructure in 140+ countries, China is essentially creating a sphere of influence that rivals the traditional US-led system. For realists, the debt-trap narrative is a tool of geopolitical competition, where infrastructure is the new ammunition of power projection.",
+            Marxism: "Marxism provides a powerful critique here: the BRI is an example of 'Spatial Fix'—where a state (China) must export excess capital and capacity to maintain profit rates. This isn't charity; it's the expansion of global capital that inevitably leads to the exploitation of labor in recipient states and the enrichment of a transnational elite.",
+            Postcolonialism: "A postcolonial lens flags the 'Hambantota' case as a warning of neo-colonialism. While China doesn't use standard Western military intervention, the 99-year lease on Sri Lankan territory mirrors the 'unequal treaties' of the colonial era. It highlights how states in the Global South are often forced to choose between underdevelopment and dependent development."
+        }
+    },
+    {
+        name: "WTO & Green Subsidies", theme: "Trade + Sustainability",
+        facts: ["US Inflation Reduction Act", "EU-China trade tensions", "Environment vs Free Trade."],
+        fiveWH: {
+            who: "Primary: USA, EU, China. Secondary: WTO, developing nations, renewable energy industries.",
+            what: "Major economies are using green industrial subsidies (e.g. US Inflation Reduction Act) that may violate WTO free trade rules, sparking trade tensions.",
+            where: "Global trade system — disputes centered in WTO (Geneva), but affecting supply chains in Asia, Europe, and the Americas.",
+            when: "US IRA signed August 2022; EU Carbon Border Adjustment Mechanism (CBAM) phased in 2023-2026. Ongoing WTO disputes.",
+            why: "States face a tension between free trade principles and the need to subsidize green industries to meet Paris Agreement targets. Developing nations argue these subsidies are protectionist.",
+            how: "Domestic legislation (IRA, CBAM); tariffs on Chinese EVs and solar panels; WTO dispute resolution (largely stalled due to Appellate Body crisis)."
+        },
+        ibLinkage: { core: ["Interdependence", "Sovereignty"], challenge: ["Environment", "Equality"] },
+        theoryInsights: {
+            Liberalism: "A model case for Liberalism: Green subsidies represent the tension between trade liberalization and environmental collective action. The issue is whether global trade rules (the WTO framework) can evolve to support 'Green Industrial Policy' through institutional cooperation. It highlights how IGOs are essential for managing complex interdependence when domestic interests clash.",
+            Realism: "Realists view the EU/US green subsidies (like the IRA) as 'Green Mercantilism'. This isn't primarily about the climate; it's about securing supply chains and dominance in the future energy transition. A realist sees this as a 'stretch' to the trade system where states use environmental justifications to protect their national industries and relative power.",
+            Structuralism: "Strictly structuralist: The WTO's subsidy rules allow the wealthy 'Core' (who have the fiscal space for subsidies) to grow while penalizing the 'Periphery' who lack the capital to compete. This reinforces a global hierarchy where the Global North dictates the terms of the 'Green Transition', potentially locking the Global South into continued dependency."
+        }
+    },
+    {
+        name: "Meta/EU Big Tech", theme: "Sovereignty + Power",
+        facts: ["GDPR as digital sovereignty", "Data privacy as HR", "Platform power vs State control."],
+        fiveWH: {
+            who: "Primary: Meta (Facebook), EU Commission, European Court of Justice. Secondary: Apple, Google, civil society groups, data protection authorities.",
+            what: "The EU's regulation of Big Tech platforms through GDPR, Digital Services Act, and Digital Markets Act — asserting sovereignty over the digital space.",
+            where: "EU member states, but with global implications due to the 'Brussels Effect' (EU regulations becoming de facto global standards).",
+            when: "GDPR enforced May 2018; Meta fined €1.2 billion (2023); Digital Services Act took effect Feb 2024.",
+            why: "Tension between corporate power (platforms controlling data/algorithms) and state sovereignty (right to regulate). Data privacy increasingly framed as a human right.",
+            how: "EU uses regulatory power (fines, compliance mandates); Meta lobbies and restructures data flows; court challenges test jurisdictional limits."
+        },
+        ibLinkage: { core: ["Sovereignty (Digital)", "Power (Corporate vs State)", "Human Rights"], challenge: ["Security", "Equality"] },
+        theoryInsights: {
+            Liberalism: "Liberals point to the 'Brussels Effect'—where regional regulations like GDPR become global standards. This demonstrates that institutional rules and legal frameworks can constrain even the most powerful transnational corporations (TNCs). It's a victory for the rule of law over unregulated market power, showing that democratic institutions still hold legitimacy in the digital age.",
+            Marxism: "A Marxist analysis is blunt: Meta and the EU are two heads of the same capitalist coin. While they appear at odds, the EU's regulation is a 'protective' move for European capital against American digital dominance. The underlying exploitation of user data (capital accumulation via data extraction) remains unchallenged by either side.",
+            Postcolonialism: "Applying Postcolonialism here is a stretch, but it reveals 'Digital Colonialism'. Western TNCs extract data-wealth from the Global South while the rules of the digital road are set in Brussels or Washington. The lack of indigenous representation in these 'global' tech standards mirrors older imperial structures of information control."
+        }
+    },
+    {
+        name: "Nigeria & Boko Haram", theme: "Development + Security",
+        facts: ["Structural violence roots", "Underdevelopment fuels insurgency", "Military vs Social intervention."],
+        fiveWH: {
+            who: "Primary: Boko Haram/ISWAP, Nigerian government/military. Secondary: UNDP, AU (MNJTF), affected communities (especially women/girls), Lake Chad Basin states.",
+            what: "Islamist insurgency in northeast Nigeria causing 350,000+ deaths and 2.2 million displaced, rooted in poverty, educational exclusion, and governance failures.",
+            where: "Northeast Nigeria (Borno, Yobe, Adamawa states) and the broader Lake Chad Basin (Niger, Chad, Cameroon).",
+            when: "Founded 2002; major escalation 2009-present. Chibok kidnapping (2014) drew global attention. Continues as of 2024.",
+            why: "Structural violence: extreme poverty, educational inequality, and state neglect in the north created conditions for radicalization. The military response often worsened civilian suffering.",
+            how: "Boko Haram uses asymmetric warfare (bombings, kidnappings). Nigeria deploys military force. International community focuses on counter-terrorism but critics argue development investment is the real solution."
+        },
+        ibLinkage: { core: ["Power (Coercive)", "Legitimacy"], challenge: ["Security", "Poverty"] },
+        theoryInsights: {
+            Realism: "The Nigerian state's response to Boko Haram is a classic struggle for internal sovereignty and territorial integrity. For realists, the insurgency is a crisis of 'Hard Power' and state capacity. The external military support (US/France) is seen as a strategic necessity to maintain regional stability in an anarchic system where the state must have a monopoly on violence.",
+            Feminism: "A feminist lens on Boko Haram is essential, specifically concerning the Chibok/Dapchi kidnappings and the use of gendered violence. It argues that the conflict cannot be understood through state security alone; it must be viewed through 'Human Security' and the specific targeting of women as a tool to destabilize social orders.",
+            Structuralism: "Structuralists point to the systemic marginalization of Northern Nigeria (the 'Periphery') by the Southern economic 'Core'. Boko Haram's rise is not just about ideology, but about the structural underdevelopment and lack of economic opportunities that make radicalization a rational response to systemic exclusion from the national wealth."
+        }
+    },
+    {
+        name: "COP28 & Oil Interests", theme: "Interdependence + Sustainability",
+        facts: ["Transition away from fuels", "Global stocktake", "Environment vs Economy."],
+        fiveWH: {
+            who: "Primary: UAE (host/ADNOC president), AOSIS (Small Island States), EU, China, USA. Secondary: fossil fuel lobbies, climate NGOs, IPCC.",
+            what: "COP28 in Dubai produced the first-ever agreement to 'transition away from fossil fuels,' but was criticized for hosting conflicts of interest with oil-producing presidency.",
+            where: "Dubai, UAE — a petrostate hosting climate negotiations. Impacts are global, especially for vulnerable SIDS and African nations.",
+            when: "November-December 2023. First Global Stocktake under the Paris Agreement. Loss and Damage Fund operationalized.",
+            why: "Tension between economic dependence on fossil fuels (for producing states) and existential climate threats (for vulnerable states). The Global Stocktake showed the world is off-track for 1.5°C.",
+            how: "Multilateral negotiation within the UNFCCC framework; lobbying by fossil fuel interests (record 2,456 lobbyists at COP28); coalition-building by SIDS and climate-vulnerable states."
+        },
+        ibLinkage: { core: ["Interdependence", "Power (Structural)"], challenge: ["Environment", "Equality"] },
+        theoryInsights: {
+            Structuralism: "COP28 is a battlefield of structural power. The 'Core' (fossil fuel producers) managed to retain significant influence over the 'Global Stocktake' text. From a structuralist view, the 'Loss and Damage' fund is a minor concession to the Periphery that doesn't actually challenge the global economic hierarchy that caused the climate crisis in the first place.",
+            Liberalism: "For liberals, COP28 represents the best hope for collective action. Despite the oil presidency, the agreement to 'transition away' from fossil fuels is a landmark normative success of multilateralism. It proves that even the most difficult global problems can be managed through shared institutional frameworks and dialogue.",
+            Realism: "Realism offers a cynical but necessary view: The UAE's presidency was a rational move to ensure that the energy transition doesn't happen at the expense of their national interest. A realist sees climate negotiations as 'Geopolitics by other means,' where states compete for energy security and economic advantage under the guise of global cooperation."
+        }
+    },
+    {
+        name: "NATO's 'Arctic Sentry'", theme: "Security + Environment",
+        facts: ["Melting ice strategic shifts", "Russian High North expansion", "Climate-militarization."],
+        fiveWH: {
+            who: "Primary: Russia, NATO (especially Norway, Canada, USA), Finland, Sweden. Secondary: China ('Near-Arctic State' claim), Indigenous Arctic peoples.",
+            what: "Climate change is melting Arctic ice, opening new shipping routes and resource access, triggering a geopolitical competition and military buildup.",
+            where: "The Arctic region — Northern Sea Route, Northwest Passage, Svalbard, and Russia's Northern Fleet bases.",
+            when: "Intensifying since 2007 (Russia's flag-planting at North Pole). Finland and Sweden joined NATO (2023-24), transforming Arctic security.",
+            why: "Arctic holds an estimated 13% of undiscovered oil and 30% of undiscovered natural gas. The Northern Sea Route cuts shipping times between Europe and Asia by 40%.",
+            how: "Russia militarizes Arctic bases and claims continental shelf. NATO conducts 'Arctic Sentry' exercises. Climate change acts as a threat multiplier — environmental degradation creates security competition."
+        },
+        ibLinkage: { core: ["Sovereignty", "Power (Hard)"], challenge: ["Security", "Environment"] },
+        theoryInsights: {
+            Realism: "The Arctic is a zero-sum frontier for Realism. NATO's 'Arctic Sentry' exercises and Russia's Northern Fleet expansion are rational responses to a new 'High North' security dilemma. Climate change isn't a shared challenge here; it's a competitive opener that allows states to project hard power into previously inaccessible territory.",
+            Liberalism: "Liberals focus on the 'Arctic Council' as a fragile but necessary institutional buffer. They argue that Arctic governance should be defined by international law and cooperation on environmental research. For a liberal, the tragedy of the current militarization is that it undermines the 'Arctic Exceptionalism'—the idea that the region was once a zone of low tension.",
+            Constructivism: "Constructivists analyze the 'Arctic Identity' of states like China, who call themselves 'Near-Arctic States' to claim legitimacy in the region. This is about 'Constructing Interests'—the Arctic is not just a place, but a socially defined strategic arena where being an 'Arctic Stakeholder' is a status that must be recognized and performed."
+        }
+    },
+    {
+        name: "Myanmar's Elections", theme: "Legitimacy + Coercive Power",
+        facts: ["Fraudulent junta polls", "Rule by force vs rule by law", "Civilian resistance movements."],
+        fiveWH: {
+            who: "Primary: Tatmadaw (military junta/SAC), NUG (National Unity Government), ethnic armed organizations (EAOs). Secondary: ASEAN, China, civilian population.",
+            what: "The military coup of Feb 2021 overthrew the elected NLD government. The junta plans elections widely seen as illegitimate while facing armed civilian and ethnic resistance.",
+            where: "Myanmar — fighting spans Sagaing, Chin, Kayah, Karen, and Shan states. Refugee flows into Thailand, India, and Bangladesh.",
+            when: "Coup: February 1, 2021. Planned 'elections' repeatedly delayed. Resistance has gained territorial control since late 2023.",
+            why: "The Tatmadaw refused to accept the 2020 election results (NLD landslide). Deeper causes: military's decades-long grip on political and economic power, ethnic marginalization.",
+            how: "Junta uses coercive power (airstrikes, mass detention, internet shutdowns). Resistance uses guerilla warfare (People's Defence Forces) and parallel governance (NUG). ASEAN's 'Five-Point Consensus' has failed."
+        },
+        ibLinkage: { core: ["Legitimacy", "Power (Coercive)", "Sovereignty"], challenge: ["Security", "Equality"] },
+        theoryInsights: {
+            Realism: "In Myanmar, the military junta (Tatmadaw) views power through a lens of 'Internal Realism'—where the state's survival is synonymous with military control. Any election is merely a tool of 'Coercive Legitimacy' to maintain order in an internal anarchy. Outside actors (ASEAN/China) often prioritize stability over democracy, reflecting a realist acceptance of power-based rule.",
+            Liberalism: "Liberalism in Myanmar is currently a project of resistance. The NUG (National Unity Government) uses the language of 'Universal Human Rights' and 'Rule of Law' to seek international recognition. For liberals, the failure of international institutions to intervene represents a crisis for the 'Responsibility to Protect' (R2P) norm.",
+            Structuralism: "A structuralist reading highlights how Myanmar's internal conflict is exacerbated by its role as a resource-rich 'Periphery' for regional 'Core' powers like China. The military junta survives by selling raw materials (gas, timber, jade), ensuring that global economic flows continue even while the local population suffers from structural violence and political exclusion."
+        }
+    },
+    {
+        name: "Türkiye's Autonomy", theme: "Identity + Security",
+        facts: ["Strategic balancing (West vs BRICS)", "Middle power diplomacy", "NATO-Russia relations."],
+        fiveWH: {
+            who: "Primary: Türkiye (Erdoğan), NATO, Russia, EU. Secondary: USA, BRICS, Kurdish populations, Syria.",
+            what: "Türkiye pursues 'strategic autonomy' — balancing NATO membership with Russian engagement, EU accession hesitation, and regional power projection.",
+            where: "Crossroads of Europe, Middle East, and Central Asia. Key chokepoints: Bosporus Strait, Syrian border, Eastern Mediterranean.",
+            when: "Ongoing; key moments include S-400 purchase (2019), Ukraine war mediation (2022), Sweden NATO ratification delay (2023-24).",
+            why: "Türkiye seeks middle-power status by refusing to align fully with any bloc. Identity tensions: secular Kemalist legacy vs. Erdoğan's neo-Ottoman vision; EU rejection fuels pivot eastward.",
+            how: "Leverages geographic position as bargaining chip (refugee deal with EU, grain corridor with Russia/Ukraine); arms purchases from both NATO and Russia; blocks NATO expansion for concessions."
+        },
+        ibLinkage: { core: ["Power (Middle Power)", "Sovereignty", "Identity"], challenge: ["Security", "Equality"] },
+        theoryInsights: {
+            Realism: "Türkiye is the quintessential 'Realist Middle Power'. By blocking or delaying NATO accession for Finland/Sweden, Erdoğan leveraged his 'Regional Hegemon' status to extract national security concessions. This is about maximizing relative power within a major alliance, proving that even partners act in their own self-interest first.",
+            Liberalism: "Liberals find Türkiye's behavior challenging to the idea of 'shared democratic norms' within NATO. It highlights the friction in 'Institutional Liberalism' when one member uses its veto power to pursue narrow domestic goals. However, the eventual compromise shows that the alliance's institutional frameworks are still capable of resolving internal disputes.",
+            Constructivism: "Constructivism explains Türkiye's 'Autonomy' through its unique identity as a bridge between the West, Russia, and the Middle East. This 'Strategic Autonomy' is a constructed identity that allows Türkiye to act as a mediator. Türkiye doesn't see itself as just another NATO member, but as a distinct civilizational actor with interests that aren't tied to any single bloc."
+        }
+    }
+];
+
+const GLOBAL_QUESTIONS = [
+    // --- POWER ---
+    { theme: "Power", text: "Effective enforcement of Human Rights undermines state sovereignty. To what extent do you agree?" },
+    { theme: "Power", text: "Transnational corporations have more power than most states in the 21st century. Discuss." },
+    { theme: "Power", text: "Examine the claim that increased interactions and interconnectedness have fundamentally changed the nature of sovereignty." },
+    { theme: "Power", text: "Evaluate the claim that sovereign states become less powerful when they join IGOs." },
+    { theme: "Power", text: "To what extent is the 'rise of the rest' fundamentally challenging the liberal international order?" },
+    { theme: "Power", text: "Analyze the view that labels such as 'unipolar' and 'multipolar' are no longer useful for describing global power dynamics." },
+    { theme: "Power", text: "Evaluate the claim that middle powers have become more influential than great powers in contemporary global governance." },
+    { theme: "Power", text: "To what extent has the concept of 'soft power' been rendered obsolete by the return of traditional hard power competition?" },
+    { theme: "Power", text: "Discuss the view that the legitimacy of a state is derived more from its external recognition than its internal governance." },
+    { theme: "Power", text: "Examine the claim that global civil society is the only effective check on state power in the 21st century." },
+
+    // --- HUMAN RIGHTS ---
+    { theme: "Human Rights", text: "Discuss the extent to which cultural relativism can be used to justify different concepts of human rights." },
+    { theme: "Human Rights", text: "Evaluate the claim that the digital divide is the most significant barrier to the realization of human rights today." },
+    { theme: "Human Rights", text: "To what extent do universal human rights standards represent a form of Western ideological hegemony?" },
+    { theme: "Human Rights", text: "Examine the claim that economic and social rights are more important than civil and political rights for sustainable development." },
+    { theme: "Human Rights", text: "Evaluate the effectiveness of the 'Responsibility to Protect' (R2P) doctrine in safeguarding human rights in sovereign states." },
+    { theme: "Human Rights", text: "To what extent does the rise of surveillance technology threaten the fundamental right to privacy in democratic states?" },
+    { theme: "Human Rights", text: "Discuss the view that international judicial bodies, like the ICC, are biased against the Global South." },
+    { theme: "Human Rights", text: "Evaluate the claim that non-state actors are more effective than states in protecting the rights of marginalized populations." },
+    { theme: "Human Rights", text: "Examine the relationship between environmental protection and the realization of fundamental human rights." },
+    { theme: "Human Rights", text: "Discuss the extent to which the rights of indigenous peoples are compatible with the sovereign interests of the state." },
+
+    // --- DEVELOPMENT ---
+    { theme: "Development", text: "Evaluate the claim that economic growth is the most important factor in achieving sustainable development." },
+    { theme: "Development", text: "Examine the claim that development is best achieved through a top-down approach." },
+    { theme: "Development", text: "Discuss the claim that development is as much about people as it is about economies." },
+    { theme: "Development", text: "Discuss the view that environmental sustainability is often sacrificed for the sake of economic development." },
+    { theme: "Development", text: "Evaluate the claim that the United Nations Sustainable Development Goals (SDGs) are more aspirational than achievable." },
+    { theme: "Development", text: "To what extent does foreign aid perpetuate dependency rather than promoting genuine development in recipient states?" },
+    { theme: "Development", text: "Examine the role of international financial institutions (World Bank, IMF) in promoting equitable economic development." },
+    { theme: "Development", text: "Evaluate the claim that gender equality is the most significant indicator of a country's development progress." },
+    { theme: "Development", text: "Discuss the extent to which corruption acts as the primary barrier to development in the Global South." },
+    { theme: "Development", text: "Examine the view that globalization has increased the gap between developed and developing nations." },
+
+    // --- PEACE ---
+    { theme: "Peace", text: "Discuss the view that peace can only be achieved through a balance of power between states." },
+    { theme: "Peace", text: "Discuss why non-violent protest is sometimes able to achieve success against even the most powerful opponents." },
+    { theme: "Peace", text: "Structural violence is increasingly important to achieving lasting peace. To what extent do you agree?" },
+    { theme: "Peace", text: "Examine the claim that internal conflicts are more difficult to resolve than interstate conflicts in the 21st century." },
+    { theme: "Peace", text: "Evaluate the effectiveness of UN peacekeeping operations in preventing the recurrence of conflict in post-conflict states." },
+    { theme: "Peace", text: "To what extent has the rise of cyber warfare necessitated a fundamental change in the concept of security?" },
+    { theme: "Peace", text: "Examine the claim that nuclear weapons are a stabilizing force in international relations due to deterrence." },
+    { theme: "Peace", text: "Discuss the view that peace is more than the absence of war, requiring the presence of justice and equality." },
+    { theme: "Peace", text: "To what extent do regional organizations (e.g., NATO, AU, ASEAN) strengthen state security in a multipolar world?" },
+    { theme: "Peace", text: "Evaluate the claim that the arms trade is the single greatest obstacle to achieving lasting peace." }
+];
+
+// --- IR Theories Logic ---
+const IR_THEORIES = {
+    Realism: {
+        color: '#ff4d4d',
+        description: 'Focuses on power, national interest, and the anarchic nature of the international system.',
+        getInterpretation: (c) => {
+            if (c.theoryInsights?.Realism) return c.theoryInsights.Realism;
+            const primaryTheme = c.theme.split('+')[0].trim();
+            const stretch = c.theme.includes('Sovereignty') || c.theme.includes('Power') || c.theme.includes('Security')
+                ? `Evaluating "${c.name}" through a realist lens is highly appropriate given its focus on ${primaryTheme}. `
+                : `While "${c.name}" is primarily about ${primaryTheme}, a realist analysis exposes a deeper power struggle. `;
+            return `${stretch}In this framework, ${c.fiveWH?.who.split('.')[0]} act as rational agents navigating a zero-sum environment. The "how" (${c.fiveWH?.how.substring(0, 80)}...) demonstrates that even in non-conflict cases, power remains the ultimate currency for ensuring state interests in an anarchic system.`;
+        }
+    },
+    Liberalism: {
+        color: '#3399ff',
+        description: 'Emphasizes international cooperation, institutions, and the importance of democracy and human rights.',
+        getInterpretation: (c) => {
+            if (c.theoryInsights?.Liberalism) return c.theoryInsights.Liberalism;
+            const players = c.fiveWH?.who.split(',')[0].split('.')[0];
+            return `A liberal analysis of "${c.name}" identifies the importance of norms over raw power. Instead of zero-sum competition, ${players} engage in ${c.fiveWH?.how.toLowerCase().substring(0, 90)}. This suggests that institutional frameworks and the rule of law are actively constraining unilateral behavior, creating a predictable environment for mutual gains despite the competitive theme of ${c.theme}.`;
+        }
+    },
+    Structuralism: {
+        color: '#9966ff',
+        description: 'Examines how the global Core-Periphery hierarchy constrains state behavior and development.',
+        getInterpretation: (c) => {
+            if (c.theoryInsights?.Structuralism) return c.theoryInsights.Structuralism;
+            const stretch = c.theme.includes('Development') || c.theme.includes('Equality')
+                ? `Structuralism is the primary lens for "${c.name}," as it centers on global hierarchy. `
+                : `Applying Structuralism to this case exposes the underlying Core-Periphery hierarchy that often stays hidden behind ${c.theme.toLowerCase()} debates. `;
+            return `${stretch}"${c.name}" serves as a microcosm for the global economic structure. The "how" (${c.fiveWH?.how.substring(0, 70)}...) shows how the Core nations set the parameters of interaction, ensuring that ${c.fiveWH?.who.split('Secondary')[0].substring(0, 50)} remain structurally aligned with established power interests.`;
+        }
+    },
+    Marxism: {
+        color: '#cc0000',
+        description: 'Analyzes events through class struggle, exploitation, and the contradictions of global capitalism.',
+        getInterpretation: (c) => {
+            if (c.theoryInsights?.Marxism) return c.theoryInsights.Marxism;
+            const stretch = c.theme.includes('Economy') || c.theme.includes('Development')
+                ? `Evaluating the material interests in "${c.name}" through a Marxist lens is essential to understanding the underlying economic drivers. `
+                : `While "${c.name}" appears political or social, a Marxist critique reveals how the interests of capital still dictate the boundaries of ${c.theme.toLowerCase()}. `;
+            return `${stretch}Marxist theory argues that ${c.fiveWH?.who.split(',')[0]} are essentially serving the quest for capital accumulation. This case highlights how "how" (${c.fiveWH?.how.substring(0, 60)}...) is fundamentally about property, profit, or resources, rather than the stated ideological or humanitarian goals.`;
+        }
+    },
+    Constructivism: {
+        color: '#00cc99',
+        description: 'Argues that global politics is shaped by socially constructed ideas, identities, and norms.',
+        getInterpretation: (c) => {
+            if (c.theoryInsights?.Constructivism) return c.theoryInsights.Constructivism;
+            return `For a constructivist, "${c.name}" is not just an event, but a performance of identity. By framing the issue through ${c.fiveWH?.how.toLowerCase().substring(0, 70)}, the actors are actively constructing what is considered 'legitimate' or 'necessary' in global politics. Interests aren't fixed; they are shaped by the specific narrative ${c.fiveWH?.who.split('.')[0]} chooses to project in this case.`;
+        }
+    },
+    Feminism: {
+        color: '#ff66cc',
+        description: 'Examines how gender hierarchies shape global power dynamics and whose voices are excluded.',
+        getInterpretation: (c) => {
+            if (c.theoryInsights?.Feminism) return c.theoryInsights.Feminism;
+            const hasWomen = c.fiveWH?.who.toLowerCase().includes('women') || c.fiveWH?.what.toLowerCase().includes('women');
+            const stretch = hasWomen
+                ? `A feminist lens is critical here to understand the gendered impact of ${c.theme.toLowerCase()}. `
+                : `Feminist theory might seem distant from "${c.name}," but its application reveals the exclusionary nature of the process. `;
+            return `${stretch}It asks: where is the 'human security' for marginalized groups in ${c.fiveWH?.where}? By prioritizing the "hard" security/economic needs of ${c.fiveWH?.who.substring(0, 40)}, the system inherently silences those whose lives are most impacted by the "how" (${c.fiveWH?.how.substring(0, 50)}...).`;
+        }
+    },
+    Postcolonialism: {
+        color: '#ff9933',
+        description: 'Critically analyzes colonial legacies and how Western-centric power dynamics persist today.',
+        getInterpretation: (c) => {
+            if (c.theoryInsights?.Postcolonialism) return c.theoryInsights.Postcolonialism;
+            const isWest = c.fiveWH?.who.toLowerCase().includes('west') || c.fiveWH?.who.toLowerCase().includes('usa') || c.fiveWH?.who.toLowerCase().includes('eu');
+            const stretch = isWest
+                ? `This case highlights the persistence of Western-centric gaze even in modern ${c.theme.toLowerCase()} contexts. `
+                : `While not explicitly about colonizer-colonized relations, evaluating "${c.name}" through this lens reveals enduring hierarchies. `;
+            return `${stretch}The "where" (${c.fiveWH?.where}) is often treated as a resource to be managed or a problem to be solved by Global North actors. This reinforces a power imbalance where ${c.fiveWH?.who.split('Secondary')[0].substring(0, 50)} are framed through a Eurocentric perspective that ignores local agency and indigenous knowledge.`;
+        }
+    }
+};
 
 // --- Components ---
 
@@ -108,6 +443,109 @@ const PolicyEngine = () => {
 };
 
 // --- Tab 2: Writing Studio ---
+const CaseLibrary = () => {
+    const [expanded, setExpanded] = useState(null);
+    const [selectedTheory, setSelectedTheory] = useState('Realism');
+    const cases = GLOBAL_CASES;
+    const fiveWHLabels = [
+        { key: 'who', label: 'Who', icon: '👤' },
+        { key: 'what', label: 'What', icon: '📋' },
+        { key: 'where', label: 'Where', icon: '📍' },
+        { key: 'when', label: 'When', icon: '🕐' },
+        { key: 'why', label: 'Why', icon: '❓' },
+        { key: 'how', label: 'How', icon: '⚙️' }
+    ];
+    return (
+        <div className="space-y-4">
+            <h3 className="text-lg font-bold text-emerald-400">Case Library: The Intersection Series</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+                {cases.map((c, i) => (
+                    <div key={i} className={`p-4 bg-white/5 border rounded-lg transition-all cursor-pointer ${expanded === i ? 'border-emerald-500/50 md:col-span-2 bg-white/[0.07]' : 'border-white/10 hover:border-emerald-500/30'}`} onClick={() => setExpanded(expanded === i ? null : i)}>
+                        <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-bold text-white leading-tight">{c.name}</h4>
+                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                                <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded uppercase tracking-tighter">{c.theme}</span>
+                                <span className="text-gray-500 text-xs">{expanded === i ? '▲' : '▼'}</span>
+                            </div>
+                        </div>
+                        {expanded !== i && (
+                            <ul className="text-xs text-gray-400 list-disc list-inside space-y-1">
+                                {c.facts.map((f, j) => <li key={j}>{f}</li>)}
+                            </ul>
+                        )}
+                        {expanded === i && c.fiveWH && (
+                            <div className="mt-4 space-y-4" onClick={e => e.stopPropagation()}>
+                                {/* Theoretical Analysis Overlay */}
+                                <div className="p-4 bg-glopo-dark/50 border border-white/5 rounded-xl">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h5 className="text-[9px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
+                                            <Zap size={10} className="text-blue-500" /> Theoretical Analysis (IR Lenses)
+                                        </h5>
+                                        <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+                                            {Object.keys(IR_THEORIES).map(theory => (
+                                                <button
+                                                    key={theory}
+                                                    onClick={() => setSelectedTheory(theory)}
+                                                    className={`px-2 py-1 rounded text-[9px] font-bold transition-all border whitespace-nowrap ${selectedTheory === theory ? 'bg-white/10 border-white/20 text-white shadow-xl' : 'bg-transparent border-transparent text-gray-600 hover:text-gray-400'}`}
+                                                    style={{ borderLeftColor: selectedTheory === theory ? IR_THEORIES[theory].color : 'transparent', borderLeftWidth: selectedTheory === theory ? '3px' : '1px' }}
+                                                >
+                                                    {theory}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="animate-in fade-in slide-in-from-left-4 duration-500">
+                                        <p className="text-[11px] leading-relaxed text-gray-300">
+                                            <span className="font-black mr-2 uppercase tracking-tighter" style={{ color: IR_THEORIES[selectedTheory].color }}>{selectedTheory}:</span>
+                                            {IR_THEORIES[selectedTheory].getInterpretation(c)}
+                                        </p>
+                                        <p className="text-[9px] text-gray-500 mt-2 italic font-medium">{IR_THEORIES[selectedTheory].description}</p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 flex flex-col md:flex-row gap-4">
+                                    <div className="flex-1 grid grid-cols-2 gap-3">
+                                        {fiveWHLabels.map(({ key, label, icon }) => (
+                                            <div key={key} className="p-3 bg-white/5 border border-white/10 rounded-lg">
+                                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">{icon} {label}</p>
+                                                <p className="text-xs text-gray-300 leading-relaxed">{c.fiveWH[key]}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="md:w-48 p-4 bg-blue-900/20 border border-blue-500/20 rounded-lg shrink-0">
+                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">IB Concept Linkage</p>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <p className="text-[9px] text-gray-500 uppercase font-bold mb-1">Core Concepts</p>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {c.ibLinkage.core.map((t, j) => <span key={j} className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">{t}</span>)}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] text-gray-500 uppercase font-bold mb-1">Challenges</p>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {c.ibLinkage.challenge.map((t, j) => <span key={j} className="text-[10px] bg-red-500/20 text-red-300 px-2 py-0.5 rounded">{t}</span>)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {expanded === i && !c.fiveWH && (
+                            <div className="mt-4 p-4 bg-white/5 border border-dashed border-white/20 rounded-lg text-center" onClick={e => e.stopPropagation()}>
+                                <p className="text-xs text-gray-500 italic">5Ws + H Analysis coming soon for this case study.</p>
+                                <ul className="text-xs text-gray-400 list-disc list-inside space-y-1 mt-3 text-left">
+                                    {c.facts.map((f, j) => <li key={j}>{f}</li>)}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 const WritingStudio = () => {
     const [subTab, setSubTab] = useState('bank');
 
@@ -115,28 +553,15 @@ const WritingStudio = () => {
 
     const QuestionBank = () => {
         const [filter, setFilter] = useState('All');
-        const questions = [
-            { year: "2024", theme: "Human Rights", text: "Effective enforcement of Human Rights undermines state sovereignty. To what extent do you agree?" },
-            { year: "2024", theme: "Power", text: "Transnational corporations have more power than most states in the 21st century. Discuss." },
-            { year: "2023", theme: "Human Rights", text: "Discuss the extent to which cultural relativism can be used to justify different concepts of human rights." },
-            { year: "2023", theme: "Development", text: "Evaluate the claim that economic growth is the most important factor in achieving sustainable development." },
-            { year: "2022", theme: "Power", text: "Examine the claim that increased interactions and interconnectedness have fundamentally changed the nature of sovereignty." },
-            { year: "2022", theme: "Peace", text: "Discuss the view that peace can only be achieved through a balance of power between states." },
-            { year: "2021", theme: "Power", text: "Evaluate the claim that sovereign states become less powerful when they join IGOs." },
-            { year: "2021", theme: "Development", text: "Examine the claim that development is best achieved through a top-down approach." },
-            { year: "2020", theme: "Peace", text: "Discuss why non-violent protest is sometimes able to achieve success against even the most powerful opponents." },
-            { year: "2019", theme: "Peace", text: "Structural violence is increasingly important to achieving lasting peace. To what extent do you agree?" },
-            { year: "2018", theme: "Development", text: "Discuss the claim that development is as much about people as it is about economies." },
-            { year: "2025 (Spec)", theme: "Power", text: "To what extent is the 'rise of the rest' fundamentally challenging the liberal international order?" },
-            { year: "2025 (Spec)", theme: "Human Rights", text: "Evaluate the claim that the digital divide is the most significant barrier to the realization of human rights today." },
-            { year: "2024", theme: "Development", text: "Discuss the view that environmental sustainability is often sacrificed for the sake of economic development." },
-            { year: "2024", theme: "Peace", text: "Examine the claim that internal conflicts are more difficult to resolve than interstate conflicts in the 21st century." }
-        ];
+        const questions = GLOBAL_QUESTIONS;
 
         const filtered = filter === 'All' ? questions : questions.filter(q => q.theme === filter);
 
         return (
             <div className="space-y-4">
+                <div className="mb-4 p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-[10px] text-emerald-300 italic">
+                    Note: Original mock simulation by Project Lead (IB Global Politics).
+                </div>
                 <div className="flex justify-between items-center flex-wrap gap-2">
                     <h3 className="text-lg font-bold text-emerald-400">Paper 2 Question Bank</h3>
                     <div className="flex gap-2 text-[10px]">
@@ -148,8 +573,7 @@ const WritingStudio = () => {
                 <div className="grid gap-3">
                     {filtered.map((q, i) => (
                         <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-lg hover:border-emerald-500/50 transition-colors group">
-                            <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-bold text-emerald-500/70 uppercase">May {q.year}</span>
+                            <div className="flex justify-end items-start mb-1">
                                 <span className="text-[10px] bg-white/10 text-gray-400 px-1.5 py-0.5 rounded uppercase">{q.theme}</span>
                             </div>
                             <p className="text-gray-200 group-hover:text-white text-sm">"{q.text}"</p>
@@ -368,7 +792,7 @@ const WritingStudio = () => {
 
         return (
             <div className="space-y-4">
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center mb-6 gap-4">
                     <h3 className="text-lg font-bold text-emerald-400">Golden Thread Intro Builder</h3>
                     <span className="text-xs text-gray-500">Step {step} of 2</span>
                 </div>
@@ -424,38 +848,6 @@ const WritingStudio = () => {
         );
     };
 
-    const CaseLibrary = () => {
-        const cases = [
-            { name: "G20 & Global South", theme: "Power + Development", facts: ["India's presidency focus", "AU permanent membership", "Debt restructuring tensions."] },
-            { name: "Israel-Palestine", theme: "Identity + Security", facts: ["Relational identity conflict", "Security vs Human Rights", "Legitimacy of non-state actors."] },
-            { name: "Belt and Road Initiative", theme: "Power + Interdependence", facts: ["Sovereignty vs Debt", "Soft power expansion", "Infrastructure-led development."] },
-            { name: "WTO & Green Subsidies", theme: "Trade + Sustainability", facts: ["US Inflation Reduction Act", "EU-China trade tensions", "Environment vs Free Trade."] },
-            { name: "Meta/EU Big Tech", theme: "Sovereignty + Power", facts: ["GDPR as digital sovereignty", "Data privacy as HR", "Platform power vs State control."] },
-            { name: "Nigeria & Boko Haram", theme: "Development + Security", facts: ["Structural violence roots", "Underdevelopment fuels insurgency", "Military vs Social intervention."] },
-            { name: "COP28 & Oil Interests", theme: "Interdependence + Sustainability", facts: ["Transition away from fuels", "Global stocktake", "Environment vs Economy."] },
-            { name: "NATO's 'Arctic Sentry'", theme: "Security + Environment", facts: ["Melting ice strategic shifts", "Russian High North expansion", "Climate-militarization."] },
-            { name: "Myanmar's Elections", theme: "Legitimacy + Coercive Power", facts: ["Fraudulent junta polls", "Rule by force vs rule by law", "Civilian resistance movements."] },
-            { name: "Türkiye's Autonomy", theme: "Identity + Security", facts: ["Strategic balancing (West vs BRICS)", "Middle power diplomacy", "NATO-Russia relations."] }
-        ];
-        return (
-            <div className="space-y-4">
-                <h3 className="text-lg font-bold text-emerald-400">Case Library: The Intersection Series</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                    {cases.map((c, i) => (
-                        <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-lg hover:border-emerald-500/30 transition-all">
-                            <div className="flex justify-between items-start mb-2">
-                                <h4 className="font-bold text-white leading-tight">{c.name}</h4>
-                                <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded uppercase tracking-tighter shrink-0 ml-2">{c.theme}</span>
-                            </div>
-                            <ul className="text-xs text-gray-400 list-disc list-inside space-y-1">
-                                {c.facts.map((f, j) => <li key={j}>{f}</li>)}
-                            </ul>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    };
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -469,7 +861,6 @@ const WritingStudio = () => {
                     { id: 'debate', label: 'Debate Lab', icon: MessageSquare },
                     { id: 'intro', label: 'Intro Builder', icon: Zap },
                     { id: 'peel', label: 'PEEL Lab', icon: PenTool },
-                    { id: 'cases', label: 'Case Library', icon: Shield }
                 ].map(b => (
                     <button
                         key={b.id}
@@ -486,7 +877,6 @@ const WritingStudio = () => {
                 {subTab === 'debate' && <DebateLab />}
                 {subTab === 'intro' && <IntroWizard />}
                 {subTab === 'peel' && <PeelLab />}
-                {subTab === 'cases' && <CaseLibrary />}
             </Card>
         </div>
     );
@@ -760,195 +1150,643 @@ const WarRoom = () => {
     );
 };
 
-// --- Tab 5: Test Prep ---
-const TestPrep = () => {
+// --- Helper for hover concepts & tables ---
+const SourceText = ({ text }) => {
+    if (!text) return null;
+
+    // Auto-wrap glossary terms
+    const glossaryTerms = ["Power", "Sovereignty", "Legitimacy", "Interdependence", "Human Rights", "Justice", "Liberty", "Equality", "Development", "Sustainability", "Peace", "Conflict", "Violence", "Non-violence", "Globalization", "Borders"];
+
+    const wrapTerms = (content) => {
+        let result = content;
+        glossaryTerms.forEach(term => {
+            const regex = new RegExp(`\\b(${term})\\b`, 'gi');
+            result = result.replace(regex, `<span class="glossary-term font-bold text-cyan-400 cursor-help border-b border-cyan-500/30">$1</span>`);
+        });
+        return result;
+    };
+
+    // Table renderer logic
+    if (text.includes('|') && text.includes('---')) {
+        const lines = text.trim().split('\n');
+        const tableLines = lines.filter(l => l.trim().startsWith('|'));
+        if (tableLines.length > 2) {
+            const header = tableLines[0].split('|').filter(c => c.trim() !== '').map(c => c.trim());
+            const rows = tableLines.slice(2).map(row =>
+                row.split('|').filter(c => c.trim() !== '').map(c => c.trim())
+            );
+
+            return (
+                <div className="overflow-x-auto my-4 rounded-lg border border-white/10">
+                    <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr className="bg-glopo-blue/20 text-blue-300 font-bold">
+                                {header.map((h, i) => (
+                                    <th key={i} className="p-3 border-b border-white/10" dangerouslySetInnerHTML={{ __html: wrapTerms(h) }} />
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.map((row, i) => (
+                                <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    {row.map((cell, j) => (
+                                        <td key={j} className="p-3 text-gray-300" dangerouslySetInnerHTML={{ __html: wrapTerms(cell) }} />
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            );
+        }
+    }
+
+    return <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-line" dangerouslySetInnerHTML={{ __html: wrapTerms(text) }} />;
+};
+
+// --- Mock Exam Zone Components (Extracted for Stability) ---
+const TimerBar = ({ seconds, running, limit, start, toggle, reset, color, formatTime }) => (
+    <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl mb-6">
+        <div className={`text-2xl font-black font-mono tabular-nums ${color}`}>
+            {seconds > 0 ? formatTime(seconds) : '--:--'}
+        </div>
+        <div className="flex-1 text-xs text-gray-500">Practice Timer</div>
+        <div className="flex gap-2">
+            {seconds === 0 ? (
+                <button onClick={() => start(90)} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors">Start</button>
+            ) : (
+                <>
+                    <button onClick={toggle} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${running ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
+                        {running ? 'Pause' : 'Resume'}
+                    </button>
+                    <button onClick={reset} className="px-3 py-1.5 bg-white/10 text-gray-400 text-xs font-bold rounded-lg hover:bg-white/20 transition-colors">Reset</button>
+                </>
+            )}
+        </div>
+    </div>
+);
+
+const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer, analysis, analyzeDraft, requestDeepAnalysis, activeLab, setActiveLab }) => {
+    const key = `${paperKey}-${selectedExamIndex}-${q.num}`;
+    // Use LOCAL state for the textarea so typing doesn't trigger parent re-renders (which steal focus)
+    const [localAnswer, setLocalAnswer] = React.useState(userAnswers[key] || '');
+    const feedback = analysis[key];
+    const isActive = activeLab?.paper === paperKey && activeLab?.qNum === q.num;
+
+    // Sync parent → local when the lab first opens (e.g. restoring from localStorage)
+    React.useEffect(() => {
+        setLocalAnswer(userAnswers[key] || '');
+    }, [key, isActive]); // intentionally limited deps
+
+    const handleChange = (e) => {
+        setLocalAnswer(e.target.value);
+    };
+
+    // Sync local → parent on blur so auto-save still works
+    const handleBlur = () => {
+        updateAnswer(key, localAnswer);
+    };
+
+    const wordCount = localAnswer.trim().length > 0
+        ? localAnswer.trim().split(/\s+/).filter(x => x.length > 0).length
+        : 0;
+
+    return (
+        <div className="mt-4 border-t border-white/10 pt-4">
+            <button
+                onClick={() => setActiveLab(isActive ? null : { paper: paperKey, qNum: q.num })}
+                className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mb-3 px-3 py-1.5 rounded-lg border transition-all ${isActive ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300'}`}
+            >
+                <PenTool size={12} /> {isActive ? 'Close Practice Lab' : 'Open Practice Lab'}
+            </button>
+
+            {isActive && (
+                <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                    <div className="relative">
+                        <textarea
+                            value={localAnswer}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            placeholder="Type your response here... (Auto-saves to browser memory)"
+                            className="w-full bg-glopo-dark border border-white/20 rounded-xl p-4 text-xs text-gray-300 h-48 focus:border-cyan-500 outline-none transition-all placeholder:text-gray-600 resize-y"
+                        />
+                        <div className="absolute bottom-2 right-4 text-[9px] text-gray-500 font-bold uppercase tracking-tighter pointer-events-none select-none">
+                            {wordCount > 0 ? `${wordCount} Words` : 'Ready to write'}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={() => { updateAnswer(key, localAnswer); analyzeDraft(paperKey, q, localAnswer); }}
+                            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-[10px] font-black rounded-lg transition-all"
+                        >
+                            QUICK LOCAL ANALYSIS
+                        </button>
+                        {localAnswer.length > 20 && (
+                            <button
+                                onClick={() => { updateAnswer(key, localAnswer); requestDeepAnalysis(paperKey, q, localAnswer); }}
+                                className={`px-4 py-2 text-[10px] font-black rounded-lg transition-all flex items-center gap-2 ${feedback?.isDeep ? 'bg-purple-600 text-white' : 'bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30'}`}
+                            >
+                                <Zap size={10} /> {feedback?.isDeep ? 'DEEP CRITIQUE ACTIVE' : 'REQUEST DEEP CRITIQUE'}
+                            </button>
+                        )}
+                        {localAnswer.length > 0 && (
+                            <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-1">
+                                <Shield size={10} /> Auto-saved
+                            </span>
+                        )}
+                    </div>
+
+                    {feedback && (
+                        <div className={`p-4 rounded-xl border transition-all ${feedback.isDeep ? 'bg-purple-500/5 border-purple-500/30' : 'bg-cyan-500/5 border-cyan-500/20'}`}>
+                            <h5 className={`text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-2 ${feedback.isDeep ? 'text-purple-400' : (feedback.relevanceAlert ? 'text-amber-500' : 'text-cyan-400')}`}>
+                                <Zap size={10} /> {feedback.isDeep ? 'Agentic Health Scan' : (feedback.relevanceAlert ? 'Relevance Check Failed' : 'Technical Draft Scan')}
+                            </h5>
+                            <p className="text-[9px] text-gray-500 mb-3 italic">
+                                {feedback.isDeep ? 'Bespoke structural and conceptual audit. Switch to Antigravity for qualitative nuance.' : 'Note: This scanner checks for structural health and conceptual presence, not semantic argument quality.'}
+                            </p>
+
+                            <div className="space-y-4">
+                                <ul className="space-y-2">
+                                    {feedback.tips.map((tip, i) => (
+                                        <li key={i} className="text-[11px] text-gray-400 flex gap-2">
+                                            <span className={`${feedback.isDeep ? 'text-purple-500' : (tip.includes('⚠️') ? 'text-amber-500' : 'text-cyan-500')} shrink-0`}>•</span> {tip}
+                                        </li>
+                                    ))}
+                                </ul>
+
+                                {feedback.isDeep && (
+                                    <div className="mt-4 pt-4 border-t border-purple-500/20">
+                                        {feedback.deepLoading ? (
+                                            <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                                                <RefreshCw className="animate-spin text-purple-400" size={24} />
+                                                <div className="text-[10px] text-purple-300 font-black uppercase tracking-widest animate-pulse">Consulting Gemini 2.5 Flash...</div>
+                                                <p className="text-[9px] text-gray-500 italic max-w-xs text-center">Analyzing 1M context tokens for syllabus alignment. This usually takes 5-10 seconds.</p>
+                                            </div>
+                                        ) : feedback.deepError ? (
+                                            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                                                <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">⚠ AI Critique Error</p>
+                                                <p className="text-[11px] text-red-300">{feedback.deepError}</p>
+                                            </div>
+                                        ) : feedback.liveAnalysis ? (
+                                            <div className="space-y-4 animate-in fade-in duration-500">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="h-px flex-1 bg-purple-500/20" />
+                                                    <div className="text-[9px] font-black text-purple-400 uppercase tracking-tighter">AI Examiner Feedback</div>
+                                                    <div className="h-px flex-1 bg-purple-500/20" />
+                                                </div>
+                                                <div className="text-[11px] text-gray-300 leading-relaxed whitespace-pre-wrap bg-purple-500/5 p-4 rounded-xl border border-purple-500/10 shadow-inner overflow-hidden">
+                                                    {feedback.liveAnalysis}
+                                                </div>
+                                            </div>
+                                        ) : feedback.critique && (
+                                            <div className="grid gap-3 md:grid-cols-2 animate-in slide-in-from-bottom-2 duration-300">
+                                                <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                                    <h6 className="text-[9px] font-bold text-purple-300 uppercase mb-1">Prompt Alignment</h6>
+                                                    <p className="text-[10px] text-gray-400 leading-relaxed">{feedback.critique.relevance}</p>
+                                                </div>
+                                                <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                                    <h6 className="text-[9px] font-bold text-purple-300 uppercase mb-1">Conceptual Health</h6>
+                                                    <p className="text-[10px] text-gray-400 leading-relaxed">{feedback.critique.concepts}</p>
+                                                </div>
+                                                <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                                    <h6 className="text-[9px] font-bold text-purple-300 uppercase mb-1">Evidence Quality</h6>
+                                                    <p className="text-[10px] text-gray-400 leading-relaxed">{feedback.critique.evidence}</p>
+                                                </div>
+                                                <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                                                    <h6 className="text-[9px] font-bold text-purple-400 uppercase mb-1">Technical Rigor</h6>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[10px] text-gray-400">Structural Health:</span>
+                                                        <span className="text-xs font-black text-purple-400">{feedback.critique.health}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const ExamSelector = ({ exams, paperKey, selectedIndex, onChange, color }) => (
+    <div className="flex items-center gap-3 mb-4 p-3 bg-white/5 border border-white/10 rounded-xl">
+        <FileText size={16} className={`text-${color}-400`} />
+        <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Practice Mock Exam:</span>
+        <select
+            value={selectedIndex}
+            onChange={(e) => onChange(parseInt(e.target.value))}
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-blue-500/50 transition-colors"
+        >
+            {exams.map((exam, i) => (
+                <option key={exam.id} value={i} style={{ background: '#1a1a2e', color: '#fff' }}>
+                    {i + 1}. {exam.title}
+                </option>
+            ))}
+        </select>
+    </div>
+);
+
+const MockExamZone = () => {
     const [subTab, setSubTab] = useState('paper1');
+    const [timerSeconds, setTimerSeconds] = useState(0);
+    const [timerRunning, setTimerRunning] = useState(false);
+    const [timerLimit, setTimerLimit] = useState(0);
+    const [selectedExam, setSelectedExam] = useState({ paper1: 0, paper2: 0, paper3: 0 });
+    const [expandedSources, setExpandedSources] = useState([0]); // Default first source open
 
-    const Paper1 = () => (
-        <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
-                <h3 className="text-xl font-bold text-blue-400 text-glow">Paper 1: Stimulus-Based Paper</h3>
-                <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-xs font-bold uppercase tracking-tighter">
-                    Assessment: 1h 15m | 24 Marks
-                </div>
-            </div>
+    // Practice Lab State
+    const [userAnswers, setUserAnswers] = useState({});
+    const [activeLab, setActiveLab] = useState(null); // { paper, qNum }
+    const [analysis, setAnalysis] = useState({}); // { paper-qNum: feedback }
 
-            <div className="grid gap-6">
-                {[
+    // Persistence Logic
+    useEffect(() => {
+        const saved = localStorage.getItem('glopo-practice-lab');
+        if (saved) setUserAnswers(JSON.parse(saved));
+    }, []);
+
+    useEffect(() => {
+        if (Object.keys(userAnswers).length > 0) {
+            localStorage.setItem('glopo-practice-lab', JSON.stringify(userAnswers));
+        }
+    }, [userAnswers]);
+
+    const updateAnswer = (key, val) => {
+        setUserAnswers(prev => ({ ...prev, [key]: val }));
+    };
+
+    // Toggle Source Visibility (Multi-Expand capable)
+    const toggleSource = (index) => {
+        setExpandedSources(prev =>
+            prev.includes(index)
+                ? prev.filter(i => i !== index)
+                : [...prev, index]
+        );
+    };
+
+    const requestDeepAnalysis = async (paperKey, q, text) => {
+        const key = `${paperKey}-${selectedExam[paperKey]}-${q.num}`;
+
+        // 1. Trigger local scan first for immediate feedback
+        analyzeDraft(paperKey, q, text, true);
+
+        // 2. Set loading state for deep analysis
+        setAnalysis(prev => ({
+            ...prev,
+            [key]: { ...prev[key], isDeep: true, deepLoading: true }
+        }));
+
+        const systemInstruction = `You are an IB Global Politics Senior Examiner for the 2026 syllabus. 
+            Your goal is to provide constructive, pedagogically sound, and strictly unbiased feedback. 
+            Maintain a neutral, academic tone. Avoid taking ideological sides; instead, evaluate the student's ability to synthesize competing perspectives (e.g., Realism vs. Liberalism). 
+            Always identify how the 4 core concepts (Power, Sovereignty, Legitimacy, Interdependence) are applied.`;
+
+        const prompt = `${systemInstruction}
+
+Question: ${q.text}
+Marks Available: ${q.marks || 15}
+
+Student Response:
+${text}
+
+Please provide a rigorous assessment. 
+
+REQUIRED SECTIONS:
+## Glow
+[Key strengths in knowledge, analysis, and evaluation.]
+
+## Grow
+[Specific actionable areas for improvement based on the 2026 IB Rubric.]
+
+## Alternative Perspectives
+[Provide 2-3 alternative ways of responding to this prompt. Suggest different theoretical lenses (e.g., "A feminist critique would focus on...") or different case studies. Keep this unbiased and constructive.]
+
+## Synthesis Guidance
+[A one-sentence 'golden tip' on how to bridge these perspectives for a higher mark band.]`;
+
+        let analysisText = null;
+
+        // Strategy 1: Try Netlify function (works on Netlify-hosted site and netlify dev)
+        try {
+            const response = await fetch("/.netlify/functions/analyze-essay", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ essayText: text, questionText: q.text, marks: q.marks || 15 }),
+                signal: AbortSignal.timeout(5000) // Give it 5s to respond
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.analysis) analysisText = data.analysis;
+            }
+        } catch (e) {
+            console.log("Netlify function not available, falling back to direct API call.");
+        }
+
+        // Strategy 2: Direct Gemini API call (works on localhost:3000 with REACT_APP_ key)
+        if (!analysisText) {
+            const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+            console.log("🔑 Gemini API key present:", !!apiKey, "| Length:", apiKey?.length);
+            if (!apiKey) {
+                setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], deepLoading: false, deepError: "API key not configured. Restart npm start after adding REACT_APP_GEMINI_API_KEY to .env" } }));
+                return;
+            }
+            try {
+                const geminiResponse = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
                     {
-                        q: "Question 1",
-                        marks: "3 Marks",
-                        goal: "Identify three distinct points from Source A.",
-                        strategy: "List three separate, numbered points directly from the text. Use brief, direct quotes or clear paraphrasing. Do not over-explain.",
-                        tip: "Quick wins—aim to finish this in under 5 minutes."
-                    },
-                    {
-                        q: "Question 2",
-                        marks: "4 Marks",
-                        goal: "Explain one claim from Source B.",
-                        strategy: "Identify the claim (1 mark), provide supporting evidence from the source (1 mark), and use own knowledge to explain its broader context or limitation (2 marks).",
-                        tip: "Success follows the 'S-E-K-L' pattern: Source, Evidence, Knowledge, Link."
-                    },
-                    {
-                        q: "Question 3",
-                        marks: "8 Marks",
-                        goal: "Compare and contrast two sources.",
-                        strategy: "Identify 3 thematic points. Aim for at least 1 comparison and 1 contrast. Use connectives like 'conversely' or 'similarly' to link source ideas.",
-                        tip: "Avoid listing Source C then Source D. Group by theme (e.g., 'Both sources agree that sovereignty is...')."
-                    },
-                    {
-                        q: "Question 4",
-                        marks: "10-12 Marks",
-                        goal: "Synthesis Essay using sources & own knowledge.",
-                        strategy: "Formulate a clear thesis. Use at least 3 sources. Balance source evidence with detailed contemporary case studies from your own knowledge.",
-                        tip: "Evaluate the sources themselves. NGO reports may have different biases than government data."
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }]
+                        })
                     }
-                ].map((item, idx) => (
-                    <div key={idx} className="p-4 bg-white/5 border border-white/10 rounded-2xl hover:border-blue-500/30 transition-colors group">
-                        <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-bold text-white group-hover:text-blue-400 transition-colors">{item.q}</h4>
-                            <span className="text-[10px] font-black bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded uppercase">{item.marks}</span>
-                        </div>
-                        <div className="space-y-3">
-                            <div>
-                                <p className="text-[10px] text-gray-500 uppercase font-black mb-1">Goal</p>
-                                <p className="text-xs text-gray-300">{item.goal}</p>
-                            </div>
-                            <div>
-                                <p className="text-[10px] text-gray-500 uppercase font-black mb-1">Strategy</p>
-                                <p className="text-xs text-gray-400 leading-relaxed">{item.strategy}</p>
-                            </div>
-                            <div className="pt-2 border-t border-white/5">
-                                <p className="text-[10px] text-blue-400/70 font-bold italic">💡 Pro Tip: {item.tip}</p>
-                            </div>
-                        </div>
+                );
+
+                if (geminiResponse.status === 429) {
+                    throw new Error("Rate limit reached. Your API key has hit its quota — wait 1 minute and try again, or upgrade your Google AI Studio plan.");
+                }
+                if (!geminiResponse.ok) {
+                    throw new Error(`Gemini API error: ${geminiResponse.status} ${geminiResponse.statusText}`);
+                }
+
+                const geminiData = await geminiResponse.json();
+                console.log("🤖 Gemini raw response:", JSON.stringify(geminiData).slice(0, 500));
+                analysisText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!analysisText) {
+                    const reason = geminiData?.promptFeedback?.blockReason || geminiData?.candidates?.[0]?.finishReason || "Unknown";
+                    throw new Error(`Gemini returned no text. Reason: ${reason}. Check console for full response.`);
+                }
+            } catch (error) {
+                console.error("Direct Gemini API Error:", error);
+                setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], deepLoading: false, deepError: error.message } }));
+                return;
+            }
+        }
+
+        setAnalysis(prev => ({
+            ...prev,
+            [key]: { ...prev[key], isDeep: true, deepLoading: false, liveAnalysis: analysisText }
+        }));
+
+        // Also copy prompt to clipboard as a fallback reference
+        navigator.clipboard.writeText(prompt).catch(() => { });
+    };
+
+    // Feedback Logic - Local Rubric Engine (Now: Technical Draft Scan)
+    const analyzeDraft = (paperKey, q, text, isDeep = false) => {
+        const key = `${paperKey}-${selectedExam[paperKey]}-${q.num}`;
+        let feedback = { score: 'Drafting...', tips: [], isDeep: isDeep };
+
+        if (!text || text.length < 20) {
+            feedback.tips.push("Response is too short. Try to elaborate further.");
+            setAnalysis(prev => ({ ...prev, [key]: feedback }));
+            return;
+        }
+
+        const lowerText = text.toLowerCase();
+
+        // 1. Relevance Guard
+        if (q.coreConcepts) {
+            const overlap = q.coreConcepts.filter(c => lowerText.includes(c.toLowerCase()));
+            const relevanceScore = (overlap.length / q.coreConcepts.length) * 100;
+
+            if (relevanceScore < 20) {
+                feedback.tips.push("⚠️ RELEVANCE WARNING: Your draft does not seem to address the specific core concepts of the question. Check your focus.");
+                feedback.relevanceAlert = true;
+            } else if (relevanceScore > 60) {
+                feedback.tips.push("✅ Strong alignment with prompt-specific terminology.");
+            }
+        }
+
+        // 2. Concept Scanner
+        const conceptsFound = GLOSSARY_TERMS.filter(t => lowerText.includes(t.toLowerCase()));
+        if (conceptsFound.length > 0) {
+            feedback.tips.push(`✅ Solid concept usage: ${conceptsFound.slice(0, 3).join(', ')}.`);
+        } else {
+            feedback.tips.push("❌ Link to core IB concepts (Power, Sovereignty, etc.).");
+        }
+
+        // 3. Case Linker
+        const casesFound = GLOBAL_CASES.filter(c => lowerText.includes(c.name.toLowerCase()));
+        if (casesFound.length > 0) {
+            feedback.tips.push(`✅ Referenced case study: ${casesFound[0].name}.`);
+        } else if (paperKey === 'paper2' || (paperKey === 'paper1' && q.marks >= 8)) {
+            feedback.tips.push("⚠️ Missing specific real-world case studies for supporting evidence.");
+        }
+
+        // 4. Structural Rubric (PEEL / Intro)
+        if (lowerText.length > 100) {
+            if (paperKey === 'paper2' && q.num === 1) {
+                const hasThesis = lowerText.includes("argue") || lowerText.includes("claim") || lowerText.includes("demonstrate") || lowerText.includes("thesis");
+                const hasRoadmap = lowerText.includes("firstly") || lowerText.includes("initially") || lowerText.includes("secondly") || lowerText.includes("finally") || lowerText.includes("explore");
+                if (hasThesis && hasRoadmap) feedback.tips.push("✅ Introduction structure looks strong (Thesis + Roadmap detected).");
+                else if (!hasThesis) feedback.tips.push("⚠️ Introduction: Ensure you have a clear thesis statement (your main claim).");
+                else if (!hasRoadmap) feedback.tips.push("⚠️ Introduction: Add a brief roadmap of the arguments you will explore.");
+            }
+            const sentences = text.split(/[.!?]/).filter(s => s.trim().length > 5);
+            if (sentences.length >= 4) {
+                const hasEvidence = lowerText.includes("for example") || lowerText.includes("case study") || lowerText.includes("specifically") || lowerText.includes("instance");
+                const hasLink = lowerText.includes("consequently") || lowerText.includes("therefore") || lowerText.includes("link") || lowerText.includes("thus") || lowerText.includes("proving");
+                if (hasEvidence && hasLink) feedback.tips.push("✅ Strong PEEL paragraph structure (Evidence and Link detected).");
+                else if (!hasEvidence) feedback.tips.push("⚠️ PEEL: Your paragraphs need specific evidence/examples to support points.");
+                else if (!hasLink) feedback.tips.push("⚠️ PEEL: Remember to explicitly link your analysis back to the question/thesis.");
+            }
+        }
+
+        // 5. Technical Health Score (Simulation)
+        if (isDeep) {
+            feedback.critique = {
+                relevance: feedback.relevanceAlert ? "Potential Irrelevance: Draft lacks question-specific terminology." : "Strong Focus: Response aligns well with the prompt's core concepts.",
+                concepts: conceptsFound.length > 2 ? "High conceptual density. You are successfully synthesizing abstract themes." : "Basic conceptual application. Try connecting concepts to show interdependency.",
+                evidence: casesFound.length > 0 ? `Good use of ${casesFound[0].name}. Ensure you analyze its impact on different levels (local/global).` : "Evidence is currently generic. Refer to specific actors, dates, or outcomes.",
+                structure: lowerText.length > 500 ? "Sophisticated development of ideas across paragraphs." : "Structure is functional but needs more 'Evaluation' (looking at alternative views).",
+                health: Math.min(100, (lowerText.length / 700) * 100 + (conceptsFound.length * 5)).toFixed(0) + "% Structural Health"
+            };
+        }
+
+        setAnalysis(prev => ({ ...prev, [key]: feedback }));
+    };
+
+    useEffect(() => {
+        let interval;
+        if (timerRunning && timerSeconds > 0) {
+            interval = setInterval(() => setTimerSeconds(s => s - 1), 1000);
+        } else if (timerSeconds === 0 && timerRunning) {
+            setTimerRunning(false);
+        }
+        return () => clearInterval(interval);
+    }, [timerRunning, timerSeconds]);
+
+    const startTimer = (minutes) => {
+        setTimerLimit(minutes * 60);
+        setTimerSeconds(minutes * 60);
+        setTimerRunning(true);
+    };
+    const toggleTimer = () => setTimerRunning(!timerRunning);
+    const resetTimer = () => { setTimerRunning(false); setTimerSeconds(timerLimit); };
+
+    const formatTime = (s) => {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+    };
+
+    const timerColor = timerSeconds < 300 && timerRunning ? 'text-red-400' : timerSeconds < 900 && timerRunning ? 'text-amber-400' : 'text-white';
+
+    const LabProps = (paperKey) => ({
+        paperKey,
+        selectedExamIndex: selectedExam[paperKey],
+        userAnswers,
+        updateAnswer,
+        analysis,
+        analyzeDraft,
+        requestDeepAnalysis,
+        activeLab,
+        setActiveLab
+    });
+
+    const Paper1 = () => {
+        const exam = paper1Exams[selectedExam.paper1];
+        return (
+            <div className="space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                    <div>
+                        <h3 className="text-xl font-bold text-blue-400">Paper 1: Source Analysis</h3>
+                        <p className="text-xs text-gray-500 mt-1">Foundational unit: {exam.unit}</p>
                     </div>
-                ))}
-            </div>
-        </div>
-    );
-
-    const Paper2 = () => (
-        <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
-                <h3 className="text-xl font-bold text-emerald-400 text-glow">Paper 2: Extended Response (Essays)</h3>
-                <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-xs font-bold uppercase tracking-tighter">
-                    Assessment: 1h 45m | 50 Marks (2 x 25)
-                </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-                <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                    <h4 className="text-xs font-black text-white mb-3 uppercase tracking-widest text-emerald-400">Essay Response Goals</h4>
-                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-3">
-                        <li>Concept-led analysis (Sovereignty, Power, Legitimacy).</li>
-                        <li>Effective use of relevant, contemporary case studies (last 10 years).</li>
-                        <li>Critical evaluation of different political perspectives (Realist vs Liberal).</li>
-                        <li>Clear, sustained argument that directly answers the prompt.</li>
-                    </ul>
-                </div>
-                <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                    <h4 className="text-xs font-black text-white mb-3 uppercase tracking-widest text-emerald-400">Winning Strategies</h4>
-                    <ul className="text-xs text-gray-400 list-disc list-inside space-y-3">
-                        <li><strong>The 'Golden Thread':</strong> Re-engage with prompt keywords in every single paragraph.</li>
-                        <li><strong>Bifurcation:</strong> For every claim, present a counter-argument to show complex thinking.</li>
-                        <li><strong>Case Study Depth:</strong> Don't just mention a case; use 'PEEL' to prove its relevance.</li>
-                        <li><strong>Evaluation:</strong> Conclude each section by judging which perspective holds more weight.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div className="p-5 bg-emerald-900/10 border border-emerald-500/20 rounded-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-2 opacity-10">
-                    <Zap size={48} className="text-emerald-400" />
-                </div>
-                <h4 className="text-xs font-black text-emerald-400 mb-2 uppercase tracking-widest">Scholar Tip: Level 7 Evaluation</h4>
-                <p className="text-xs text-gray-300 leading-relaxed italic">
-                    "To hit Level 7, your evaluation must go beyond 'some say X, others say Y'. You must explain WHY they differ (e.g., due to different theoretical assumptions) and evaluate the real-world implications of these disagreements."
-                </p>
-            </div>
-        </div>
-    );
-
-    const Paper3 = () => (
-        <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
-                <h3 className="text-xl font-bold text-red-400 text-glow">Paper 3: HL Global Challenges</h3>
-                <div className="px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-red-400 text-xs font-bold uppercase tracking-tighter">
-                    Assessment: 1h 30m | 36 Marks
-                </div>
-            </div>
-
-            <div className="grid gap-6">
-                {[
-                    {
-                        q: "Question 1",
-                        marks: "4 Marks",
-                        goal: "Data/Source Identification and Application.",
-                        strategy: "Identify 2 key trends or facts from the provided data (2 marks). Provide a concrete real-world example that illustrates each point (2 marks).",
-                        tip: "Think of this as: 'Data Point + Real World proof'."
-                    },
-                    {
-                        q: "Question 2a",
-                        marks: "6 Marks",
-                        goal: "Policy Formulation/Case Study Analysis.",
-                        strategy: "Propose a specific, feasible action based on the stimulus. Clearly identify WHICH actor (state, NGO, IGO) should act and HOW.",
-                        tip: "Specificity is key. Instead of 'States should fix it', say 'G20 states should implement X via a treaty'."
-                    },
-                    {
-                        q: "Question 2b",
-                        marks: "6 Marks",
-                        goal: "Policy Evaluation & Limitations.",
-                        strategy: "Identify one major strength and one major limitation of your proposal. Explain why the limitation exists (e.g., lack of enforcement power).",
-                        tip: "Be your own harshest critic. No policy is perfect; identifying the trade-off gets you the points."
-                    },
-                    {
-                        q: "Question 3",
-                        marks: "15 Marks",
-                        goal: "Global Challenge Synthesis Essay.",
-                        strategy: "Synthesize 2 global challenges (e.g., Poverty and Identity) using the provided case study. Use the 'Link and Reconnect' strategy.",
-                        tip: "Use bridge sentences to show how Challenge A directly intensifies Challenge B. This is the synthesis examiners crave."
-                    }
-                ].map((item, idx) => (
-                    <div key={idx} className="p-4 bg-white/5 border border-white/10 rounded-2xl hover:border-red-500/30 transition-colors group">
-                        <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-bold text-white group-hover:text-red-400 transition-colors">{item.q}</h4>
-                            <span className="text-[10px] font-black bg-red-500/20 text-red-400 px-2 py-0.5 rounded uppercase">{item.marks}</span>
-                        </div>
-                        <div className="space-y-3">
-                            <div>
-                                <p className="text-[10px] text-gray-500 uppercase font-black mb-1">Goal</p>
-                                <p className="text-xs text-gray-300">{item.goal}</p>
-                            </div>
-                            <div>
-                                <p className="text-[10px] text-gray-500 uppercase font-black mb-1">Strategy</p>
-                                <p className="text-xs text-gray-400 leading-relaxed">{item.strategy}</p>
-                            </div>
-                            <div className="pt-2 border-t border-white/5">
-                                <p className="text-[10px] text-red-400/70 font-bold italic">💡 Pro Tip: {item.tip}</p>
-                            </div>
-                        </div>
+                    <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-xs font-bold uppercase tracking-tighter">
+                        1h 15m | 25 Marks
                     </div>
-                ))}
+                </div>
+                <TimerBar seconds={timerSeconds} running={timerRunning} limit={timerLimit} start={startTimer} toggle={toggleTimer} reset={resetTimer} color={timerColor} formatTime={formatTime} />
+                <ExamSelector exams={paper1Exams} paperKey="paper1" selectedIndex={selectedExam.paper1} onChange={(v) => setSelectedExam(prev => ({ ...prev, paper1: v }))} color="blue" />
+                <div className="mb-4 p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl text-[10px] text-blue-300 italic">
+                    Note: Original mock simulation.
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-3">
+                        <div className="text-[9px] text-gray-500 font-bold uppercase mb-2">Stimulus Materials (Multiple can be open)</div>
+                        {exam.sources.map((src, i) => (
+                            <div key={i} className={`p-4 border rounded-xl cursor-pointer transition-all ${expandedSources.includes(i) ? 'bg-blue-900/20 border-blue-500/40' : 'bg-white/5 border-white/10 hover:border-blue-500/30'}`} onClick={() => toggleSource(i)}>
+                                <div className="flex items-center justify-between mb-1">
+                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{src.label}</p>
+                                    <ChevronRight size={14} className={`transition-transform ${expandedSources.includes(i) ? 'rotate-90' : ''}`} />
+                                </div>
+                                <p className="text-[10px] text-gray-500 italic mb-2 line-clamp-1">{src.citation}</p>
+                                {expandedSources.includes(i) && (
+                                    <div className="mt-4 pt-4 border-t border-white/10" onClick={e => e.stopPropagation()}>
+                                        <SourceText text={src.text} />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="space-y-4">
+                        {exam.questions.map((q, i) => (
+                            <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-2xl relative">
+                                <span className="absolute top-0 right-0 bg-blue-500/10 text-blue-400 text-[10px] font-black px-2 py-0.5 rounded-bl-lg">{q.marks} MARKS</span>
+                                <h4 className="text-xs font-bold text-blue-300 mb-2">Question {q.num}</h4>
+                                <p className="text-xs text-gray-300 leading-relaxed">{q.text}</p>
+                                <PracticeLab q={q} {...LabProps('paper1')} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
+
+    const Paper2 = () => {
+        const exam = paper2Exams[selectedExam.paper2];
+        return (
+            <div className="space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                    <h3 className="text-xl font-bold text-emerald-400">Paper 2: Extended Response</h3>
+                    <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-xs font-bold uppercase tracking-tighter">
+                        1h 45m | 30 Marks
+                    </div>
+                </div>
+                <TimerBar seconds={timerSeconds} running={timerRunning} limit={timerLimit} start={startTimer} toggle={toggleTimer} reset={resetTimer} color={timerColor} formatTime={formatTime} />
+                <ExamSelector exams={paper2Exams} paperKey="paper2" selectedIndex={selectedExam.paper2} onChange={(v) => setSelectedExam(prev => ({ ...prev, paper2: v }))} color="emerald" />
+                <div className="mb-4 p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-[10px] text-emerald-300 italic">
+                    Note: Original mock simulation.
+                </div>
+                <div className="grid gap-6 md:grid-cols-2">
+                    {[exam.sectionA, exam.sectionB].map((section, idx) => (
+                        <div key={idx} className="space-y-4">
+                            <h4 className="text-sm font-bold text-emerald-400 border-b border-white/10 pb-2">{section.label}</h4>
+                            {section.questions.map((q, i) => (
+                                <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                                    <p className="text-xs text-gray-300 leading-relaxed"><span className="font-bold text-emerald-500 mr-2">{q.num}.</span>{q.text}</p>
+                                    <PracticeLab q={q} {...LabProps('paper2')} />
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const Paper3 = () => {
+        const exam = paper3Exams[selectedExam.paper3];
+        return (
+            <div className="space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                    <div>
+                        <h3 className="text-xl font-bold text-red-500">Paper 3: Global Challenges</h3>
+                        <p className="text-xs text-gray-500 mt-1">Challenge: {exam.challenge}</p>
+                    </div>
+                    <div className="px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full text-red-400 text-xs font-bold uppercase tracking-tighter">
+                        1h 30m | 28 Marks
+                    </div>
+                </div>
+                <TimerBar seconds={timerSeconds} running={timerRunning} limit={timerLimit} start={startTimer} toggle={toggleTimer} reset={resetTimer} color={timerColor} formatTime={formatTime} />
+                <ExamSelector exams={paper3Exams} paperKey="paper3" selectedIndex={selectedExam.paper3} onChange={(v) => setSelectedExam(prev => ({ ...prev, paper3: v }))} color="red" />
+                <div className="mb-4 p-3 bg-red-500/5 border border-red-500/10 rounded-xl text-[10px] text-red-300 italic">
+                    Note: Original mock simulation.
+                </div>
+                <div className="grid gap-6 md:grid-cols-2">
+                    <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                        <h4 className="text-sm font-bold text-red-400 mb-4">Stimulus Material</h4>
+                        <SourceText text={exam.stimulus} />
+                    </div>
+                    <div className="space-y-4">
+                        {exam.questions.map((q, i) => (
+                            <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-xl relative">
+                                <span className="absolute top-0 right-0 bg-red-500/10 text-red-400 text-[10px] font-black px-2 py-0.5 rounded-bl-lg">{q.marks} MARKS</span>
+                                <h4 className="text-xs font-bold text-red-400 mb-2">Question {q.num}</h4>
+                                <p className="text-xs text-gray-300 leading-relaxed">{q.text}</p>
+                                <PracticeLab q={q} {...LabProps('paper3')} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <BookOpen className="text-blue-500" /> Test Prep: Writing Strategy
+                <BookOpen className="text-blue-500" /> Mock Exam Zone
             </h2>
 
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
                 {[
-                    { id: 'paper1', label: 'Paper 1', color: 'blue' },
-                    { id: 'paper2', label: 'Paper 2', color: 'emerald' },
-                    { id: 'paper3', label: 'Paper 3', color: 'red' }
+                    { id: 'paper1', label: 'Paper 1 (25 marks)', color: 'blue' },
+                    { id: 'paper2', label: 'Paper 2 (30 marks)', color: 'emerald' },
+                    { id: 'paper3', label: 'Paper 3 (28 marks)', color: 'red' }
                 ].map(b => (
                     <button
                         key={b.id}
-                        onClick={() => setSubTab(b.id)}
+                        onClick={() => { setSubTab(b.id); resetTimer(); setExpandedSources([0]); }}
                         className={`px-6 py-3 rounded-xl text-sm font-bold transition-all border-2 ${subTab === b.id
                             ? `bg-${b.color}-600/10 border-${b.color}-500 text-white shadow-lg shadow-${b.color}-500/10`
                             : "bg-white/5 border-transparent text-gray-500 hover:bg-white/10"
@@ -968,12 +1806,58 @@ const TestPrep = () => {
     );
 };
 
+
+
+// --- Glossary Provider ---
+const GlossaryProvider = () => {
+    useEffect(() => {
+        fetch('/glossary.json')
+            .then(r => r.json())
+            .then(data => {
+                // Normalize keys to lowercase for robust matching
+                const glossary = {};
+                Object.keys(data).forEach(key => {
+                    glossary[key.toLowerCase()] = data[key];
+                });
+
+                const attachTooltips = () => {
+                    if (typeof window.tippy === 'undefined') {
+                        setTimeout(attachTooltips, 500);
+                        return;
+                    }
+                    document.querySelectorAll('.glossary-term').forEach(el => {
+                        if (el._tippy) return;
+                        const term = el.textContent.trim().toLowerCase();
+                        const def = glossary[term];
+                        if (def) {
+                            window.tippy(el, {
+                                content: `<div class="p-1"><span class="glossary-label">IB Concept</span><div class="text-white font-medium">${def}</div></div>`,
+                                allowHTML: true,
+                                animation: 'shift-away',
+                                theme: 'glopo',
+                                placement: 'top',
+                                interactive: true,
+                                appendTo: document.body
+                            });
+                        }
+                    });
+                };
+                const observer = new MutationObserver(attachTooltips);
+                observer.observe(document.body, { childList: true, subtree: true });
+                attachTooltips();
+            })
+            .catch(() => { });
+    }, []);
+    return null;
+};
+
 // --- Main App ---
 export default function App() {
     const [activeTab, setActiveTab] = useState('policy');
 
     return (
         <div className="min-h-screen bg-glopo-dark text-gray-100 p-4 md:p-8">
+            <GlossaryProvider />
             <div className="max-w-4xl mx-auto">
                 <header className="mb-12 text-center">
                     <div className="inline-flex items-center justify-center p-3 bg-blue-600/10 rounded-2xl mb-4 border border-blue-500/20">
@@ -982,14 +1866,24 @@ export default function App() {
                     <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">
                         GloPo <span className="text-blue-500">Companion</span>
                     </h1>
-                    <p className="text-gray-500 text-lg">IB Global Politics Master Study Suite (2026 Syllabus)</p>
+                    <p className="text-gray-500 text-lg mb-4">IB Global Politics Master Study Suite (2026 Syllabus)</p>
+                    <a
+                        href="https://globalcommandcenter2026.netlify.app/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-black text-sm rounded-xl transition-all hover:scale-105 shadow-lg shadow-cyan-500/20 border border-cyan-400/30"
+                    >
+                        🌐 Launch 2026 Command Center
+                        <ChevronRight size={16} />
+                    </a>
                 </header>
 
                 <nav className="flex flex-wrap gap-2 mb-8 justify-center">
                     {[
                         { id: 'policy', label: 'Policy Engine', icon: Shield },
                         { id: 'writing', label: 'Writing Studio', icon: PenTool },
-                        { id: 'testprep', label: 'Test Prep', icon: BookOpen },
+                        { id: 'cases', label: 'Case Library', icon: Shield },
+                        { id: 'exams', label: 'Mock Exam Zone', icon: BookOpen },
                         { id: 'drill', label: 'Drill Mode', icon: Zap },
                         { id: 'warroom', label: 'War Room', icon: AlertTriangle },
                     ].map(tab => (
@@ -1009,12 +1903,18 @@ export default function App() {
                 <main className="min-h-[400px]">
                     {activeTab === 'policy' && <PolicyEngine />}
                     {activeTab === 'writing' && <WritingStudio />}
-                    {activeTab === 'testprep' && <TestPrep />}
+                    {activeTab === 'cases' && <CaseLibrary />}
+                    {activeTab === 'exams' && <MockExamZone />}
                     {activeTab === 'drill' && <DrillMode />}
                     {activeTab === 'warroom' && <WarRoom />}
                 </main>
 
                 <footer className="mt-16 pt-12 pb-20 border-t border-cyan-500/30 text-center">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">Legal Disclaimer</p>
+                    <p className="text-xs text-gray-500 max-w-2xl mx-auto leading-relaxed">
+                        This site is an independent educational resource and is not affiliated with or endorsed by the International Baccalaureate Organization.
+                        All practice mock exams are original simulations designed for pedagogical purposes.
+                    </p>
                     <div className="mb-8 p-4 bg-cyan-950/30 border border-cyan-500/20 rounded-xl inline-block max-w-lg">
                         <p className="text-cyan-300 text-xs font-bold tracking-widest uppercase mb-2">Non-Commercial Educational Tool</p>
                         <p className="text-white/60 text-xs leading-relaxed">
