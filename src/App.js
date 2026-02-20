@@ -1582,16 +1582,32 @@ REQUIRED SECTIONS:
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ essayText: text, questionText: q.text, marks: q.marks || 15 }),
-                signal: AbortSignal.timeout(10000) // Increased to 10s for Gemini
+                signal: AbortSignal.timeout(25000) // 25s — Netlify free tier allows up to 26s
             });
 
             if (response.ok) {
                 const data = await response.json();
                 if (data.analysis) analysisText = data.analysis;
+            } else if (response.status === 429) {
+                // Rate limit from Netlify function — retry once after 3s
+                console.log("Rate limited on first attempt, retrying in 3s...");
+                await new Promise(r => setTimeout(r, 3000));
+                const retry = await fetch("/.netlify/functions/analyze-essay", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ essayText: text, questionText: q.text, marks: q.marks || 15 }),
+                    signal: AbortSignal.timeout(25000)
+                });
+                if (retry.ok) {
+                    const data = await retry.json();
+                    if (data.analysis) analysisText = data.analysis;
+                } else {
+                    setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], deepLoading: false, deepError: "Temporarily rate-limited. Please wait 30 seconds and try again." } }));
+                    return;
+                }
             } else {
                 const errorData = await response.json().catch(() => ({}));
                 console.error("Netlify function error:", response.status, errorData.error);
-                // If the error explicitly mentions configuration, don't fall back to Strategy 2 silently
                 if (errorData.error?.includes("configured")) {
                     setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], deepLoading: false, deepError: "Gemini API Key not configured in Netlify Site Settings." } }));
                     return;
@@ -1622,7 +1638,24 @@ REQUIRED SECTIONS:
                 );
 
                 if (geminiResponse.status === 429) {
-                    throw new Error("Rate limit reached. Your API key has hit its quota — wait 1 minute and try again, or upgrade your Google AI Studio plan.");
+                    // Retry once after a brief wait
+                    console.log("Direct API rate limited, retrying in 3s...");
+                    await new Promise(r => setTimeout(r, 3000));
+                    const retryResp = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+                        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
+                    );
+                    if (retryResp.status === 429) {
+                        throw new Error("Temporarily rate-limited. Please wait 30 seconds and try again.");
+                    }
+                    if (!retryResp.ok) throw new Error(`Gemini API error: ${retryResp.status}`);
+                    const retryData = await retryResp.json();
+                    analysisText = retryData?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (analysisText) {
+                        setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], isDeep: true, deepLoading: false, liveAnalysis: analysisText } }));
+                        navigator.clipboard.writeText(prompt).catch(() => { });
+                        return;
+                    }
                 }
                 if (!geminiResponse.ok) {
                     throw new Error(`Gemini API error: ${geminiResponse.status} ${geminiResponse.statusText}`);

@@ -49,9 +49,23 @@ REQUIRED SECTIONS:
 [A one-sentence 'golden tip' on how to bridge these perspectives for a higher mark band.]
 `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        let text;
+        try {
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            text = response.text();
+        } catch (genError) {
+            // Retry once on rate limit (429) after a brief pause
+            if (genError.status === 429 || genError.message?.includes('429') || genError.message?.includes('quota')) {
+                console.log("Rate limited by Gemini, retrying in 3s...");
+                await new Promise(r => setTimeout(r, 3000));
+                const retryResult = await model.generateContent(prompt);
+                const retryResponse = await retryResult.response;
+                text = retryResponse.text();
+            } else {
+                throw genError;
+            }
+        }
 
         return {
             statusCode: 200,
