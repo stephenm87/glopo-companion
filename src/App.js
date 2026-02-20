@@ -1,15 +1,41 @@
 import React, { useState, useEffect } from 'react';
 // Version: 1.0.3 - Restored React hooks import
-import { Shield, PenTool, Zap, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, BookOpen, MessageSquare, FileText, Clock } from 'lucide-react';
+import { Shield, PenTool, Zap, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, BookOpen, MessageSquare, FileText, Clock, Search } from 'lucide-react';
 import { paper1Exams, paper2Exams, paper3Exams } from './examBank';
 
 // --- Global Data Constants ---
-const GLOSSARY_TERMS = ["Power", "Sovereignty", "Legitimacy", "Interdependence", "Human Rights", "Justice", "Liberty", "Equality", "Development", "Sustainability", "Peace", "Conflict", "Violence", "Non-violence", "Globalization", "Borders"];
+const GLOSSARY_TERMS = ["Power", "Sovereignty", "Legitimacy", "Interdependence", "Human rights", "Justice", "Liberty", "Equality", "Development", "Sustainability", "Peace", "Conflict", "Violence", "Non-violence", "Globalization", "Inequality", "Borders", "Security", "Environment", "Health", "Poverty", "Identity", "Technology"];
+
+const CONCEPT_THEMES = {
+    "Power": { theme: "Power, Sovereignty & IR", color: "blue" },
+    "Sovereignty": { theme: "Power, Sovereignty & IR", color: "blue" },
+    "Legitimacy": { theme: "Power, Sovereignty & IR", color: "blue" },
+    "Interdependence": { theme: "Power, Sovereignty & IR", color: "blue" },
+    "Human rights": { theme: "Human Rights", color: "purple" },
+    "Justice": { theme: "Human Rights", color: "purple" },
+    "Liberty": { theme: "Human Rights", color: "purple" },
+    "Equality": { theme: "Human Rights", color: "purple" },
+    "Development": { theme: "Development", color: "emerald" },
+    "Globalization": { theme: "Development", color: "emerald" },
+    "Inequality": { theme: "Development", color: "emerald" },
+    "Sustainability": { theme: "Development", color: "emerald" },
+    "Peace": { theme: "Peace & Conflict", color: "red" },
+    "Conflict": { theme: "Peace & Conflict", color: "red" },
+    "Violence": { theme: "Peace & Conflict", color: "red" },
+    "Non-violence": { theme: "Peace & Conflict", color: "red" },
+    "Borders": { theme: "HL Global Challenges", color: "amber" },
+    "Security": { theme: "HL Global Challenges", color: "amber" },
+    "Environment": { theme: "HL Global Challenges", color: "amber" },
+    "Health": { theme: "HL Global Challenges", color: "amber" },
+    "Poverty": { theme: "HL Global Challenges", color: "amber" },
+    "Identity": { theme: "HL Global Challenges", color: "amber" },
+    "Technology": { theme: "HL Global Challenges", color: "amber" }
+};
 
 const GLOBAL_CASES = [
     {
         name: "South China Sea Dispute", theme: "Sovereignty + Power",
-        facts: ["Overlapping territorial claims", "Nine-Dash Line", "Freedom of Navigation operations."],
+        facts: ["Overlapping territorial claims", "Nine-Dash Line", "Freedom of Navigation operations"],
         fiveWH: {
             who: "Primary: China (PRC), Philippines, Vietnam, Malaysia. Secondary: USA (Freedom of Navigation), ASEAN.",
             what: "Overlapping territorial claims and maritime rights (Exclusive Economic Zones) involving the \"Nine-Dash Line.\"",
@@ -19,15 +45,21 @@ const GLOBAL_CASES = [
             how: "China utilizes Hard Power (island building/naval presence) vs. Philippines/Vietnam using International Law (UNCLOS)."
         },
         ibLinkage: { core: ["Sovereignty (Contested)", "Power (Realism)"], challenge: ["Security", "Environment"] },
+        globalChallenges: {
+            Security: "The SCS is a textbook case of the 'Security Dilemma.' China's island militarization is presented as defensive, yet it forces the US and regional states into a reactive arms buildup. Every new radar installation or airstrip makes the region less secure for everyone, illustrating how the pursuit of national security can paradoxically create collective insecurity.",
+            Environment: "Massive dredging for artificial islands has destroyed over 160 sq km of coral reef ecosystem. The environmental cost of this sovereignty dispute is borne by the entire region's fishing communities, showing how interstate competition can generate irreversible environmental destruction as a byproduct of geopolitical ambition.",
+            Borders: "The 'Nine-Dash Line' is a case study in how borders can be ambiguous and contested. Unlike land borders, maritime boundaries are defined by international law (UNCLOS), yet China's historical claim challenges the entire rules-based system of border demarcation, raising the question: who decides where a border lies when history and law disagree?",
+            Technology: "Satellite surveillance, artificial island construction, and cyber operations are central to this dispute. Technology enables China to project power far from its mainland and allows smaller states like the Philippines to document and publicize violations, turning technology into both a tool of dominance and a weapon of the weak."
+        },
         theoryInsights: {
             Realism: "The South China Sea is a classic textbook case of Realism. China's 'Nine-Dash Line' and island reclamation represent a rational pursuit of national interest in an anarchic system. For realists, this is not a 'dispute' but a struggle for maritime supremacy and strategic depth. The involvement of the US (FOIA operations) highlights the 'Security Dilemma'—where one state's defensive buildup is seen as offensive by another.",
             Liberalism: "Liberals point to the 2016 Permanent Court of Arbitration ruling as the relevant framework. They argue that the dispute should be resolved through UNCLOS and international law rather than 'might makes right'. For a liberal, the tragedy here is the failure of regional institutions (ASEAN) to create a binding Code of Conduct that constrains the unilateral power of great states.",
-            Structuralism: "A structuralist analysis focuses on how China is now behaving like a established 'Core' power, asserting its right to control its regional 'Periphery'. The dispute isn't just about rocks; it's about who sets the rules for the global maritime commons—rules that were historically designed by Western core powers and are now being challenged by a rising Eastern core."
+            Structuralism: "A structuralist analysis focuses on how China is now behaving like an established 'Core' power, asserting its right to control its regional 'Periphery'. The dispute isn't just about rocks; it's about who sets the rules for the global maritime commons—rules that were historically designed by Western core powers and are now being challenged by a rising Eastern core."
         }
     },
     {
         name: "G20 & Global South", theme: "Power + Development",
-        facts: ["India's presidency focus", "AU permanent membership", "Debt restructuring tensions."],
+        facts: ["India's presidency focus", "AU permanent membership", "Debt restructuring tensions"],
         fiveWH: {
             who: "Primary: India (2023 presidency), African Union, Brazil, China. Secondary: G7 nations, IMF, World Bank.",
             what: "India's G20 presidency pushed for Global South representation, AU permanent membership, and debt restructuring for developing nations.",
@@ -37,6 +69,11 @@ const GLOBAL_CASES = [
             how: "Diplomatic coalition-building among middle powers; 'Voice of the Global South' summits; reform proposals for MDBs and IMF voting quotas."
         },
         ibLinkage: { core: ["Power (Structural)", "Legitimacy"], challenge: ["Poverty", "Equality"] },
+        globalChallenges: {
+            Poverty: "The G20's debt restructuring debates are fundamentally about global poverty. Many Global South nations spend more on debt repayment than on healthcare or education, trapping their populations in cycles of deprivation. India's presidency framed poverty not as a domestic failure but as a structural outcome of an unfair international financial architecture.",
+            Equality: "The AU's permanent G20 membership is a direct challenge to the inequality embedded in global governance. Africa's 1.4 billion people had no permanent seat at the table that sets global economic policy. This reform asks: whose voices count in shaping the future of the global economy?",
+            Identity: "India's 'Voice of the Global South' summits are an exercise in identity construction. By positioning itself as the bridge between developed and developing worlds, India is crafting a new post-colonial identity that rejects Cold War-era binaries (East/West) in favor of a 'civilizational' leadership role."
+        },
         theoryInsights: {
             Structuralism: "India's push for African Union membership in the G20 is a direct attempt to challenge the Core-Periphery hierarchy. From a structuralist view, the G7 represents the 'Core' that has historically dictated terms of development. By positioning itself as a leader of the 'Global South', India is trying to restructure the global governance framework to reduce peripheral dependency.",
             Liberalism: "For liberals, the inclusion of the AU in the G20 demonstrates the evolution of international institutions toward greater inclusivity. It shows that states can reform existing multilateral frameworks from within to improve global legitimacy and manage collective problems like debt and systemic poverty.",
@@ -45,7 +82,7 @@ const GLOBAL_CASES = [
     },
     {
         name: "Israel-Palestine", theme: "Identity + Security",
-        facts: ["Relational identity conflict", "Security vs Human Rights", "Legitimacy of non-state actors."],
+        facts: ["Relational identity conflict", "Security vs Human Rights", "Legitimacy of non-state actors"],
         fiveWH: {
             who: "Primary: Israel (state), Palestinian Authority, Hamas. Secondary: USA, Iran, UN, ICJ, Arab League.",
             what: "Protracted conflict over territory, statehood, and self-determination rooted in competing national identities and security narratives.",
@@ -55,6 +92,12 @@ const GLOBAL_CASES = [
             how: "Israel uses military force and settlement expansion. Palestinians employ diplomacy (UN statehood bids), resistance movements, and international law (ICJ advisory opinions)."
         },
         ibLinkage: { core: ["Sovereignty (Contested)", "Human Rights", "Legitimacy"], challenge: ["Security", "Equality"] },
+        globalChallenges: {
+            Security: "Israel-Palestine is the defining case of the 'National Security vs. Human Security' debate. Israel's security apparatus (Iron Dome, border walls) provides national security but does so at the cost of daily human security for Palestinian civilians, demonstrating how security for one group can mean insecurity for another.",
+            Borders: "The Green Line, the separation barrier, and the contested borders of a future Palestinian state are central to the conflict. This case shows how borders are not just lines on a map but instruments of control that determine who has access to resources, movement, and ultimately, self-determination.",
+            Identity: "This is perhaps the world's most powerful example of relational identity—each side's national identity is defined in opposition to the other. The narratives of 'Occupier/Defender' and 'Indigenous/Settler' are not just labels; they are the fuel that sustains the conflict across generations through education and collective memory.",
+            Health: "The blockade of Gaza has created a chronic public health crisis, with limited access to medicine, clean water, and hospital infrastructure. Health in this context is not just a medical issue but a political tool, as the control of humanitarian access becomes a lever of power."
+        },
         theoryInsights: {
             Realism: "In Israel-Palestine, realists see a zero-sum struggle for land and security where state survival is the ultimate goal. The conflict is driven by the 'anarchy' of the regional system where no external power can enforce a two-state solution. Hard power (military force, barriers) is the primary currency, and security for one group is viewed as insecurity for the other.",
             Constructivism: "Constructivism is vital here: the conflict is sustained by deeply embedded, mutually exclusive identities. The narratives of 'Occupier' vs 'Defender' or 'Indigenous' vs 'Settler' are socially constructed and reinforced through education and media. Peace requires a fundamental 'identity shift' that moves beyond the historical narratives of trauma and exclusion.",
@@ -64,7 +107,7 @@ const GLOBAL_CASES = [
     },
     {
         name: "Belt and Road Initiative", theme: "Power + Interdependence",
-        facts: ["Sovereignty vs Debt", "Soft power expansion", "Infrastructure-led development."],
+        facts: ["Sovereignty vs Debt", "Soft power expansion", "Infrastructure-led development"],
         fiveWH: {
             who: "Primary: China (PRC), recipient states (Sri Lanka, Pakistan, Kenya, Laos). Secondary: USA, EU, World Bank, local communities.",
             what: "China's massive infrastructure investment program ($1 trillion+) spanning 140+ countries, building ports, railways, and digital networks.",
@@ -74,6 +117,12 @@ const GLOBAL_CASES = [
             how: "Bilateral infrastructure loans (often criticized as 'debt-trap diplomacy'); state-owned enterprise construction; digital infrastructure (5G, smart cities)."
         },
         ibLinkage: { core: ["Power (Soft/Economic)", "Sovereignty", "Interdependence"], challenge: ["Poverty", "Environment"] },
+        globalChallenges: {
+            Poverty: "The BRI is framed as a poverty-reduction engine, bringing infrastructure to regions that lack roads, ports, and power grids. However, critics argue that the debt conditions attached to BRI loans can deepen poverty by diverting national budgets toward debt repayment rather than social services like education or healthcare.",
+            Environment: "BRI-funded coal plants and highways in Southeast Asia and Africa raise serious environmental concerns. The tension between rapid infrastructure development and environmental sustainability is stark: the roads that connect communities to markets also carve through forests and wetlands.",
+            Technology: "China's 'Digital Silk Road' extends BRI into the tech sphere, building 5G networks, smart city platforms, and submarine cables in partner countries. This raises critical questions about digital sovereignty—who controls the data that flows through Chinese-built infrastructure?",
+            Borders: "The BRI fundamentally reshapes borders by creating economic corridors (like CPEC) that tie nations together across traditional boundary lines. The Hambantota port's 99-year lease blurs the line between economic partnership and territorial control, echoing colonial-era concessions."
+        },
         theoryInsights: {
             Realism: "Realists view the BRI as 'Economic Statecraft' designed to create a Sino-centric order. By building infrastructure in 140+ countries, China is essentially creating a sphere of influence that rivals the traditional US-led system. For realists, the debt-trap narrative is a tool of geopolitical competition, where infrastructure is the new ammunition of power projection.",
             Marxism: "Marxism provides a powerful critique here: the BRI is an example of 'Spatial Fix'—where a state (China) must export excess capital and capacity to maintain profit rates. This isn't charity; it's the expansion of global capital that inevitably leads to the exploitation of labor in recipient states and the enrichment of a transnational elite.",
@@ -82,7 +131,7 @@ const GLOBAL_CASES = [
     },
     {
         name: "WTO & Green Subsidies", theme: "Trade + Sustainability",
-        facts: ["US Inflation Reduction Act", "EU-China trade tensions", "Environment vs Free Trade."],
+        facts: ["US Inflation Reduction Act", "EU-China trade tensions", "Environment vs Free Trade"],
         fiveWH: {
             who: "Primary: USA, EU, China. Secondary: WTO, developing nations, renewable energy industries.",
             what: "Major economies are using green industrial subsidies (e.g. US Inflation Reduction Act) that may violate WTO free trade rules, sparking trade tensions.",
@@ -92,6 +141,11 @@ const GLOBAL_CASES = [
             how: "Domestic legislation (IRA, CBAM); tariffs on Chinese EVs and solar panels; WTO dispute resolution (largely stalled due to Appellate Body crisis)."
         },
         ibLinkage: { core: ["Interdependence", "Sovereignty"], challenge: ["Environment", "Equality"] },
+        globalChallenges: {
+            Environment: "This case is the frontline of the climate-economy tension. Green subsidies aim to accelerate the clean energy transition, but they also distort global markets. The core question is whether environmental protection can be achieved through state competition or only through genuine multilateral cooperation.",
+            Equality: "The IRA and CBAM create a two-tier green transition. Wealthy nations can afford to subsidize their industries while developing nations—who contributed least to climate change—are penalized by tariffs they can't match. This is environmental policy that deepens global economic inequality.",
+            Technology: "The dispute is fundamentally about who will control the technology of the future: Chinese EVs and solar panels vs. US and EU domestic production. Green subsidies are as much about technological supremacy as they are about saving the planet, making tech a key arena of geopolitical competition."
+        },
         theoryInsights: {
             Liberalism: "A model case for Liberalism: Green subsidies represent the tension between trade liberalization and environmental collective action. The issue is whether global trade rules (the WTO framework) can evolve to support 'Green Industrial Policy' through institutional cooperation. It highlights how IGOs are essential for managing complex interdependence when domestic interests clash.",
             Realism: "Realists view the EU/US green subsidies (like the IRA) as 'Green Mercantilism'. This isn't primarily about the climate; it's about securing supply chains and dominance in the future energy transition. A realist sees this as a 'stretch' to the trade system where states use environmental justifications to protect their national industries and relative power.",
@@ -100,7 +154,7 @@ const GLOBAL_CASES = [
     },
     {
         name: "Meta/EU Big Tech", theme: "Sovereignty + Power",
-        facts: ["GDPR as digital sovereignty", "Data privacy as HR", "Platform power vs State control."],
+        facts: ["GDPR as digital sovereignty", "Data privacy as HR", "Platform power vs State control"],
         fiveWH: {
             who: "Primary: Meta (Facebook), EU Commission, European Court of Justice. Secondary: Apple, Google, civil society groups, data protection authorities.",
             what: "The EU's regulation of Big Tech platforms through GDPR, Digital Services Act, and Digital Markets Act — asserting sovereignty over the digital space.",
@@ -110,6 +164,12 @@ const GLOBAL_CASES = [
             how: "EU uses regulatory power (fines, compliance mandates); Meta lobbies and restructures data flows; court challenges test jurisdictional limits."
         },
         ibLinkage: { core: ["Sovereignty (Digital)", "Power (Corporate vs State)", "Human Rights"], challenge: ["Security", "Equality"] },
+        globalChallenges: {
+            Technology: "This is the defining case for the Technology challenge. Meta's algorithms shape public discourse for billions, raising the question: should a private corporation have more influence over information flows than a democratic government? The EU's regulatory response is an attempt to reassert state authority over the digital commons.",
+            Security: "Data breaches and algorithmic manipulation pose a direct threat to both individual privacy and national security. The EU's GDPR framework treats personal data as a security asset, arguing that the mass collection of citizen data by foreign corporations is a vulnerability that must be regulated as a matter of state security.",
+            Borders: "The 'Brussels Effect' shows how digital regulation crosses borders without traditional diplomacy. When the EU sets data rules, companies worldwide must comply to access the European market, effectively exporting European law globally. This challenges the idea that borders can contain policy in a digital world.",
+            Identity: "Social media platforms shape identity by curating the information people see. Algorithmic echo chambers reinforce political identities and can deepen societal polarization. The EU's concern is that unregulated platforms allow foreign actors to manipulate national identity and democratic processes."
+        },
         theoryInsights: {
             Liberalism: "Liberals point to the 'Brussels Effect'—where regional regulations like GDPR become global standards. This demonstrates that institutional rules and legal frameworks can constrain even the most powerful transnational corporations (TNCs). It's a victory for the rule of law over unregulated market power, showing that democratic institutions still hold legitimacy in the digital age.",
             Marxism: "A Marxist analysis is blunt: Meta and the EU are two heads of the same capitalist coin. While they appear at odds, the EU's regulation is a 'protective' move for European capital against American digital dominance. The underlying exploitation of user data (capital accumulation via data extraction) remains unchallenged by either side.",
@@ -118,7 +178,7 @@ const GLOBAL_CASES = [
     },
     {
         name: "Nigeria & Boko Haram", theme: "Development + Security",
-        facts: ["Structural violence roots", "Underdevelopment fuels insurgency", "Military vs Social intervention."],
+        facts: ["Structural violence roots", "Underdevelopment fuels insurgency", "Military vs Social intervention"],
         fiveWH: {
             who: "Primary: Boko Haram/ISWAP, Nigerian government/military. Secondary: UNDP, AU (MNJTF), affected communities (especially women/girls), Lake Chad Basin states.",
             what: "Islamist insurgency in northeast Nigeria causing 350,000+ deaths and 2.2 million displaced, rooted in poverty, educational exclusion, and governance failures.",
@@ -128,6 +188,12 @@ const GLOBAL_CASES = [
             how: "Boko Haram uses asymmetric warfare (bombings, kidnappings). Nigeria deploys military force. International community focuses on counter-terrorism but critics argue development investment is the real solution."
         },
         ibLinkage: { core: ["Power (Coercive)", "Legitimacy"], challenge: ["Security", "Poverty"] },
+        globalChallenges: {
+            Security: "Nigeria illustrates the limits of a purely military approach to security. Despite years of military operations, Boko Haram persists because the root causes—poverty, exclusion, and lack of governance—remain unaddressed. This case argues that 'Human Security' (addressing basic needs) is a prerequisite for 'National Security.'",
+            Poverty: "Boko Haram's name literally translates to 'Western education is forbidden,' reflecting a rejection born from exclusion. Northeast Nigeria's extreme poverty and educational deprivation created the conditions for radicalization, making this a case where poverty is not just a social issue but a direct driver of violent conflict.",
+            Health: "The insurgency has destroyed healthcare infrastructure across Borno State, creating famine conditions and disease outbreaks among 2.2 million displaced people. Health access has been weaponized, with Boko Haram targeting aid workers and the Nigerian military restricting humanitarian corridors.",
+            Identity: "Boko Haram exploits a fractured national identity—the perceived economic and political marginalization of the predominantly Muslim North by the Christian/secular South. The insurgency feeds on a sense of 'otherness' and exclusion from the Nigerian national project."
+        },
         theoryInsights: {
             Realism: "The Nigerian state's response to Boko Haram is a classic struggle for internal sovereignty and territorial integrity. For realists, the insurgency is a crisis of 'Hard Power' and state capacity. The external military support (US/France) is seen as a strategic necessity to maintain regional stability in an anarchic system where the state must have a monopoly on violence.",
             Feminism: "A feminist lens on Boko Haram is essential, specifically concerning the Chibok/Dapchi kidnappings and the use of gendered violence. It argues that the conflict cannot be understood through state security alone; it must be viewed through 'Human Security' and the specific targeting of women as a tool to destabilize social orders.",
@@ -136,7 +202,7 @@ const GLOBAL_CASES = [
     },
     {
         name: "COP28 & Oil Interests", theme: "Interdependence + Sustainability",
-        facts: ["Transition away from fuels", "Global stocktake", "Environment vs Economy."],
+        facts: ["Transition away from fuels", "Global stocktake", "Environment vs Economy"],
         fiveWH: {
             who: "Primary: UAE (host/ADNOC president), AOSIS (Small Island States), EU, China, USA. Secondary: fossil fuel lobbies, climate NGOs, IPCC.",
             what: "COP28 in Dubai produced the first-ever agreement to 'transition away from fossil fuels,' but was criticized for hosting conflicts of interest with oil-producing presidency.",
@@ -146,6 +212,11 @@ const GLOBAL_CASES = [
             how: "Multilateral negotiation within the UNFCCC framework; lobbying by fossil fuel interests (record 2,456 lobbyists at COP28); coalition-building by SIDS and climate-vulnerable states."
         },
         ibLinkage: { core: ["Interdependence", "Power (Structural)"], challenge: ["Environment", "Equality"] },
+        globalChallenges: {
+            Environment: "COP28 is the ultimate Environment challenge case. The first-ever agreement to 'transition away from fossil fuels' is a historic normative shift, but the gap between rhetoric and action remains vast. The Global Stocktake revealed the world is far off-track for 1.5°C, making this a case study in whether multilateral institutions can solve existential environmental threats.",
+            Equality: "The Loss and Damage fund operationalized at COP28 is a direct response to climate inequality—the nations least responsible for emissions suffer the most from rising seas and extreme weather. The fund's initial pledges ($700M) were criticized as a fraction of the trillions needed, highlighting how global inequality shapes even cooperative outcomes.",
+            Poverty: "For oil-dependent economies, transitioning away from fossil fuels threatens the livelihoods of millions. For climate-vulnerable nations, inaction threatens food security and displacement. COP28 exposes the cruel intersection of poverty and climate change: the poorest people face the highest costs of both action and inaction."
+        },
         theoryInsights: {
             Structuralism: "COP28 is a battlefield of structural power. The 'Core' (fossil fuel producers) managed to retain significant influence over the 'Global Stocktake' text. From a structuralist view, the 'Loss and Damage' fund is a minor concession to the Periphery that doesn't actually challenge the global economic hierarchy that caused the climate crisis in the first place.",
             Liberalism: "For liberals, COP28 represents the best hope for collective action. Despite the oil presidency, the agreement to 'transition away' from fossil fuels is a landmark normative success of multilateralism. It proves that even the most difficult global problems can be managed through shared institutional frameworks and dialogue.",
@@ -154,7 +225,7 @@ const GLOBAL_CASES = [
     },
     {
         name: "NATO's 'Arctic Sentry'", theme: "Security + Environment",
-        facts: ["Melting ice strategic shifts", "Russian High North expansion", "Climate-militarization."],
+        facts: ["Melting ice strategic shifts", "Russian High North expansion", "Climate-militarization"],
         fiveWH: {
             who: "Primary: Russia, NATO (especially Norway, Canada, USA), Finland, Sweden. Secondary: China ('Near-Arctic State' claim), Indigenous Arctic peoples.",
             what: "Climate change is melting Arctic ice, opening new shipping routes and resource access, triggering a geopolitical competition and military buildup.",
@@ -164,6 +235,12 @@ const GLOBAL_CASES = [
             how: "Russia militarizes Arctic bases and claims continental shelf. NATO conducts 'Arctic Sentry' exercises. Climate change acts as a threat multiplier — environmental degradation creates security competition."
         },
         ibLinkage: { core: ["Sovereignty", "Power (Hard)"], challenge: ["Security", "Environment"] },
+        globalChallenges: {
+            Security: "The Arctic is a new front in great power competition. Russia's Northern Fleet expansion and NATO's 'Arctic Sentry' exercises represent a classic security dilemma where climate change acts as a 'threat multiplier'—melting ice doesn't create peace; it opens new arenas for military competition.",
+            Environment: "The Arctic is ground zero for climate change. Melting permafrost releases methane, accelerating warming in a feedback loop. Yet the same melting ice that signals environmental catastrophe also unlocks oil, gas, and shipping routes, creating a perverse incentive where environmental destruction is economically rewarded.",
+            Borders: "Arctic borders are literally shifting as ice recedes. Continental shelf claims under UNCLOS are contested between Russia, Canada, Denmark, and Norway. The question of where sovereign territory ends and international commons begin is being redrawn by geology and climate science.",
+            Technology: "Satellite monitoring, icebreaker fleets, and deep-sea drilling technology are the tools of Arctic competition. Russia's nuclear-powered icebreakers give it a technological edge in navigating the Northern Sea Route, demonstrating how technological capability directly translates to geopolitical advantage in extreme environments."
+        },
         theoryInsights: {
             Realism: "The Arctic is a zero-sum frontier for Realism. NATO's 'Arctic Sentry' exercises and Russia's Northern Fleet expansion are rational responses to a new 'High North' security dilemma. Climate change isn't a shared challenge here; it's a competitive opener that allows states to project hard power into previously inaccessible territory.",
             Liberalism: "Liberals focus on the 'Arctic Council' as a fragile but necessary institutional buffer. They argue that Arctic governance should be defined by international law and cooperation on environmental research. For a liberal, the tragedy of the current militarization is that it undermines the 'Arctic Exceptionalism'—the idea that the region was once a zone of low tension.",
@@ -172,7 +249,7 @@ const GLOBAL_CASES = [
     },
     {
         name: "Myanmar's Elections", theme: "Legitimacy + Coercive Power",
-        facts: ["Fraudulent junta polls", "Rule by force vs rule by law", "Civilian resistance movements."],
+        facts: ["Fraudulent junta polls", "Rule by force vs rule by law", "Civilian resistance movements"],
         fiveWH: {
             who: "Primary: Tatmadaw (military junta/SAC), NUG (National Unity Government), ethnic armed organizations (EAOs). Secondary: ASEAN, China, civilian population.",
             what: "The military coup of Feb 2021 overthrew the elected NLD government. The junta plans elections widely seen as illegitimate while facing armed civilian and ethnic resistance.",
@@ -182,6 +259,12 @@ const GLOBAL_CASES = [
             how: "Junta uses coercive power (airstrikes, mass detention, internet shutdowns). Resistance uses guerilla warfare (People's Defence Forces) and parallel governance (NUG). ASEAN's 'Five-Point Consensus' has failed."
         },
         ibLinkage: { core: ["Legitimacy", "Power (Coercive)", "Sovereignty"], challenge: ["Security", "Equality"] },
+        globalChallenges: {
+            Security: "Myanmar demonstrates the failure of collective security mechanisms. Despite ASEAN's 'Five-Point Consensus' and international condemnation, the junta continues to use airstrikes against civilians. The case exposes the gap between 'Human Security' ideals and the reality of sovereign impunity.",
+            Equality: "The Tatmadaw's rule systematically excludes ethnic minorities (Rohingya, Karen, Chin) from political participation. Myanmar is a case where political inequality is enforced through violence, demonstrating that equality cannot exist without legitimate governance.",
+            Technology: "The junta's internet shutdowns provide a stark example of how technology is used as a tool of repression. Conversely, resistance groups use encrypted messaging and social media to coordinate opposition and document atrocities, making technology both a weapon of the state and a shield for civil society.",
+            Identity: "Myanmar's civil war is driven by a fragmented national identity—over 135 recognized ethnic groups with distinct languages and cultures. The Tatmadaw's Bamar-centric nationalism has alienated ethnic minorities for decades, and the NUG's promise of a federal, multi-ethnic democracy represents an attempt to construct a new, inclusive national identity."
+        },
         theoryInsights: {
             Realism: "In Myanmar, the military junta (Tatmadaw) views power through a lens of 'Internal Realism'—where the state's survival is synonymous with military control. Any election is merely a tool of 'Coercive Legitimacy' to maintain order in an internal anarchy. Outside actors (ASEAN/China) often prioritize stability over democracy, reflecting a realist acceptance of power-based rule.",
             Liberalism: "Liberalism in Myanmar is currently a project of resistance. The NUG (National Unity Government) uses the language of 'Universal Human Rights' and 'Rule of Law' to seek international recognition. For liberals, the failure of international institutions to intervene represents a crisis for the 'Responsibility to Protect' (R2P) norm.",
@@ -190,7 +273,7 @@ const GLOBAL_CASES = [
     },
     {
         name: "Türkiye's Autonomy", theme: "Identity + Security",
-        facts: ["Strategic balancing (West vs BRICS)", "Middle power diplomacy", "NATO-Russia relations."],
+        facts: ["Strategic balancing (West vs BRICS)", "Middle power diplomacy", "NATO-Russia relations"],
         fiveWH: {
             who: "Primary: Türkiye (Erdoğan), NATO, Russia, EU. Secondary: USA, BRICS, Kurdish populations, Syria.",
             what: "Türkiye pursues 'strategic autonomy' — balancing NATO membership with Russian engagement, EU accession hesitation, and regional power projection.",
@@ -200,6 +283,11 @@ const GLOBAL_CASES = [
             how: "Leverages geographic position as bargaining chip (refugee deal with EU, grain corridor with Russia/Ukraine); arms purchases from both NATO and Russia; blocks NATO expansion for concessions."
         },
         ibLinkage: { core: ["Power (Middle Power)", "Sovereignty", "Identity"], challenge: ["Security", "Equality"] },
+        globalChallenges: {
+            Security: "Türkiye's purchase of Russian S-400 missiles while being a NATO member is a direct challenge to alliance security norms. It demonstrates how middle powers can exploit their strategic position to play major powers against each other, complicating collective security arrangements.",
+            Identity: "Türkiye's 'strategic autonomy' is fundamentally an identity project. Erdoğan's neo-Ottoman narrative rejects the binary of 'East vs West,' constructing a unique civilizational identity that allows Türkiye to mediate between NATO and Russia, the EU and the Middle East, acting as a bridge rather than a follower.",
+            Borders: "Türkiye controls the Bosphorus Strait—one of the world's most critical chokepoints. Its geographic position at the crossroads of Europe, Asia, and the Middle East makes its borders uniquely strategic, allowing it to leverage refugee flows (the EU deal) and trade routes as tools of foreign policy."
+        },
         theoryInsights: {
             Realism: "Türkiye is the quintessential 'Realist Middle Power'. By blocking or delaying NATO accession for Finland/Sweden, Erdoğan leveraged his 'Regional Hegemon' status to extract national security concessions. This is about maximizing relative power within a major alliance, proving that even partners act in their own self-interest first.",
             Liberalism: "Liberals find Türkiye's behavior challenging to the idea of 'shared democratic norms' within NATO. It highlights the friction in 'Institutional Liberalism' when one member uses its veto power to pursue narrow domestic goals. However, the eventual compromise shows that the alliance's institutional frameworks are still capable of resolving internal disputes.",
@@ -474,14 +562,14 @@ const CaseLibrary = () => {
                             </ul>
                         )}
                         {expanded === i && c.fiveWH && (
-                            <div className="mt-4 space-y-4" onClick={e => e.stopPropagation()}>
+                            <div className="mt-4 space-y-4 overflow-hidden" onClick={e => e.stopPropagation()}>
                                 {/* Theoretical Analysis Overlay */}
-                                <div className="p-4 bg-glopo-dark/50 border border-white/5 rounded-xl">
+                                <div className="p-4 bg-glopo-dark/50 border border-white/5 rounded-xl overflow-hidden">
                                     <div className="flex items-center justify-between mb-4">
                                         <h5 className="text-[9px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
                                             <Zap size={10} className="text-blue-500" /> Theoretical Analysis (IR Lenses)
                                         </h5>
-                                        <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+                                        <div className="flex gap-1 overflow-x-auto scrollbar-hide" style={{ maskImage: 'linear-gradient(to right, black 85%, transparent)', WebkitMaskImage: 'linear-gradient(to right, black 85%, transparent)' }}>
                                             {Object.keys(IR_THEORIES).map(theory => (
                                                 <button
                                                     key={theory}
@@ -495,7 +583,7 @@ const CaseLibrary = () => {
                                         </div>
                                     </div>
                                     <div className="animate-in fade-in slide-in-from-left-4 duration-500">
-                                        <p className="text-[11px] leading-relaxed text-gray-300">
+                                        <p className="text-[11px] leading-relaxed text-gray-300 break-words">
                                             <span className="font-black mr-2 uppercase tracking-tighter" style={{ color: IR_THEORIES[selectedTheory].color }}>{selectedTheory}:</span>
                                             {IR_THEORIES[selectedTheory].getInterpretation(c)}
                                         </p>
@@ -504,7 +592,7 @@ const CaseLibrary = () => {
                                 </div>
 
                                 <div className="mt-4 flex flex-col md:flex-row gap-4">
-                                    <div className="flex-1 grid grid-cols-2 gap-3">
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {fiveWHLabels.map(({ key, label, icon }) => (
                                             <div key={key} className="p-3 bg-white/5 border border-white/10 rounded-lg">
                                                 <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">{icon} {label}</p>
@@ -524,12 +612,29 @@ const CaseLibrary = () => {
                                             <div>
                                                 <p className="text-[9px] text-gray-500 uppercase font-bold mb-1">Challenges</p>
                                                 <div className="flex flex-wrap gap-1">
-                                                    {c.ibLinkage.challenge.map((t, j) => <span key={j} className="text-[10px] bg-red-500/20 text-red-300 px-2 py-0.5 rounded">{t}</span>)}
+                                                    {c.ibLinkage.challenge.map((t, j) => <span key={j} className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">{t}</span>)}
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* HL Global Challenges Analysis */}
+                                {c.globalChallenges && (
+                                    <div className="mt-4 p-4 bg-amber-900/10 border border-amber-500/20 rounded-xl">
+                                        <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-500/70 mb-3 flex items-center gap-2">
+                                            <AlertTriangle size={10} className="text-amber-500" /> HL Global Challenges Analysis
+                                        </h5>
+                                        <div className="grid gap-3 md:grid-cols-2 min-w-0">
+                                            {Object.entries(c.globalChallenges).map(([challenge, analysis]) => (
+                                                <div key={challenge} className="p-3 bg-amber-500/5 border border-amber-500/10 rounded-lg hover:border-amber-500/30 transition-colors min-w-0">
+                                                    <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-1.5">{challenge}</p>
+                                                    <p className="text-[11px] text-gray-400 leading-relaxed break-words">{analysis}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                         {expanded === i && !c.fiveWH && (
@@ -855,7 +960,7 @@ const WritingStudio = () => {
                 <PenTool className="text-emerald-500" /> Writing Studio
             </h2>
 
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide whitespace-nowrap">
                 {[
                     { id: 'bank', label: 'Q-Bank', icon: BookOpen },
                     { id: 'debate', label: 'Debate Lab', icon: MessageSquare },
@@ -1155,7 +1260,7 @@ const SourceText = ({ text }) => {
     if (!text) return null;
 
     // Auto-wrap glossary terms
-    const glossaryTerms = ["Power", "Sovereignty", "Legitimacy", "Interdependence", "Human Rights", "Justice", "Liberty", "Equality", "Development", "Sustainability", "Peace", "Conflict", "Violence", "Non-violence", "Globalization", "Borders"];
+    const glossaryTerms = ["Power", "Sovereignty", "Legitimacy", "Interdependence", "Human rights", "Justice", "Liberty", "Equality", "Development", "Sustainability", "Peace", "Conflict", "Violence", "Non-violence", "Globalization", "Inequality"];
 
     const wrapTerms = (content) => {
         let result = content;
@@ -1477,14 +1582,23 @@ REQUIRED SECTIONS:
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ essayText: text, questionText: q.text, marks: q.marks || 15 }),
-                signal: AbortSignal.timeout(5000) // Give it 5s to respond
+                signal: AbortSignal.timeout(10000) // Increased to 10s for Gemini
             });
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.analysis) analysisText = data.analysis;
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                console.error("Netlify function error:", response.status, errorData.error);
+                // If the error explicitly mentions configuration, don't fall back to Strategy 2 silently
+                if (errorData.error?.includes("configured")) {
+                    setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], deepLoading: false, deepError: "Gemini API Key not configured in Netlify Site Settings." } }));
+                    return;
+                }
             }
         } catch (e) {
-            console.log("Netlify function not available, falling back to direct API call.");
+            console.log("Netlify function unavailable or timed out, checking local fallback.");
         }
 
         // Strategy 2: Direct Gemini API call (works on localhost:3000 with REACT_APP_ key)
@@ -1808,6 +1922,120 @@ REQUIRED SECTIONS:
 
 
 
+// --- Lore & Lexicon Component ---
+const LoreLexicon = () => {
+    const [glossary, setGlossary] = useState({});
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeTheme, setActiveTheme] = useState('All');
+
+    useEffect(() => {
+        fetch('/glossary.json')
+            .then(r => r.json())
+            .then(data => setGlossary(data))
+            .catch(() => { });
+    }, []);
+
+    const themes = ['All', ...new Set(Object.values(CONCEPT_THEMES).map(t => t.theme))];
+
+    const filteredKeys = Object.keys(glossary).filter(key => {
+        const matchesSearch = key.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            glossary[key].toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesTheme = activeTheme === 'All' ||
+            CONCEPT_THEMES[key]?.theme === activeTheme ||
+            (activeTheme === 'HL Global Challenges' && key === 'Equality');
+        return matchesSearch && matchesTheme;
+    }).sort();
+
+    const getThemeStyles = (concept) => {
+        const color = CONCEPT_THEMES[concept]?.color || 'cyan';
+        const colorMap = {
+            blue: 'text-blue-400 border-blue-500/20 bg-blue-500/5 hover:border-blue-500/50 shadow-blue-500/5 hover:shadow-blue-500/10',
+            purple: 'text-purple-400 border-purple-500/20 bg-purple-500/5 hover:border-purple-500/50 shadow-purple-500/5 hover:shadow-purple-500/10',
+            emerald: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/50 shadow-emerald-500/5 hover:shadow-emerald-500/10',
+            red: 'text-red-400 border-red-500/20 bg-red-500/5 hover:border-red-500/50 shadow-red-500/5 hover:shadow-red-500/10',
+            amber: 'text-amber-400 border-amber-500/20 bg-amber-500/5 hover:border-amber-500/50 shadow-amber-500/5 hover:shadow-amber-500/10'
+        };
+        return colorMap[color] || colorMap.blue;
+    };
+
+    return (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col gap-6 mb-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 className="text-3xl font-black flex items-center gap-3">
+                            <FileText className="text-cyan-400" size={32} />
+                            IB Concept <span className="text-cyan-400">Glossary</span>
+                        </h2>
+                        <p className="text-gray-500 text-sm mt-1 uppercase tracking-widest font-bold">16 Authoritative IB Core Concepts</p>
+                    </div>
+                    <div className="relative group min-w-[250px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-cyan-400 transition-colors" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search concepts..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-cyan-500/50 transition-all"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    {themes.map(t => (
+                        <button
+                            key={t}
+                            onClick={() => setActiveTheme(t)}
+                            className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border-2 ${activeTheme === t
+                                ? "bg-cyan-500/10 border-cyan-500 text-white shadow-lg shadow-cyan-500/10"
+                                : "bg-transparent border-white/10 text-gray-500 hover:border-white/20"
+                                }`}
+                        >
+                            {t}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+                {filteredKeys.map(concept => {
+                    const styles = getThemeStyles(concept);
+                    const themeObj = CONCEPT_THEMES[concept] || { theme: "General", color: "cyan" };
+                    return (
+                        <div key={concept} className={`border p-6 rounded-2xl transition-all hover:shadow-lg group ${styles}`}>
+                            <h3 className="text-lg font-bold text-white mb-2 group-hover:opacity-80 transition-opacity flex items-center justify-between">
+                                {concept}
+                                <span className={`text-[10px] uppercase tracking-tighter border px-2 py-0.5 rounded-full font-black ${styles.split(' ')[1]} ${styles.split(' ')[0]}`}>
+                                    {themeObj.theme}
+                                </span>
+                            </h3>
+                            <div className="text-sm text-gray-400 leading-relaxed font-medium">
+                                {glossary[concept] && glossary[concept].includes('\n') ? (
+                                    <ul className="space-y-2 list-none">
+                                        {glossary[concept].split('\n').map((line, idx) => (
+                                            <li key={idx} className="flex gap-2">
+                                                <span className="text-cyan-500/50 mt-1">•</span>
+                                                <span>{line.replace(/^- \*\*[^*]+\*\*: /, '').replace(/^- /, '')}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p>{glossary[concept]}</p>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+                {filteredKeys.length === 0 && (
+                    <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
+                        <p className="text-gray-500 font-bold uppercase tracking-widest">No matching concepts found</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 // --- Glossary Provider ---
 const GlossaryProvider = () => {
     useEffect(() => {
@@ -1827,11 +2055,37 @@ const GlossaryProvider = () => {
                     }
                     document.querySelectorAll('.glossary-term').forEach(el => {
                         if (el._tippy) return;
-                        const term = el.textContent.trim().toLowerCase();
-                        const def = glossary[term];
+                        const termRaw = el.textContent.trim();
+                        const termKey = termRaw.toLowerCase();
+                        const def = glossary[termKey];
                         if (def) {
+                            // Find matching concept for theme color
+                            const conceptMatch = GLOSSARY_TERMS.find(t => t.toLowerCase() === termKey);
+                            const themeData = conceptMatch ? CONCEPT_THEMES[conceptMatch] : null;
+                            const color = themeData ? themeData.color : 'blue';
+                            const colors = {
+                                blue: 'border-blue-500/50 bg-blue-600/20 text-blue-400',
+                                purple: 'border-purple-500/50 bg-purple-600/20 text-purple-400',
+                                emerald: 'border-emerald-500/50 bg-emerald-600/20 text-emerald-400',
+                                red: 'border-red-500/50 bg-red-600/20 text-red-400',
+                                amber: 'border-amber-500/50 bg-amber-600/20 text-amber-400'
+                            };
+                            const colorStyle = colors[color] || colors.blue;
+
+                            const formattedDef = def.includes('\n')
+                                ? `<ul class="space-y-1 list-none mt-1">
+                                    ${def.split('\n').map(l => `<li class="text-[11px] leading-tight"><span class="opacity-40 mr-1">•</span>${l.replace(/^- /, '')}</li>`).join('')}
+                                   </ul>`
+                                : `<div class="text-white text-sm font-medium leading-relaxed">${def}</div>`;
+
                             window.tippy(el, {
-                                content: `<div class="p-1"><span class="glossary-label">IB Concept</span><div class="text-white font-medium">${def}</div></div>`,
+                                content: `<div class="p-2 border rounded-lg ${colorStyle} backdrop-blur-md max-w-xs shadow-2xl">
+                                    <div class="flex items-center justify-between gap-4 mb-1 border-b border-white/10 pb-1">
+                                        <span class="text-[9px] font-black uppercase tracking-widest opacity-70">IB Concept</span>
+                                        <span class="text-[8px] font-black uppercase tracking-tighter opacity-50">${themeData?.theme || 'General'}</span>
+                                    </div>
+                                    ${formattedDef}
+                                </div>`,
                                 allowHTML: true,
                                 animation: 'shift-away',
                                 theme: 'glopo',
@@ -1878,11 +2132,12 @@ export default function App() {
                     </a>
                 </header>
 
-                <nav className="flex flex-wrap gap-2 mb-8 justify-center">
+                <nav className="flex gap-2 mb-8 justify-start sm:justify-center overflow-x-auto pb-2 scrollbar-hide sm:flex-wrap">
                     {[
                         { id: 'policy', label: 'Policy Engine', icon: Shield },
                         { id: 'writing', label: 'Writing Studio', icon: PenTool },
                         { id: 'cases', label: 'Case Library', icon: Shield },
+                        { id: 'glossary', label: 'IB Concept Glossary', icon: FileText },
                         { id: 'exams', label: 'Mock Exam Zone', icon: BookOpen },
                         { id: 'drill', label: 'Drill Mode', icon: Zap },
                         { id: 'warroom', label: 'War Room', icon: AlertTriangle },
@@ -1890,7 +2145,7 @@ export default function App() {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === tab.id
+                            className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold transition-all shrink-0 text-sm sm:text-base ${activeTab === tab.id
                                 ? "bg-glopo-card text-white border-blue-500 border-2 shadow-lg shadow-blue-500/10"
                                 : "bg-transparent text-gray-500 border-transparent border-2 hover:bg-white/5"
                                 }`}
@@ -1904,6 +2159,7 @@ export default function App() {
                     {activeTab === 'policy' && <PolicyEngine />}
                     {activeTab === 'writing' && <WritingStudio />}
                     {activeTab === 'cases' && <CaseLibrary />}
+                    {activeTab === 'glossary' && <LoreLexicon />}
                     {activeTab === 'exams' && <MockExamZone />}
                     {activeTab === 'drill' && <DrillMode />}
                     {activeTab === 'warroom' && <WarRoom />}
