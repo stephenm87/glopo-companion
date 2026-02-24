@@ -879,19 +879,174 @@ const WritingStudio = () => {
     const IntroWizard = () => {
         const [step, setStep] = useState(1);
         const [data, setData] = useState({ concept: '', definition: '', caseA: '', caseB: '', thesis: '' });
+        const [generatedIntro, setGeneratedIntro] = useState('');
+        const [introLoading, setIntroLoading] = useState(false);
+        const [introError, setIntroError] = useState('');
         const updateData = (key, val) => setData({ ...data, [key]: val });
 
+        const generateIntro = async () => {
+            setStep(3);
+            setIntroLoading(true);
+            setIntroError('');
+            setGeneratedIntro('');
+
+            let introText = '';
+
+            // Strategy 1: Netlify serverless function
+            try {
+                const response = await fetch("/.netlify/functions/generate-intro", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                    signal: AbortSignal.timeout(25000)
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.intro) introText = result.intro;
+                } else if (response.status === 429) {
+                    await new Promise(r => setTimeout(r, 3000));
+                    const retry = await fetch("/.netlify/functions/generate-intro", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(data),
+                        signal: AbortSignal.timeout(25000)
+                    });
+                    if (retry.ok) {
+                        const result = await retry.json();
+                        if (result.intro) introText = result.intro;
+                    }
+                }
+            } catch (e) {
+                console.log("Netlify function unavailable, trying direct API...");
+            }
+
+            // Strategy 2: Direct Gemini API call (localhost fallback)
+            if (!introText) {
+                const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+                if (!apiKey) {
+                    setIntroLoading(false);
+                    setIntroError("AI not configured. Please add your API key to generate personalised introductions.");
+                    return;
+                }
+                try {
+                    const prompt = `Write a model introduction paragraph for an IB Global Politics Paper 2 essay using ONLY these student inputs:
+
+KEY CONCEPT: ${data.concept}
+STUDENT'S DEFINITION: ${data.definition}
+CASE STUDY A: ${data.caseA}
+CASE STUDY B: ${data.caseB}
+STUDENT'S THESIS: ${data.thesis}
+
+REQUIREMENTS:
+1. Open with a contextual hook SPECIFIC to "${data.concept}" — reference a real-world tension or paradox related to this concept.
+2. Define the concept using the student's definition, woven naturally into the paragraph.
+3. Frame the central analytical tension around "${data.concept}" — identify competing perspectives relevant to THIS concept (e.g., for Sovereignty: statist vs globalist; for Development: modernization vs dependency; for Peace: negative vs positive peace). Do NOT default to "globalist vs statist" for every concept.
+4. Introduce both case studies ("${data.caseA}" and "${data.caseB}") with a brief phrase explaining WHY each is relevant.
+5. Integrate the thesis naturally as the essay's central claim.
+6. End with a brief roadmap sentence.
+
+OUTPUT: Write ONLY the introduction paragraph in quotation marks. No headers, no bullet points, no meta-commentary. Keep it 80-120 words. Formal academic register.`;
+
+                    const geminiResponse = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        }
+                    );
+
+                    if (geminiResponse.status === 429) {
+                        await new Promise(r => setTimeout(r, 3000));
+                        const retryResp = await fetch(
+                            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+                            { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
+                        );
+                        if (retryResp.ok) {
+                            const retryData = await retryResp.json();
+                            introText = retryData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                        }
+                    } else if (geminiResponse.ok) {
+                        const geminiData = await geminiResponse.json();
+                        introText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    }
+                } catch (error) {
+                    console.error("Direct Gemini API Error:", error);
+                }
+            }
+
+            setIntroLoading(false);
+            if (introText) {
+                setGeneratedIntro(introText.trim());
+            } else {
+                setIntroError("Could not generate introduction. Please try again in a moment.");
+            }
+        };
+
+        const resetWizard = () => {
+            setStep(1);
+            setData({ concept: '', definition: '', caseA: '', caseB: '', thesis: '' });
+            setGeneratedIntro('');
+            setIntroError('');
+        };
+
         if (step === 3) return (
-            <div className="space-y-4 animate-in zoom-in-95 duration-300">
-                <div className="bg-emerald-900/20 border border-emerald-500/30 p-6 rounded-xl leading-relaxed text-gray-300">
-                    <p>
-                        "The central tension in this enquiry lies in the evolution of <strong className="text-white">{data.concept || '[Concept]'}</strong>, fundamentally defined as <span className="italic">{data.definition || '[Definition]'}</span>.
-                        While globalist perspectives suggest that <strong className="text-white">{data.concept}</strong> is being eroded by transnational challenges, statists argue it remains the bedrock of world order.
-                        This essay will bridge these perspectives by synthesising the case studies of <strong className="text-white">{data.caseA || '[Case A]'}</strong> and <strong className="text-white">{data.caseB || '[Case B]'}</strong> to demonstrate
-                        that {data.thesis || '[Thesis Statement]'}. Underpinning this analysis is the recognition of a 'power gap' that necessitates a shift in how we conceptualise authority in the 21st century."
-                    </p>
-                </div>
-                <Button variant="outline" onClick={() => setStep(1)}><RefreshCw size={16} /> Start Over</Button>
+            <div className="space-y-6 animate-in zoom-in-95 duration-300">
+                {introLoading ? (
+                    <div className="bg-emerald-900/20 border border-emerald-500/30 p-8 rounded-xl text-center">
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                            <div className="text-sm text-emerald-300 font-bold animate-pulse">Crafting your personalised introduction...</div>
+                            <p className="text-[10px] text-gray-500 max-w-sm">Gemini is analysing your concept, definition, case studies, and thesis to build a unique Golden Thread introduction.</p>
+                        </div>
+                    </div>
+                ) : introError ? (
+                    <div className="bg-red-900/20 border border-red-500/30 p-6 rounded-xl">
+                        <p className="text-sm text-red-300 flex items-center gap-2"><AlertTriangle size={16} /> {introError}</p>
+                    </div>
+                ) : (
+                    <div className="bg-emerald-900/20 border border-emerald-500/30 p-6 rounded-xl leading-relaxed text-gray-300">
+                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest block mb-3 flex items-center gap-2">
+                            <Zap size={10} /> AI-Generated Model Introduction
+                        </span>
+                        <p className="text-sm">{generatedIntro}</p>
+                    </div>
+                )}
+
+                {!introLoading && (
+                    <>
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={resetWizard}><RefreshCw size={16} /> Start Over</Button>
+                            {generatedIntro && <Button variant="outline" onClick={generateIntro}><Zap size={16} /> Regenerate</Button>}
+                        </div>
+
+                        {/* Components of a Strong Thesis */}
+                        <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5 space-y-3">
+                            <h4 className="text-sm font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                                <CheckCircle size={14} /> Components of a Strong Thesis
+                            </h4>
+                            <p className="text-[11px] text-gray-500 italic">A high-scoring thesis in IB Global Politics should include all of the following:</p>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                {[
+                                    { icon: '🎯', title: 'Arguable Claim', desc: 'Takes a clear position that can be debated — not a statement of fact.' },
+                                    { icon: '🧠', title: 'Reasoning / "Because"', desc: 'Explains WHY the claim is true — signals the analytical direction.' },
+                                    { icon: '🌍', title: 'Case Study Scope', desc: 'Grounds the argument in specific examples that will be analysed in the essay.' },
+                                    { icon: '🔗', title: 'Conceptual Anchoring', desc: 'Links the claim to IB key concepts (e.g., Power, Sovereignty, Legitimacy).' },
+                                    { icon: '⚖️', title: 'Tension / Nuance', desc: 'Acknowledges competing perspectives or a counter-argument to address.' },
+                                    { icon: '🧭', title: 'Essay Roadmap', desc: 'Implicitly or explicitly signals the structure and direction of the essay.' }
+                                ].map((item, i) => (
+                                    <div key={i} className="flex gap-3 p-3 bg-white/[0.03] rounded-lg border border-white/5 hover:border-emerald-500/20 transition-colors">
+                                        <span className="text-lg shrink-0">{item.icon}</span>
+                                        <div>
+                                            <p className="text-xs font-bold text-white">{item.title}</p>
+                                            <p className="text-[10px] text-gray-400 leading-relaxed">{item.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         );
 
@@ -903,20 +1058,22 @@ const WritingStudio = () => {
                 </div>
                 {step === 1 ? (
                     <div className="space-y-4">
-                        <input className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3" placeholder="Key Concept (e.g., Legitimacy)" onChange={(e) => updateData('concept', e.target.value)} />
-                        <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-24" placeholder="Basic Definition..." onChange={(e) => updateData('definition', e.target.value)} />
-                        <Button onClick={() => setStep(2)}>Next <ChevronRight size={18} /></Button>
+                        <input className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3" placeholder="Key Concept (e.g., Legitimacy)" onChange={(e) => updateData('concept', e.target.value)} value={data.concept} />
+                        <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-24" placeholder="Your definition of this concept..." onChange={(e) => updateData('definition', e.target.value)} value={data.definition} />
+                        <Button onClick={() => setStep(2)} disabled={!data.concept.trim() || !data.definition.trim()}>Next <ChevronRight size={18} /></Button>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         <div className="flex gap-4">
-                            <input className="flex-1 bg-glopo-dark border border-glopo-border rounded-lg p-3" placeholder="Case Study A" onChange={(e) => updateData('caseA', e.target.value)} />
-                            <input className="flex-1 bg-glopo-dark border border-glopo-border rounded-lg p-3" placeholder="Case Study B" onChange={(e) => updateData('caseB', e.target.value)} />
+                            <input className="flex-1 bg-glopo-dark border border-glopo-border rounded-lg p-3" placeholder="Case Study A (e.g., South China Sea)" onChange={(e) => updateData('caseA', e.target.value)} value={data.caseA} />
+                            <input className="flex-1 bg-glopo-dark border border-glopo-border rounded-lg p-3" placeholder="Case Study B (e.g., EU Governance)" onChange={(e) => updateData('caseB', e.target.value)} value={data.caseB} />
                         </div>
-                        <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-24" placeholder="Thesis Statement (Main Claim)" onChange={(e) => updateData('thesis', e.target.value)} />
+                        <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-24" placeholder="Your thesis — the central claim your essay will argue..." onChange={(e) => updateData('thesis', e.target.value)} value={data.thesis} />
                         <div className="flex gap-2">
                             <Button variant="secondary" onClick={() => setStep(1)}>Back</Button>
-                            <Button onClick={() => setStep(3)}>Generate Intro</Button>
+                            <Button onClick={generateIntro} disabled={!data.caseA.trim() || !data.caseB.trim() || !data.thesis.trim()}>
+                                <Zap size={16} /> Generate Intro
+                            </Button>
                         </div>
                     </div>
                 )}
