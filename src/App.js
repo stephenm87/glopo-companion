@@ -929,23 +929,33 @@ const WritingStudio = () => {
                     return;
                 }
                 try {
-                    const prompt = `Write a model introduction paragraph for an IB Global Politics Paper 2 essay using ONLY these student inputs:
+                    const IB_AO_CONTEXT = `IB GLOBAL POLITICS 2026 SYLLABUS CONTEXT:
+- AO1 (Knowledge & Understanding): Student must demonstrate accurate knowledge of named case studies and IB key concepts. Score improves with specific dates, treaty names, statistics, and named actors.
+- AO2 (Application & Analysis): Student must apply a named IR theory (Realism, Liberalism, Constructivism, Feminism, Marxism, Postcolonialism) with analytical connectives ("therefore", "this demonstrates").
+- AO3 (Synthesis & Evaluation): Student must present a counter-argument, synthesise competing perspectives, and reach a substantiated evaluative judgement.
+- AO4 (Use of Key Concepts): Student must use and define IB concepts — 4 Core (Power, Sovereignty, Legitimacy, Interdependence) and Global Challenges (Security, Development, Environment, Equality, Health). Concepts must be used precisely, not decoratively.
+- PAPERS: Paper 2 requires one extended essay (1,200–2,000 words) using two case studies to explore an IB concept. The introduction must anchor the thesis in a specific IB concept and signal the case study scope.`;
 
+                    const prompt = `You are a senior IB Global Politics examiner writing a model introduction for a Band 7 Paper 2 essay.
+
+${IB_AO_CONTEXT}
+
+Student Inputs:
 KEY CONCEPT: ${data.concept}
 STUDENT'S DEFINITION: ${data.definition}
 CASE STUDY A: ${data.caseA}
 CASE STUDY B: ${data.caseB}
 STUDENT'S THESIS: ${data.thesis}
 
-REQUIREMENTS:
-1. Open with a contextual hook SPECIFIC to "${data.concept}" — reference a real-world tension or paradox related to this concept.
-2. Define the concept using the student's definition, woven naturally into the paragraph.
-3. Frame the central analytical tension around "${data.concept}" — identify competing perspectives relevant to THIS concept (e.g., for Sovereignty: statist vs globalist; for Development: modernization vs dependency; for Peace: negative vs positive peace). Do NOT default to "globalist vs statist" for every concept.
-4. Introduce both case studies ("${data.caseA}" and "${data.caseB}") with a brief phrase explaining WHY each is relevant.
-5. Integrate the thesis naturally as the essay's central claim.
-6. End with a brief roadmap sentence.
+REQUIREMENTS (all must be met for a Band 7 introduction):
+1. Open with a real-world hook SPECIFIC to "${data.concept}" — name a concrete current tension, paradox, or event that reveals why this concept matters now.
+2. Weave in the student's definition naturally — it should read as analysis, not a dictionary entry.
+3. Identify the central analytical tension specific to "${data.concept}" (e.g., for Sovereignty: state authority vs. global governance; for Development: GDP growth vs. human development; for Peace: negative peace vs. positive peace / structural violence). Do NOT default to a generic "globalist vs. statist" framing.
+4. Introduce BOTH case studies with a brief clause explaining why each illuminates "${data.concept}" differently.
+5. Build to the thesis as the essay's governing claim — it should feel earned, not dropped in.
+6. Close with a one-sentence roadmap signalling structure.
 
-OUTPUT: Write ONLY the introduction paragraph in quotation marks. No headers, no bullet points, no meta-commentary. Keep it 80-120 words. Formal academic register.`;
+OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic register). No headers, no bullet points, no meta-commentary.`;
 
                     const geminiResponse = await fetch(
                         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
@@ -1086,6 +1096,42 @@ OUTPUT: Write ONLY the introduction paragraph in quotation marks. No headers, no
         const updateData = (key, val) => setData({ ...data, [key]: val });
         const [showResult, setShowResult] = useState(false);
 
+        // Inline Argument Strength dims (embedded — no separate tab needed)
+        const argDims = [
+            {
+                id: 'claim', label: 'Claim Clarity', color: '#3399ff',
+                score: t => /^(the|this|it can be argued|states|by|in|a|while)/i.test(t.trim()) ? 3 : t.trim().length > 20 ? 2 : 1,
+                note: t => /^(the|this|it can be argued|states|by|in|a|while)/i.test(t.trim())
+                    ? 'AO2 ✓ — Strong opening claim with clear analytical direction.'
+                    : 'Sharpen your point sentence — start with a claim, not background.'
+            },
+            {
+                id: 'evidence', label: 'Evidence Specificity', color: '#00cc77',
+                score: t => /\d{4}|\b(un\b|nato|eu\b|wto|icj|bri|cop|g20|imf|icc|asean)/i.test(t) ? 3 : /said|according|reported|stated/i.test(t) ? 2 : 1,
+                note: t => /\d{4}|\b(un\b|nato|eu\b|wto|icj|bri|cop|g20|imf|icc|asean)/i.test(t)
+                    ? 'AO1 ✓ — Specific institution/date cited.'
+                    : 'Add a year, institution, or named actor to reach AO1 Band 3.'
+            },
+            {
+                id: 'theory', label: 'Theory Link', color: '#cc44ff',
+                score: t => /realism|liberalism|constructivism|marxism|feminism|postcolonial|structuralism|critical theory/i.test(t) ? 3 : 1,
+                note: t => /realism|liberalism|constructivism|marxism|feminism|postcolonial|structuralism|critical theory/i.test(t)
+                    ? 'AO2 ✓ — IR theory applied.'
+                    : 'Name a theory (Realism, Liberalism, Constructivism, Feminism…) to reach AO2 Band 3.'
+            },
+            {
+                id: 'evaluation', label: 'Evaluative Link', color: '#ff9900',
+                score: t => /therefore|consequently|this (demonstrates|reveals|suggests|illustrates)|thus|as a result|which means|this explains/i.test(t) ? 3
+                    : /because|since|as/i.test(t) ? 2 : 1,
+                note: t => /therefore|consequently|this (demonstrates|reveals|suggests|illustrates)|thus|as a result|which means/i.test(t)
+                    ? 'AO3 ✓ — Evaluative connective links evidence to argument.'
+                    : 'Add a connective: "This demonstrates that…" or "Consequently…" to meet AO3.'
+            },
+        ];
+
+        const combined = `${data.point} ${data.evidence} ${data.explanation} Consequently, this ${data.link}.`;
+        const argScores = showResult ? argDims.map(d => ({ ...d, s: d.score(combined), n: d.note(combined) })) : null;
+
         return (
             <div className="space-y-4">
                 <h3 className="text-lg font-bold text-emerald-400">PEEL Paragraph Lab</h3>
@@ -1103,6 +1149,24 @@ OUTPUT: Write ONLY the introduction paragraph in quotation marks. No headers, no
                             <span className="font-bold text-white uppercase text-xs mb-2 block tracking-widest text-emerald-500">Structured Analysis</span>
                             <p>{data.point} {data.evidence} {data.explanation} Consequently, this {data.link}.</p>
                         </div>
+                        {/* Embedded Argument Strength */}
+                        <div className="bg-white/3 border border-white/10 rounded-xl p-4">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">📊 Argument Strength — IB Criteria Check</p>
+                            <div className="grid gap-2">
+                                {argScores && argScores.map(r => (
+                                    <div key={r.id} className="p-3 bg-white/5 border rounded-lg" style={{ borderColor: r.color + '33' }}>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs font-bold" style={{ color: r.color }}>{r.label}</span>
+                                            <span className="font-black text-xs" style={{ color: r.color }}>{r.s}/3</span>
+                                        </div>
+                                        <div className="w-full bg-white/10 rounded-full h-1 mb-2">
+                                            <div className="h-1 rounded-full transition-all" style={{ width: `${(r.s / 3) * 100}%`, background: r.color }} />
+                                        </div>
+                                        <p className="text-xs text-gray-400">{r.n}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                         <Button variant="outline" onClick={() => setShowResult(false)}><RefreshCw size={16} /> Edit Details</Button>
                     </div>
                 )}
@@ -1110,6 +1174,211 @@ OUTPUT: Write ONLY the introduction paragraph in quotation marks. No headers, no
         );
     };
 
+
+    // ── F1: IB Rubric-Aligned Feedback ───────────────────────────────────────
+    const IBRubricFeedback = () => {
+        const [essay, setEssay] = useState('');
+        const [feedback, setFeedback] = useState(null);
+        const AO = [
+            { id: 'AO1', label: 'AO1 — Knowledge & Understanding', color: '#3399ff' },
+            { id: 'AO2', label: 'AO2 — Application & Analysis', color: '#00cc77' },
+            { id: 'AO3', label: 'AO3 — Synthesis & Evaluation', color: '#ff9900' },
+            { id: 'AO4', label: 'AO4 — Use of Key Concepts', color: '#cc44ff' },
+        ];
+        const score = (text, ao) => {
+            const charLen = text.trim().length;
+            const wc = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+            // Accept input if either 30+ chars OR 5+ words (handles non-spaced paste)
+            if (charLen < 30 && wc < 5) return { s: 1, note: 'Too short to evaluate — paste a full paragraph.' };
+            if (ao === 'AO1') {
+                // AO1 (IB 2026): Knowledge & Understanding — named cases, IB concepts, accurate data
+                const hasCase = /south china sea|ukraine|israel|bri|cop28|myanmar|nato|meta|wto|g20|duterte|rohingya|russia|venezuela|sahel|taiwan|arctic|kashmir|nile|darien/i.test(text);
+                const hasConcept = /sovereignty|power|legitimacy|interdependence|human rights?|development|peace|security|identity|equality/i.test(text);
+                const hasDetail = /\d{4}|article|resolution|treaty|protocol|summit|declaration|sanction|convention/i.test(text);
+                return hasCase && hasConcept && hasDetail
+                    ? { s: 3, note: 'Band 3 — Named case + IB concept + specific detail. Solid AO1 ✓' }
+                    : hasCase && hasConcept
+                        ? { s: 2, note: 'Band 2 — Add specific detail (dates, treaties, statistics) to reach Band 3.' }
+                        : { s: 1, note: 'Band 1 — Add a named case study AND a core IB concept (Power, Sovereignty, etc.).' };
+            }
+            if (ao === 'AO2') {
+                // AO2 (IB 2026): Application & Analysis — IR theory applied WITH analytical connectives
+                const hasTheory = /realism|liberalism|constructivism|marxism|feminism|postcolonial|structuralism|critical theory/i.test(text);
+                const hasAnalysis = /therefore|consequently|this (demonstrates|reveals|shows|suggests|illustrates)|because|thus|as a result|this explains|which means/i.test(text);
+                const hasLink = /through a .+ lens|from a .+ perspective|viewed through|analysed via/i.test(text);
+                return hasTheory && hasAnalysis
+                    ? { s: 3, note: 'Band 3 — IR theory applied with analytical connectives ✓ (AO2 target met)' }
+                    : hasTheory
+                        ? { s: 2, note: 'Band 2 — Theory named but not applied. Add: "This demonstrates that..." or "Through a Realist lens..."' }
+                        : { s: 1, note: 'Band 1 — Apply a named IR theory (Realism, Liberalism, Constructivism, Feminism, etc.).' };
+            }
+            if (ao === 'AO3') {
+                // AO3 (IB 2026): Synthesis & Evaluation — counter-argument + sustained evaluative judgement
+                const hasCounter = /however|on the other hand|yet|critics argue|critics of|counter|alternatively|in contrast|nevertheless|this is contested|a competing view/i.test(text);
+                const hasJudgement = /overall|ultimately|to a (large|greater|limited) extent|more significant(ly)?|outweigh|more persuasive|it can be concluded|the evidence suggests/i.test(text);
+                const hasSynthesis = /both .+ and|while .+ nonetheless|despite .+ however/i.test(text);
+                return hasCounter && hasJudgement
+                    ? { s: 3, note: 'Band 3 — Counter-argument + evaluative judgement. This is Band 7 territory ✓' }
+                    : hasCounter || hasJudgement
+                        ? { s: 2, note: `Band 2 — ${hasCounter ? 'Counter-argument present; add an explicit evaluative conclusion.' : 'Judgement present; add a counter-argument first.'}` }
+                        : { s: 1, note: 'Band 1 — Add a counter-argument ("However, critics argue...") and a final evaluative judgement.' };
+            }
+            if (ao === 'AO4') {
+                // AO4 (IB 2026): Use of Key Concepts — 4 core + global challenges + precise definition
+                const coreC = ['power', 'sovereignty', 'legitimacy', 'interdependence'];
+                const globalC = ['human rights', 'development', 'peace', 'security', 'equality', 'environment', 'identity', 'technology', 'health', 'poverty'];
+                const usedCore = coreC.filter(c => text.toLowerCase().includes(c));
+                const usedGlobal = globalC.filter(c => text.toLowerCase().includes(c));
+                const total = usedCore.length + usedGlobal.length;
+                const hasDef = /defined as|refers to|can be understood as|meaning that/i.test(text);
+                return total >= 3 && hasDef
+                    ? { s: 3, note: `Band 3 — ${total} IB concepts used with definitional grounding ✓ (${[...usedCore, ...usedGlobal].slice(0, 3).join(', ')})` }
+                    : total >= 2
+                        ? { s: 2, note: `Band 2 — ${total} concepts found. Add a one-sentence definition of your key concept.` }
+                        : { s: 1, note: 'Band 1 — Name at least 3 IB key concepts: 4 Core (Power, Sovereignty, Legitimacy, Interdependence) + Global Challenges.' };
+            }
+            return { s: 2, note: 'Checked.' };
+        };
+        return (
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-blue-400">🎯 IB Rubric-Aligned Feedback</h3>
+                <p className="text-xs text-gray-400">Paste a paragraph or essay for heuristic AO1–AO4 feedback.</p>
+                <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-36 text-sm" placeholder="Paste your essay or paragraph..." value={essay} onChange={e => setEssay(e.target.value)} />
+                <Button onClick={() => setFeedback(AO.map(ao => ({ ...ao, res: score(essay, ao.id) })))} disabled={essay.trim().length < 30}>Analyse Against IB Criteria</Button>
+                {feedback && <div className="space-y-3 animate-in fade-in duration-300">{feedback.map(ao => (<div key={ao.id} className="p-4 bg-white/5 border rounded-lg" style={{ borderColor: ao.color + '44' }}><div className="flex justify-between items-center mb-1"><span className="text-xs font-bold" style={{ color: ao.color }}>{ao.label}</span><span className="text-xs font-black" style={{ color: ao.color }}>{ao.res.s}/3</span></div><div className="w-full bg-white/10 rounded-full h-1 mb-2"><div className="h-1 rounded-full" style={{ width: `${(ao.res.s / 3) * 100}%`, background: ao.color }} /></div><p className="text-xs text-gray-400">{ao.res.note}</p></div>))}<p className="text-[10px] text-gray-600 italic">Heuristic only — not a substitute for teacher feedback.</p></div>}
+            </div>
+        );
+    };
+
+
+    // ── F5: Comparative Analysis Builder ─────────────────────────────────────
+    const CompareBuilder = () => {
+        const [idxA, setIdxA] = useState('');
+        const [idxB, setIdxB] = useState('');
+        const [angle, setAngle] = useState('Power');
+        const [result, setResult] = useState(null);
+
+        const CONCEPT_GROUPS = [
+            { label: 'Core Concepts', color: '#3399ff', items: ['Power', 'Sovereignty', 'Legitimacy', 'Interdependence'] },
+            { label: 'Global Challenges', color: '#00cc77', items: ['Security', 'Development', 'Environment', 'Equality'] },
+            { label: 'Key Concepts', color: '#ff9900', items: ['Human Rights', 'Peace', 'Identity', 'Justice', 'Technology', 'Globalization', 'Conflict', 'Cooperation'] },
+        ];
+
+        const getRelevantInsight = (caseData, a) => {
+            if (caseData.globalChallenges) {
+                for (const [key, val] of Object.entries(caseData.globalChallenges)) {
+                    if (key.toLowerCase().includes(a.split(' ')[0].toLowerCase())) return { text: val.substring(0, 200), source: 'direct' };
+                }
+            }
+            return { text: caseData.fiveWH?.why?.substring(0, 200) || caseData.facts?.[0] || '', source: 'indirect' };
+        };
+
+        const isConceptRelevant = (caseData, conceptAngle) => {
+            const a = conceptAngle.toLowerCase();
+            const all = [...(caseData.ibLinkage?.core || []), ...(caseData.ibLinkage?.challenge || []), ...Object.keys(caseData.globalChallenges || {})].map(c => c.toLowerCase());
+            return all.some(c => c.includes(a.split(' ')[0]) || a.split(' ')[0].includes(c.split(' ')[0].split('(')[0].trim()));
+        };
+
+        const getBestTheory = (caseData, a) => {
+            const theoryMap = { power: 'Realism', sovereignty: 'Realism', security: 'Realism', conflict: 'Realism', development: 'Structuralism', equality: 'Structuralism', environment: 'Liberalism', cooperation: 'Liberalism', interdependence: 'Liberalism', globalization: 'Liberalism', identity: 'Constructivism', legitimacy: 'Constructivism', justice: 'Constructivism', 'human rights': 'Feminism', peace: 'Feminism', technology: 'Liberalism' };
+            const theory = Object.entries(theoryMap).find(([k]) => a.toLowerCase().includes(k))?.[1] || 'Realism';
+            return { theory, text: caseData.theoryInsights?.[theory]?.substring(0, 160) || null };
+        };
+
+        const buildScaffold = (currentAngle) => {
+            const ca = GLOBAL_CASES.find(c => c.name === idxA);
+            const cb = GLOBAL_CASES.find(c => c.name === idxB);
+            if (!ca || !cb) return;
+            const insightA = getRelevantInsight(ca, currentAngle);
+            const insightB = getRelevantInsight(cb, currentAngle);
+            const theoryA = getBestTheory(ca, currentAngle);
+            const relevanceNote = (!isConceptRelevant(ca, currentAngle) || !isConceptRelevant(cb, currentAngle))
+                ? `⚠️ Note: ${!isConceptRelevant(ca, currentAngle) ? ca.name : cb.name} does not directly centre ${currentAngle} — use it as a secondary illustration or choose a more relevant case pair.` : null;
+            setResult({
+                angle: currentAngle, relevanceNote,
+                sentences: [
+                    { label: 'Opening', color: '#00cc77', text: `Both "${ca.name}" and "${cb.name}" reveal the contested nature of ${currentAngle} — the former through the lens of ${ca.theme}, the latter through ${cb.theme}.` },
+                    { label: `Case A — ${ca.name}`, color: '#3399ff', text: `${insightA.text}...${insightA.source === 'indirect' ? ` [Note: make the ${currentAngle} connection explicit.]` : ''}` },
+                    { label: `Case B — ${cb.name}`, color: '#ff9900', text: `${insightB.text}...${insightB.source === 'indirect' ? ` [Note: make the ${currentAngle} connection explicit.]` : ''}` },
+                    { label: `Lens (${theoryA.theory})`, color: '#cc44ff', text: theoryA.text ? `Through a ${theoryA.theory} lens: ${theoryA.text}...` : `Apply a ${theoryA.theory} lens: how does ${currentAngle} interact with ${theoryA.theory.toLowerCase()} assumptions about state behaviour?` },
+                    { label: 'Synthesis', color: '#ff66aa', text: `Ultimately, "${ca.name}" and "${cb.name}" demonstrate that ${currentAngle} is not fixed but a contested arena shaped by power asymmetries, institutional mechanisms, and normative frameworks. A comparative reading therefore [YOUR EVALUATIVE JUDGEMENT].` },
+                ]
+            });
+        };
+
+        const handleAngle = (a) => { setAngle(a); if (idxA && idxB && idxA !== idxB) buildScaffold(a); else setResult(null); };
+
+        return (
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-cyan-400">⚖️ Comparative Analysis Builder</h3>
+                <p className="text-xs text-gray-400">Choose two cases + an IB concept. Click any concept to update the scaffold instantly.</p>
+                <div className="grid gap-3">
+                    <select className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-2 text-sm" value={idxA} onChange={e => { setIdxA(e.target.value); setResult(null); }}>
+                        <option value="">— Case A —</option>{GLOBAL_CASES.map((c, i) => <option key={i} value={c.name}>{c.name}</option>)}
+                    </select>
+                    <select className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-2 text-sm" value={idxB} onChange={e => { setIdxB(e.target.value); setResult(null); }}>
+                        <option value="">— Case B —</option>{GLOBAL_CASES.filter(c => c.name !== idxA).map((c, i) => <option key={i} value={c.name}>{c.name}</option>)}
+                    </select>
+                    <div className="space-y-2">
+                        {CONCEPT_GROUPS.map(group => (
+                            <div key={group.label}>
+                                <p className="text-[9px] font-bold uppercase mb-1" style={{ color: group.color }}>{group.label}</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {group.items.map(a => (
+                                        <button key={a} onClick={() => handleAngle(a)}
+                                            className="text-xs px-2.5 py-1 rounded-lg border transition-all"
+                                            style={angle === a ? { background: group.color, borderColor: group.color, color: '#000', fontWeight: 700 } : { borderColor: group.color + '44', color: group.color + 'bb' }}>
+                                            {a}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <Button onClick={() => buildScaffold(angle)} disabled={!idxA || !idxB || idxA === idxB}>Build Scaffold</Button>
+                {result && (
+                    <div className="space-y-3 animate-in fade-in duration-300">
+                        <p className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest">Comparative Scaffold — {result.angle}</p>
+                        {result.relevanceNote && <div className="p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg"><p className="text-xs text-amber-400">{result.relevanceNote}</p></div>}
+                        {result.sentences.map((s, i) => (
+                            <div key={i} className="p-3 rounded-r-lg border-l-2 text-xs text-gray-300 leading-relaxed" style={{ borderColor: s.color + '80', background: s.color + '08' }}>
+                                <span className="text-[9px] font-black uppercase tracking-widest block mb-1" style={{ color: s.color }}>{s.label}</span>
+                                {s.text}
+                            </div>
+                        ))}
+                        <p className="text-[10px] text-gray-600 italic">Sections marked [YOUR ...] are where your own analysis goes.</p>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // ── F9: Thesis Variations ─────────────────────────────────────────────────
+    const ThesisVariations = () => {
+
+        const [concept, setConcept] = useState('');
+        const [core, setCore] = useState('');
+        const [variations, setVariations] = useState(null);
+        const generate = () => {
+            if (!concept || !core) return;
+            setVariations([
+                { level: 'Foundation', color: '#888', text: `${concept} is relevant to global politics because ${core}.` },
+                { level: 'Proficient', color: '#00cc77', text: `While ${concept} remains central to global governance, ${core}, suggesting that states must balance self-interest with collective responsibility.` },
+                { level: 'Distinction', color: '#cc44ff', text: `The concept of ${concept} is not a fixed condition but a contested, dynamic arena: ${core}. This claim must be qualified by examining structural constraints and the diverging interests of major powers, emerging economies, and non-state actors who each construct ${concept} through their own normative frameworks.` },
+            ]);
+        };
+        return (
+            <div className="space-y-4">
+                <h3 className="text-lg font-bold text-pink-400">✨ Thesis Variations</h3>
+                <p className="text-xs text-gray-400">Enter your IB concept + core argument. Get 3 thesis phrasings at Foundation, Proficient, and Distinction level.</p>
+                <input className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 text-sm" placeholder="IB Concept (e.g., Sovereignty, Power, Peace)" value={concept} onChange={e => setConcept(e.target.value)} />
+                <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-20 text-sm" placeholder="Core argument (e.g., 'great powers undermine sovereignty through economic coercion')" value={core} onChange={e => setCore(e.target.value)} />
+                <Button onClick={generate} disabled={!concept || !core}>Generate Thesis Variations</Button>
+                {variations && <div className="space-y-3 animate-in fade-in duration-300">{variations.map((v, i) => <div key={i} className="p-4 rounded-xl border-l-4" style={{ borderColor: v.color, background: v.color + '11' }}><span className="text-[10px] font-black uppercase tracking-widest block mb-2" style={{ color: v.color }}>{v.level}</span><p className="text-sm text-gray-200 leading-relaxed italic">"{v.text}"</p></div>)}</div>}
+            </div>
+        );
+    };
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1123,6 +1392,8 @@ OUTPUT: Write ONLY the introduction paragraph in quotation marks. No headers, no
                     { id: 'debate', label: 'Debate Lab', icon: MessageSquare },
                     { id: 'intro', label: 'Intro Builder', icon: Zap },
                     { id: 'peel', label: 'PEEL Lab', icon: PenTool },
+                    { id: 'compare', label: 'Compare', icon: ChevronRight },
+                    { id: 'thesis', label: 'Thesis Var.', icon: PenTool },
                 ].map(b => (
                     <button
                         key={b.id}
@@ -1139,6 +1410,8 @@ OUTPUT: Write ONLY the introduction paragraph in quotation marks. No headers, no
                 {subTab === 'debate' && <DebateLab />}
                 {subTab === 'intro' && <IntroWizard />}
                 {subTab === 'peel' && <PeelLab />}
+                {subTab === 'compare' && <CompareBuilder />}
+                {subTab === 'thesis' && <ThesisVariations />}
             </Card>
         </div>
     );
@@ -1703,33 +1976,72 @@ const MockExamZone = () => {
             [key]: { ...prev[key], isDeep: true, deepLoading: true }
         }));
 
-        const systemInstruction = `You are an IB Global Politics Senior Examiner for the 2026 syllabus. 
-            Your goal is to provide constructive, pedagogically sound, and strictly unbiased feedback. 
-            Maintain a neutral, academic tone. Avoid taking ideological sides; instead, evaluate the student's ability to synthesize competing perspectives (e.g., Realism vs. Liberalism). 
-            Always identify how the 4 core concepts (Power, Sovereignty, Legitimacy, Interdependence) are applied.`;
+        const IB_SYLLABUS_RUBRIC = `IB GLOBAL POLITICS 2026 — OFFICIAL ASSESSMENT CRITERIA (use these as your scoring framework):
+
+AO1 — KNOWLEDGE & UNDERSTANDING (Band 3 = clear, accurate, relevant knowledge of cases and concepts with supporting detail such as dates, statistics, treaties, and named actors):
+  Band 1: Generic or inaccurate — no named cases or concepts
+  Band 2: Named cases/concepts but lacking specificity or accuracy
+  Band 3: Accurate, detailed knowledge with specific supporting evidence
+
+AO2 — APPLICATION & ANALYSIS (Band 3 = consistent application of a named IR theory with sustained analytical connectives that link evidence to argument):
+  Band 1: Descriptive — no theory applied
+  Band 2: Theory named but not systematically applied to evidence
+  Band 3: Theory applied throughout; connectives ("therefore", "this demonstrates") used consistently
+  Valid theories: Realism, Liberalism, Constructivism, Marxism/Structuralism, Feminism, Postcolonialism, Critical Theory
+
+AO3 — SYNTHESIS & EVALUATION (Band 3 = multiple perspectives synthesised, counter-argument addressed, substantiated evaluative judgement reached):
+  Band 1: No counter-argument; no evaluation
+  Band 2: Counter-argument present OR evaluation present, but not both
+  Band 3: Competing perspectives synthesised + explicit evaluative judgement ("To a large extent...", "The evidence suggests...")
+
+AO4 — USE OF KEY CONCEPTS (Band 3 = IB key concepts used precisely, defined contextually, integrated into the argument rather than mentioned decoratively):
+  4 Core Concepts: Power, Sovereignty, Legitimacy, Interdependence
+  Global Challenges (HL): Security, Development, Environment, Equality, Health, Identity, Technology, Poverty
+  Band 1: Concepts absent or used as buzzwords
+  Band 2: Concepts used but not defined or analysed
+  Band 3: Concepts defined in context AND used as analytical lenses throughout
+
+PAPER CONTEXTS:
+  Paper 1 (Source-Based): OPVL analysis of 2–3 sources + structured response; 30 marks; SL & HL
+  Paper 2 (Extended Essay): Two case studies explore one IB concept; 1,200–2,000 words; 40 marks; SL & HL
+  Paper 3 (HL only): Stimulus-based global challenge response; 2,500 words; 40 marks`;
+
+        const systemInstruction = `You are an IB Global Politics Senior Examiner for the 2026 syllabus.
+Your feedback must be:
+- Directly tied to IB 2026 AO1–AO4 mark bands (always cite the band the student is at)
+- Strictly unbiased and politically neutral — evaluate analytical skill, not political position
+- Specific: quote the student's words when praising or critiquing
+- Actionable: every growth point must include an example of what better looks like
+
+${IB_SYLLABUS_RUBRIC}`;
 
         const prompt = `${systemInstruction}
 
-Question: ${q.text}
-Marks Available: ${q.marks || 15}
+---
+QUESTION: ${q.text}
+PAPER / MARKS: ${q.marks || 15} marks
 
-Student Response:
+STUDENT RESPONSE:
 ${text}
+---
 
-Please provide a rigorous assessment. 
+Provide detailed, syllabus-aligned examiner feedback using the sections below.
 
-REQUIRED SECTIONS:
-## Glow
-[Key strengths in knowledge, analysis, and evaluation.]
+## 🟢 GLOW — What the Student Did Well
+For each strength, cite the AO it meets and the mark band achieved. Quote specific phrases from the response.
+(Format: "[AO2 — Band 3] The student writes '...' — this demonstrates consistent application of [theory] because...")
 
-## Grow
-[Specific actionable areas for improvement based on the 2026 IB Rubric.]
+## 🔴 GROW — Specific Areas for Improvement
+For each gap, state the AO being missed, the current band, and what is required to reach the next band.
+Give a concrete example of what the improved version would look like.
+(Format: "[AO3 — currently Band 1 → target Band 3]: No counter-argument is present. To reach Band 3, add: 'However, a Constructivist perspective would argue...'")
 
-## Alternative Perspectives
-[Provide 2-3 alternative ways of responding to this prompt. Suggest different theoretical lenses (e.g., "A feminist critique would focus on...") or different case studies. Keep this unbiased and constructive.]
+## 🔵 ALTERNATIVE PERSPECTIVES
+Suggest 2–3 alternative theoretical lenses or case studies the student could use to approach this question differently. For each, explain the specific analytical angle it would open up.
+(Format: "Through a Feminist lens: instead of focusing on state power, examine how gender hierarchies shape [specific aspect of the question]...")
 
-## Synthesis Guidance
-[A one-sentence 'golden tip' on how to bridge these perspectives for a higher mark band.]`;
+## ⭐ IB EXAMINER'S GOLDEN TIP
+One precise, actionable tip that would most significantly raise this response's mark band. Make it specific to this student's work, not generic advice.`;
 
         let analysisText = null;
 
