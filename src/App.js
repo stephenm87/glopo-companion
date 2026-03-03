@@ -1392,8 +1392,8 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
                     { id: 'debate', label: 'Debate Lab', icon: MessageSquare },
                     { id: 'intro', label: 'Intro Builder', icon: Zap },
                     { id: 'peel', label: 'PEEL Lab', icon: PenTool },
-                    { id: 'compare', label: 'Compare', icon: ChevronRight },
                     { id: 'thesis', label: 'Thesis Var.', icon: PenTool },
+                    { id: 'policy', label: 'Policy Engine', icon: Shield },
                 ].map(b => (
                     <button
                         key={b.id}
@@ -1410,8 +1410,8 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
                 {subTab === 'debate' && <DebateLab />}
                 {subTab === 'intro' && <IntroWizard />}
                 {subTab === 'peel' && <PeelLab />}
-                {subTab === 'compare' && <CompareBuilder />}
                 {subTab === 'thesis' && <ThesisVariations />}
+                {subTab === 'policy' && <PolicyEngine />}
             </Card>
         </div>
     );
@@ -2608,8 +2608,811 @@ const GlossaryProvider = () => {
 };
 
 // --- Main App ---
+// --- Ops Room (station data & sub-components at module level) ---
+
+const FLASHCARD_DEFS = {
+    "Power": "The ability of an actor to influence or control the behaviour of other actors. Can be hard (coercive) or soft (persuasive).",
+    "Sovereignty": "The supreme authority of a state to govern itself within its territory without external interference — the basis of the Westphalian order.",
+    "Legitimacy": "The quality of being accepted and recognised as rightful. A government may have power without legitimacy, such as after a coup.",
+    "Interdependence": "A relationship where states are mutually reliant; disruption for one affects others. Can be symmetrical or asymmetrical.",
+    "Human rights": "Rights inherent to all humans regardless of nationality, sex, ethnicity, or religion — often debated as universal vs. culturally relative.",
+    "Justice": "The fair and equitable treatment of individuals and groups. In GP, justice includes distributive, restorative, and procedural dimensions.",
+    "Liberty": "Freedom from oppression or coercion by government or other actors. Negative liberty = freedom from interference; positive = capacity to act.",
+    "Equality": "The state of being equal in rights, status, or opportunity. Global inequality is a structural outcome of the Core-Periphery system.",
+    "Development": "The process of improving living standards and freedoms. Measured variously by GDP, HDI, SDGs. Contested: top-down vs. bottom-up.",
+    "Sustainability": "Meeting the needs of the present without compromising the ability of future generations to meet their own needs (Brundtland, 1987).",
+    "Peace": "More than the absence of war — positive peace includes justice, equality, and the elimination of structural violence (Galtung).",
+    "Conflict": "A clash of interests between actors. Can be violent or non-violent, interstate or intrastate, overt or structural.",
+    "Violence": "The use of force to harm. Includes direct violence (physical), structural violence (systemic injustice), and cultural violence (norms).",
+    "Non-violence": "Political action that rejects physical force. Includes civil disobedience, sanctions, and diplomacy as tools of change.",
+    "Globalization": "The intensification of global flows of goods, capital, people, and ideas. Creates interdependence but also inequality and cultural tension.",
+    "Inequality": "Unequal distribution of resources, opportunities, or power between individuals, states, or regions — a key driver of global instability.",
+    "Borders": "Lines defining the territorial limits of sovereign states. Can be physical, legal, digital. Increasingly contested in a globalised world.",
+    "Security": "Freedom from threats to survival or wellbeing. Encompasses national, human, environmental, and cyber security dimensions.",
+    "Environment": "The natural world, increasingly threatened by industrial activity. Environmental degradation is a threat multiplier for conflict and poverty.",
+    "Health": "A state of complete physical, mental, and social wellbeing. Framed as a human right and a global public good requiring collective action.",
+    "Poverty": "Deprivation of basic needs and capabilities. Absolute poverty (survival) vs. relative poverty (social participation). Structural in origin.",
+    "Identity": "The sense of self — individual, national, or civilisational. Constructed through shared norms, history, and narratives (Constructivism).",
+    "Technology": "Tools and innovations shaping how states, actors, and individuals interact. A contested arena of power, surveillance, and emancipation."
+};
+
+const THEORY_QUOTES = [
+    { quote: "China's island-building in the South China Sea is a rational response to the anarchic international system — states must maximize power to survive.", answer: "Realism", explanation: "Power maximization in anarchy = core Realist logic. Every state acts to secure its survival." },
+    { quote: "The AU's permanent inclusion in the G20 shows that multilateral institutions can evolve to better reflect the principle of equal participation.", answer: "Liberalism", explanation: "Institutional reform toward greater inclusivity is a hallmark of Liberal thinking about cooperative global governance." },
+    { quote: "Boko Haram's rise reflects the structural underdevelopment of Northern Nigeria — violence is the rational response of a marginalized periphery.", answer: "Structuralism", explanation: "Core-Periphery hierarchy producing structural violence = Structuralist / World Systems analysis." },
+    { quote: "Meta's extraction of user data for profit mirrors 19th-century enclosures — the digital commons is being privatized by transnational capital.", answer: "Marxism", explanation: "Capital accumulation through data extraction, digital enclosures — classic Marxist critique of capitalist expansion." },
+    { quote: "Turkiye's 'strategic autonomy' is not just a policy — it is a performance of a distinct civilizational identity that refuses Western or Eastern labels.", answer: "Constructivism", explanation: "Identity is socially constructed and shapes state interests — this is the core Constructivist argument." },
+    { quote: "The peace negotiations in the Sahel excluded women at every level, perpetuating a masculine security framework that ignored human security entirely.", answer: "Feminism", explanation: "Feminist IR critiques the exclusion of women from decision-making and challenges militarized security frameworks." },
+    { quote: "The BRI's 99-year port lease in Sri Lanka is a 21st-century version of the unequal treaties — debt replacing gunboats as the tool of control.", answer: "Postcolonialism", explanation: "Neo-colonial dependency relationships, unequal treaties, and Global South sovereignty — core Postcolonial concerns." },
+    { quote: "The US IRA subsidies are not really about climate — they are a geopolitical tool to secure American dominance in the next century's energy order.", answer: "Realism", explanation: "Green Mercantilism — using environmental policy as cover for national interest and power competition." },
+    { quote: "Myanmar shows the failure of R2P: without binding institutional enforcement, human rights norms dissolve whenever they conflict with sovereignty.", answer: "Liberalism", explanation: "Liberal institutionalism argues norms and institutions are essential; their failure here is a Liberals' tragedy." },
+    { quote: "COP28's fossil fuel lobby presence demonstrates that climate governance serves the interests of capital, not the planet or the Global South.", answer: "Marxism", explanation: "Class interests and capital accumulation driving 'green' policy inaction — Marxist political economy of climate." },
+    { quote: "The Arctic is not just melting ice — it is a socially constructed strategic arena where states must 'perform' their Arctic identity to gain legitimacy.", answer: "Constructivism", explanation: "China calling itself a 'near-Arctic state' is pure identity construction — interests are created through discourse." },
+    { quote: "The Chibok kidnappings reveal how gender-based violence is weaponized as a deliberate tool to undermine the social fabric of resistant communities.", answer: "Feminism", explanation: "Feminist IR centres gendered violence as a structural feature of armed conflict, not a side effect." },
+    { quote: "Western-designed human rights norms impose a European liberal framework on societies with radically different histories of justice and community.", answer: "Postcolonialism", explanation: "The 'universal' in universal human rights masks Western epistemic hegemony — Postcolonial critique at its core." },
+    { quote: "The G20's debt rules allow wealthy Core nations to subsidize their revival while the Periphery drowns in loan conditions that deepen dependency.", answer: "Structuralism", explanation: "Core-Periphery analysis of international financial architecture — structural inequality reproduced through institutions." },
+];
+
+const SOURCE_LAB_ITEMS = [
+    {
+        id: 'sl1',
+        title: '"The Responsibility to Protect: A New Era of Humanitarian Intervention"',
+        attribution: 'UN Secretary-General Kofi Annan, Address to the General Assembly, September 1999',
+        excerpt: 'If humanitarian intervention is, indeed, an unacceptable assault on sovereignty, how should we respond to a Rwanda, to a Srebrenica -- to gross and systematic violations of human rights that offend every precept of our common humanity? The tragedy of Kosovo has prompted a renewed debate on the question. The debate has laid bare deep divisions within the international community. Some have challenged the legal basis for NATO action. Many more have questioned the motives behind it. The legitimacy of humanitarian intervention is more than a legal question. It goes to the heart of our understanding of statehood, of the meaning of sovereignty, and of the obligations that states owe not only to each other but to humanity as a whole. In an era of interdependence, when the suffering of one is the responsibility of all, we must develop a new doctrine that does not allow sovereignty to become a shield for mass murder. We must ask ourselves whether the United Nations Charter -- and the international order it underpins -- was designed to protect the individual or the state. These are not comfortable questions. But they are questions we can no longer avoid.',
+        modelOPVL: {
+            origin: 'UN Secretary-General Kofi Annan in a formal address to the General Assembly in September 1999, in the aftermath of NATO\'s Kosovo intervention and the Rwandan genocide. Annan was a Ghanaian diplomat who served as UN Secretary-General from 1997 to 2006.',
+            purpose: 'To challenge the international community to reconsider the absolute nature of state sovereignty in the face of mass atrocities, and to lay groundwork for what would become the Responsibility to Protect doctrine formalised in 2005.',
+            value: 'Highly significant as a primary source from the world\'s highest diplomatic office -- it directly shaped the intellectual trajectory of R2P and reveals the normative tension between sovereignty and human rights at the highest institutional level.',
+            limitation: 'As a speech aimed at political persuasion, it uses emotionally charged examples (Rwanda, Srebrenica) selectively and does not engage with the arguments of China, Russia, and Global South states who feared "humanitarian" pretexts for great power interference.'
+        }
+    },
+    {
+        id: 'sl2',
+        title: '"China Will Not Tolerate Foreign Interference in Its Internal Affairs"',
+        attribution: 'Official statement by the Chinese Ministry of Foreign Affairs following UN Security Council debate on Xinjiang, July 2022',
+        excerpt: 'China firmly opposes the politicisation of human rights issues and the use of human rights as a pretext for interference in other countries\' internal affairs. Xinjiang-related issues are entirely China\'s internal affairs. The Chinese government has the right and responsibility to protect its citizens from terrorism, extremism, and separatism, as recognised by international law. The so-called concerns raised by certain Western governments are based on lies and disinformation fabricated by hostile forces seeking to destabilise China. We urge those countries to respect the basic norms governing international relations, stop interfering in China\'s domestic affairs, and reflect on their own human rights records. More than 80 countries have expressed understanding and support for China\'s position. We welcome all those willing to visit Xinjiang to see the truth for themselves. China is committed to multilateralism and international cooperation -- but cooperation cannot mean accepting the diktat of a handful of Western nations who speak loudly of human rights while committing violations of their own.',
+        modelOPVL: {
+            origin: 'An official position statement published by the Chinese Ministry of Foreign Affairs in July 2022, following intensified international focus on alleged human rights abuses against Uyghur Muslims in Xinjiang.',
+            purpose: 'To deflect international criticism by framing Chinese policy as a legitimate counter-terrorism measure and reframing the debate as an attack on sovereignty by Western powers with their own human rights failings.',
+            value: 'Valuable as a primary source revealing how China officially frames the Xinjiang situation -- it illustrates the Realist-Westphalian counter-narrative to R2P that many Global South states find compelling.',
+            limitation: 'Highly partisan government propaganda -- it presents no acknowledgement of the substantial evidence from former detainees, leaked documents, and satellite imagery. The claim that "80+ countries support China" conflates diplomatic silence with genuine endorsement.'
+        }
+    },
+    {
+        id: 'sl3',
+        title: '"Youth-Led Climate Action and the Language of Rights"',
+        attribution: 'Greta Thunberg, speech at the United Nations Climate Action Summit, New York, September 2019',
+        excerpt: 'My message is that we will be watching you. This is all wrong. I should not be up here. I should be back in school on the other side of the ocean. Yet you all come to us young people for hope. How dare you! You have stolen my dreams and my childhood with your empty words. And yet I am one of the lucky ones. People are suffering. People are dying. Entire ecosystems are collapsing. We are in the beginning of a mass extinction, and all you can talk about is money and fairy tales of eternal economic growth. How dare you! For more than 30 years, the science has been crystal clear. How dare you continue to look away and come here saying that you are doing enough, when the politics and solutions needed are still nowhere in sight. You say you love your children above all else, and yet you are stealing their future in front of their very eyes. Until you start focusing on what needs to be done rather than what is politically possible, there is no hope. We will not let you get away with this.',
+        modelOPVL: {
+            origin: 'Swedish climate activist Greta Thunberg, speaking before world leaders at the UN Climate Action Summit in New York, September 2019, aged 16. Thunberg began her school strikes for climate in August 2018.',
+            purpose: 'To directly challenge heads of state on climate inaction, using moral and emotional pressure to demand immediate emissions reductions rather than incremental political compromise.',
+            value: 'Significant as a primary source revealing the rhetorical strategies of youth climate activism -- the deliberate use of anger, grief, and intergenerational justice framing to shift political discourse.',
+            limitation: 'As an advocacy speech, it does not distinguish between the responsibilities of high-emitting states versus developing economies, making it stronger as mobilising rhetoric than as policy analysis.'
+        }
+    },
+    {
+        id: 'sl4',
+        title: '"The Limits of Multilateralism: The UN in an Age of Great Power Competition"',
+        attribution: 'Editorial, The Economist, March 2022, published following Russia\'s invasion of Ukraine',
+        excerpt: 'The United Nations was built on a flaw: it gave veto power over collective security to the five states most likely to threaten it. Russia\'s invasion of Ukraine has put that flaw on full display. In the 77 years since San Francisco, the Security Council has been paralysed at every moment of genuine danger involving a permanent member or its close allies. Korea, Suez, Vietnam, Afghanistan, Iraq -- the list of crises in which P5 self-interest has trumped collective security is longer than its defenders care to admit. The Charter\'s authors knew this. They gambled that great power unity would outlast the rivalry that produced the Cold War. They lost. Russia\'s invasion is not merely a legal violation of Article 2(4): it is an ideological challenge to the entire post-1945 order. It raises the question not just of how to punish Putin, but of whether the architecture designed at San Francisco is capable of responding to 21st-century threats at all. The answer, uncomfortably, may be that it is not. What replaces it remains, as yet, unimagined.',
+        modelOPVL: {
+            origin: 'An editorial published by The Economist -- a prestigious British centre-right liberal publication with a global readership -- in March 2022, immediately following Russia\'s invasion of Ukraine.',
+            purpose: 'To situate Russia\'s invasion within a broader critique of the UN\'s structural inability to enforce collective security when a permanent member is the aggressor, and to raise the question of institutional reform.',
+            value: 'Useful as a secondary source from a credible publication reflecting mainstream Western liberal internationalist opinion. Its historical survey of P5 vetoes adds analytical depth, and it is valuable for assessing Liberal institutionalist critiques of global governance.',
+            limitation: 'As a Western liberal publication, The Economist frames Western-led alternatives to the UN as more legitimate without equivalent scrutiny of US unilateralism -- for example, the US-led Iraq invasion of 2003, also a comparable Charter violation.'
+        }
+    },
+    {
+        id: 'sl5',
+        title: '"AI Governance and the New Scramble for Digital Power"',
+        attribution: 'Marietje Schaake, former MEP and International Policy Director, Stanford University, Geneva Digital Governance Forum, 2023',
+        excerpt: 'We are witnessing a new scramble for power -- not for territory, but for the infrastructure, data, and standards that will define global relations for the next century. Artificial intelligence is not neutral technology. It encodes values, amplifies existing power imbalances, and, when deployed without democratic oversight, becomes a tool of surveillance and control. The question is not whether AI will transform global politics -- it already has. The question is who will write the rules. Currently, that contest is being fought between the United States, which has largely allowed market actors to dominate, and China, which has integrated AI into its model of authoritarian governance. Europe has attempted a third way -- the AI Act -- based on fundamental rights and democratic accountability. But the Global South has largely been excluded from these negotiations. If the rules that govern AI are written in Washington, Beijing, or Brussels, then the majority of humanity will live under a digital order they had no hand in shaping. That is not governance -- it is a new form of colonialism.',
+        modelOPVL: {
+            origin: 'Marietje Schaake, a former Dutch MEP and International Policy Director at Stanford University\'s Cyber Policy Center, speaking at the Geneva Digital Governance Forum in 2023.',
+            purpose: 'To argue that AI governance is a geopolitical contest, to critique the exclusion of the Global South from norm-setting, and to advocate for democratic, rights-based AI regulation.',
+            value: 'Valuable as a primary source from a domain expert in both policymaking and academia. The framing of AI governance as a "new colonialism" connects digital governance to the Postcolonial critique of norm-setting power imbalances.',
+            limitation: 'Schaake\'s European background may produce an overly positive assessment of the EU AI Act. The "third way" framing oversimplifies the diversity of approaches within the US and China, and the Global South itself is far from homogeneous.'
+        }
+    },
+    {
+        id: 'sl6',
+        title: '"Development Aid as Dependency: The Case Against the Washington Consensus"',
+        attribution: 'Dambisa Moyo, Dead Aid: Why Aid is Not Working and How There Is a Better Way for Africa, Chapter 2, 2009',
+        excerpt: 'Since 1970, more than $1 trillion in development-related aid has been transferred to Africa. It is arguable that less than 10 percent of that money has had any meaningful developmental impact whatsoever. Africa is no richer as a result of the hundreds of billions of dollars poured into the continent over the past five decades. Meanwhile, those few African countries that have resisted the aid model -- Botswana most famously, and more recently Rwanda and Ethiopia -- have recorded sustained economic growth. The case against aid is not ideological. It is empirical. Aid undermines domestic industry by flooding markets with cheap goods. It distorts incentive structures by allowing governments to bypass their own populations as a tax base -- reducing accountability and democratic pressure. And it creates a culture of dependency that stunts the development of domestic capital markets. The solution is not charity but trade, bond markets, direct investment, and remittances of the African diaspora -- sources of finance that come with accountability built in. Africa does not need to be saved. Africa needs to be taken seriously as a full partner in the global economy.',
+        modelOPVL: {
+            origin: 'Dambisa Moyo, a Zambian-born economist educated at Oxford and Harvard, in her 2009 book "Dead Aid." Moyo previously worked at Goldman Sachs and the World Bank, giving her insider credibility when critiquing the aid establishment.',
+            purpose: 'To make an empirical and political economy argument against the aid model of African development, advocating instead for market-based alternatives: bonds, FDI, trade, and diaspora remittances.',
+            value: 'Valuable as a primary source challenging Western-centric development assumptions from an African intellectual with elite credentials. The argument is useful for analysing the tension between Structuralist and Liberal accounts of development and whether aid perpetuates Core-Periphery dependency.',
+            limitation: 'Moyo\'s argument is contested -- critics note that the Botswana example is complicated by its diamond revenues, and Rwanda\'s growth occurred under authoritarian conditions. She also conflates structural development aid with humanitarian emergency aid, which operate under very different logics.'
+        }
+    },
+    {
+        id: 'sl7',
+        title: '"Sovereignty at Sea: The South China Sea Arbitration and Its Aftermath"',
+        attribution: 'Permanent Court of Arbitration Award, South China Sea Case (Philippines v. China), July 2016 -- press summary',
+        excerpt: 'The Tribunal found that China\'s claims to historic rights within the nine-dash line were incompatible with the United Nations Convention on the Law of the Sea, and that to the extent China had historic rights to resources in the South China Sea, such rights were extinguished by the entry into force of UNCLOS. The Tribunal found that certain sea areas are within the exclusive economic zone of the Philippines, because they are not overlapped by any possible entitlement of China. Having found that the Philippines has an entitlement to an exclusive economic zone, the Tribunal found that China had violated the Philippines\' sovereign rights in its exclusive economic zone by interfering with Philippine fishing and petroleum exploration. China has consistently stated that it does not accept or recognise the Award, and has continued to maintain its presence and operations within the area covered by the nine-dash line without modification.',
+        modelOPVL: {
+            origin: 'An official press summary of the Permanent Court of Arbitration award in the Philippines v. China case, issued in July 2016. The PCA is an intergovernmental organisation in The Hague providing arbitration services under international law.',
+            purpose: 'To officially communicate the ruling of the arbitral tribunal -- that China\'s nine-dash line claims lack legal basis under UNCLOS -- to the international community following proceedings initiated by the Philippines in 2013.',
+            value: 'Valuable as a primary legal document representing the definitive international legal ruling on the South China Sea dispute. Essential for understanding the gap between legal rulings and enforcement when great powers refuse compliance.',
+            limitation: 'As a legal summary, it deliberately avoids political and strategic context, and does not address enforcement -- which the PCA has no mechanism for. The document also cannot capture the complexity of overlapping claims by Vietnam, Malaysia, Brunei, and Taiwan.'
+        }
+    },
+    {
+        id: 'sl8',
+        title: '"The Feminist Critique of the Liberal Peace"',
+        attribution: 'Cynthia Enloe, The Curious Feminist: Searching for Women in a New Age of Empire, Chapter 4, 2004',
+        excerpt: 'The standard peace agreement does not ask: where are the women? It negotiates borders, disarmament schedules, and power-sharing arrangements between armed men. Women -- who have survived rape as a weapon of war, who have kept families alive, who have organised community resistance -- are typically absent from the table. When gender is mentioned at all, it appears in a clause committing governments to "mainstream" women\'s issues at some unspecified future point. This is not oversight. It is structure. International relations was built by men, for states, in the image of a world in which violence is the prerogative of institutions and women are its acceptable casualties. A feminist analysis of peace does not merely add women and stir. It asks why particular forms of conflict are deemed political -- and therefore worthy of negotiation -- while the violence that women experience daily is deemed private, domestic, below the threshold of diplomacy. A peace that does not dismantle gendered hierarchies is not peace.',
+        modelOPVL: {
+            origin: 'Cynthia Enloe, a pioneering American feminist International Relations scholar and professor at Clark University, in her 2004 book "The Curious Feminist." Enloe is widely credited with establishing feminist IR as an academic discipline.',
+            purpose: 'To develop a feminist critique of conventional peace processes, arguing that their exclusion of women and gendered violence renders them structurally incomplete -- and that genuine feminist peace requires dismantling gendered hierarchies.',
+            value: 'Highly valuable as a foundational secondary source for understanding Feminist IR theory and its critique of the Liberal peace. Particularly useful for analysing why post-conflict societies often reproduce gender-based violence despite formal peace agreements.',
+            limitation: 'As a theoretical text, it occasionally overgeneralises about "peace agreements" as a monolithic structure. Critics from within feminist IR have also questioned whether Enloe\'s framework adequately accounts for the role of race and class in structuring gendered violence.'
+        }
+    },
+    {
+        id: 'sl9',
+        title: '"The Global South Has Lost Faith in the International Order"',
+        attribution: 'Celso Amorim, former Brazilian Foreign Minister, interview with Le Monde Diplomatique, October 2023',
+        excerpt: 'The West is surprised that the Global South has not rallied behind Ukraine. They should not be. We remember Kosovo. We remember Iraq. We remember Libya. We have seen what a "rules-based order" means in practice -- it means the rules apply when they confirm Western interests, and are suspended when they do not. This is not cynicism. It is historical experience. When Brazil abstained on the Ukraine vote at the Security Council, we were not defending Russia. We were asserting that peace requires negotiation, and that a world in which one bloc dictates the terms of international legitimacy is not a world in which durable peace is possible. The BRICS expansion reflects this reality. More states are seeking alternatives to a dollar-denominated financial system and a security architecture that was designed without their input. The globalisation project told us we were equals who played by the same rules. Ukraine has confirmed what many of us suspected: that particular promise was always conditional.',
+        modelOPVL: {
+            origin: 'Celso Amorim, Brazil\'s most experienced diplomat and former Foreign Minister under Presidents Lula and Dilma Rousseff, in an interview with the left-leaning French publication Le Monde Diplomatique in October 2023.',
+            purpose: 'To articulate a Global South perspective on the Ukraine war and explain Brazilian strategic non-alignment as principled rather than pro-Russian, situating it within a broader pattern of selective rule-application by Western powers.',
+            value: 'Valuable as a primary source revealing the strategic reasoning of an influential Global South power. Useful for analysing fractures within the Western-led international order post-2022 and the rise of strategic autonomy as a diplomatic doctrine.',
+            limitation: 'Amorim\'s argument is politically motivated -- it serves Brazil\'s diplomatic positioning. The comparison of Ukraine to Iraq and Libya elides key distinctions: Ukraine involves direct territorial annexation of a sovereign state by a neighbouring great power, not a multilateral intervention.'
+        }
+    },
+    {
+        id: 'sl10',
+        title: '"Water Wars: Resource Scarcity and Interstate Conflict in the Nile Basin"',
+        attribution: 'International Crisis Group, Report: Egypt-Ethiopia: Preventing a Nile Waters Conflict, January 2023',
+        excerpt: 'The dispute over the Grand Ethiopian Renaissance Dam (GERD) has brought Egypt and Ethiopia closer to open confrontation than at any point in their modern diplomatic history. Egypt, which depends on the Nile for 97 percent of its freshwater needs, views any significant reduction in its annual flow as an existential threat. Ethiopia, one of the poorest countries in the world, sees the GERD as its sovereign right -- the foundation of industrialisation and electrification for a population of 120 million. The African Union-led negotiations have repeatedly stalled on two critical questions: the filling timeline and the rules governing drought management. Egypt demands legally binding guarantees that Ethiopia will release sufficient water during drought years. Ethiopia argues that such guarantees would undermine its sovereign control over its own territory and resources. Without a binding agreement, the risk of unilateral action -- including through military means -- cannot be excluded. The GERD case demonstrates that climate change, by intensifying rainfall variability, will make resource-based conflicts between states structurally more likely in the coming decades.',
+        modelOPVL: {
+            origin: 'A conflict analysis report published by the International Crisis Group in January 2023. The ICG is an independent NGO that monitors and analyses conflict globally, widely respected by governments and the UN for its impartiality.',
+            purpose: 'To assess the risk of military escalation between Egypt and Ethiopia over the GERD, identify the core sticking points in negotiations, and recommend diplomatic steps to reduce conflict risk.',
+            value: 'Highly credible secondary source from an organisation recognised for rigorous, impartial conflict analysis. It provides detailed structural analysis of both parties\' positions and connects the dispute to climate change as a systemic threat multiplier.',
+            limitation: 'The ICG must maintain relationships with both governments and the African Union, which may encourage cautious framing. The report also does not engage substantively with historical colonial-era treaties that allocated Nile waters almost entirely to Egypt without Ethiopian consent.'
+        }
+    },
+    {
+        id: 'sl11',
+        title: '"The Return of Industrial Policy: A New Era of Economic Nationalism"',
+        attribution: 'Joseph Stiglitz, Nobel Laureate in Economics, Project Syndicate, June 2023',
+        excerpt: 'For 40 years, the Washington Consensus told developing countries that industrial policy was an economic sin -- government picking winners, distorting markets, crowding out private investment. Then the United States passed the Inflation Reduction Act, the CHIPS and Science Act, and the Infrastructure Investment and Jobs Act: two trillion dollars of industrial policy in three years. The European Union responded with its Green Deal Industrial Plan and loosened state aid rules. China has been doing all of this for decades. What has changed? The answer is geopolitics. The pandemic exposed the fragility of globally distributed supply chains. The Ukraine war demonstrated the weaponisation of energy dependency. And the US-China technology decoupling has revealed that the market does not automatically produce the strategic industries a nation needs. The death of the Washington Consensus creates space -- particularly for the Global South -- to pursue developmentalist strategies that were long suppressed by conditionality. But it also creates a risk: that economic nationalism slides into protectionism and subsidy wars that undermine the multilateral trading system on which small economies depend.',
+        modelOPVL: {
+            origin: 'Joseph Stiglitz, a Nobel Prize-winning economist and former Chief Economist at the World Bank, writing in Project Syndicate -- a widely-read global opinion platform -- in June 2023.',
+            purpose: 'To analyse the ideological shift from the Washington Consensus toward state-led industrial policy, explain its geopolitical drivers, and identify both opportunities for the Global South and risks of economic nationalism.',
+            value: 'Valuable as a secondary analytical source from a leading heterodox economist who has long critiqued the Washington Consensus. The argument connects economic policy to geopolitical trends directly relevant to GP themes of power, interdependence, and development.',
+            limitation: 'Stiglitz may overestimate the capacity of Global South states to translate industrial policy space into effective outcomes -- many lack the institutional infrastructure to implement such strategies. The piece also focuses heavily on the US and EU, with less attention to least-developed countries most dependent on the current trading system.'
+        }
+    },
+    {
+        id: 'sl12',
+        title: '"Postcolonial Sovereignty and the Legacies of Empire"',
+        attribution: 'Frantz Fanon, The Wretched of the Earth, Preface, 1961 (trans. Constance Farrington)',
+        excerpt: 'The colonial world is a Manichean world. The settler paints the native as a sort of quintessence of evil. Native society is not simply described as a society lacking in values. It is not enough for the colonist to affirm that those values have disappeared from, or still better never existed in, the colonial world. The native is declared insensible to ethics; he represents not only the absence of values, but also the negation of values. He is the corrosive element, destroying all that comes near him. Colonial domination did not disrupt merely political structures and economic practices -- it dismantled the psychological infrastructure of the colonised. The liberation movement must therefore go beyond a transfer of power; it must be a total transformation -- of land, of institutions, and of the colonial self. National consciousness is not nationalism, but it is the only thing that will give us an international dimension. The intellectuals who accept decolonisation only as a rearrangement of political power without a corresponding social revolution have already betrayed the people who liberated them.',
+        modelOPVL: {
+            origin: 'Frantz Fanon, a Martinique-born Algerian psychiatrist and revolutionary intellectual, writing in 1961 during the Algerian War of Independence. The Wretched of the Earth was published the year Fanon died, aged 36, and became a foundational anticolonial text.',
+            purpose: 'To provide a psychological and political analysis of the colonial relationship and to argue that genuine decolonisation requires a complete rupture with colonial structures -- social, institutional, and psychological -- not merely a political transfer of power.',
+            value: 'Invaluable as a foundational primary source for Postcolonial IR theory. Fanon\'s analysis of the Manichean colonial worldview underpins contemporary postcolonial critiques of Western humanitarian intervention, development discourse, and liberal internationalism.',
+            limitation: 'Written in the specific context of French colonial Algeria in 1961, its direct applicability to 21st-century postcolonial contexts requires careful contextualisation. The text is also a normative argument rather than an empirical analysis, which limits its use for descriptive claims about contemporary international relations.'
+        }
+    },
+    {
+        id: 'sl13',
+        title: '"Human Trafficking and the Limits of International Law"',
+        attribution: 'UN Office on Drugs and Crime (UNODC), Global Report on Trafficking in Persons, 2022 -- Executive Summary',
+        excerpt: 'The COVID-19 pandemic severely disrupted anti-trafficking operations globally, while simultaneously increasing vulnerability to trafficking. Lockdowns, border closures, and economic downturns pushed more people -- particularly women and girls -- into conditions of exploitation. Despite 181 countries having criminalised human trafficking under the Palermo Protocol, the number of victims detected remains far below actual trafficking flows. In 2020, fewer victims were detected globally than in 2018, largely due to disruptions to law enforcement and victim identification services. Sexual exploitation remains the most detected form, accounting for 46 percent of detected victims globally. However, labour exploitation is increasingly detected, particularly in agriculture, domestic work, and manufacturing supply chains. The disconnect between ratification of international instruments and effective domestic implementation reflects a persistent enforcement gap: states lack the resources, political will, and in some cases the institutional capacity to prosecute traffickers, protect victims, and address the structural drivers -- poverty, inequality, conflict, and climate displacement -- that make millions vulnerable to exploitation.',
+        modelOPVL: {
+            origin: 'The UN Office on Drugs and Crime (UNODC) in its biennial Global Report on Trafficking in Persons, published in 2022. The UNODC is mandated by the UN General Assembly to monitor global crime trends and support member states in implementing anti-crime conventions.',
+            purpose: 'To provide evidence-based data on global trafficking trends, identify how COVID-19 affected responses, and highlight the gap between legal commitments and enforcement -- targeting policymakers, donors, and civil society.',
+            value: 'Credible and comprehensive statistical report from the sole UN agency with a global monitoring mandate on trafficking. Frank acknowledgement of the enforcement gap between formal legal commitments and implementation is analytically valuable.',
+            limitation: 'UNODC data is inevitably constrained by what states choose to report, systematically undercounting trafficking in contexts with weak detection capacity or political incentives to minimise figures. The report does not distinguish between consensual adult sex work and coercive trafficking in a way all researchers accept.'
+        }
+    },
+    {
+        id: 'sl14',
+        title: '"The Humanitarian-Military Nexus in the Age of R2P"',
+        attribution: 'Alex de Waal, Director, World Peace Foundation, Boston Review symposium on R2P, 2014',
+        excerpt: 'The Libyan intervention of 2011 was authorised by the UN Security Council under Resolution 1973 as a limited mission to protect civilians. It became regime change. NATO forces actively targeted Gaddafi\'s military apparatus, coordinated with rebel ground forces, and continued operations well beyond the geographic and operational scope originally described to the Security Council. The result was the death of Gaddafi, the dissolution of the Libyan state, and a decade of civil war, weapons proliferation, and jihadist expansion across the Sahel. Russia and China drew the correct lesson from Libya: abstention on Council votes was no longer safe. Since 2011, both have vetoed every resolution that might authorise military intervention, including multiple attempts to address the Syrian catastrophe. The humanitarian community must reckon with the fact that the Libyan precedent may have made the next Rwanda more likely, not less -- because it closed the diplomatic space within which humanitarian intervention can be authorised.',
+        modelOPVL: {
+            origin: 'Alex de Waal, Director of the World Peace Foundation at Tufts University and a long-standing scholar of African conflicts, writing in a Boston Review symposium on R2P in 2014, three years after the Libyan intervention.',
+            purpose: 'To provide a critical retrospective analysis of the Libyan R2P intervention, arguing that NATO\'s mission creep fundamentally damaged the doctrine\'s credibility and long-term effectiveness.',
+            value: 'Highly valuable as a secondary source from a respected independent scholar with expertise in the Sahel and humanitarian intervention. Directly connects the misuse of R2P in Libya to subsequent Russian and Chinese obstruction of Security Council action on Syria.',
+            limitation: 'De Waal writes from a position broadly sympathetic to R2P while critical of its implementation -- he may understate arguments from critics who believe the doctrine is fundamentally flawed rather than poorly applied. His claim that the Libyan precedent "made the next Rwanda more likely" is an empirically difficult counterfactual to assess.'
+        }
+    },
+    {
+        id: 'sl15',
+        title: '"Sanctions as Diplomacy: The Iran Case"',
+        attribution: 'Richard Nephew, former US State Department Sanctions Coordinator, The Art of Sanctions: A View from the Field, 2018',
+        excerpt: 'Sanctions work when they impose pain on the target in proportion to the policy change demanded -- and when the sanctioning party is willing to offer genuine relief that makes compliance worth the political cost. The Iran case illustrates both sides of this equation. The sanctions regime constructed between 2010 and 2012 -- targeting Iran\'s oil exports, central bank, and access to the SWIFT financial messaging system -- cut Iran\'s oil revenues by approximately 50 percent, collapsed the rial, and produced double-digit inflation. This pain, combined with genuine diplomatic engagement, was sufficient to bring Iran to the table and produce the 2015 JCPOA. But the Trump administration\'s reimposition of sanctions after 2018 without a corresponding diplomatic off-ramp demonstrated the other side: sanctions are not self-executing. Without credible relief on offer, they produce defiance rather than compliance, and may actually harden the target government\'s domestic political position by providing a convenient external enemy.',
+        modelOPVL: {
+            origin: 'Richard Nephew, the State Department\'s lead sanctions coordinator during the Obama administration\'s Iran negotiations, in his 2018 book. Nephew was a principal architect of the sanctions regime that helped produce the JCPOA.',
+            purpose: 'To explain the conditions under which sanctions produce their intended policy outcomes using Iran as a case study, and to argue that the Trump administration\'s reimposition of sanctions without diplomatic engagement was strategically self-defeating.',
+            value: 'Uniquely valuable as a practitioner primary source -- Nephew is not an outside analyst but one of the actual architects of the Iran sanctions regime. His insider account provides access to strategic reasoning and design choices that shaped the policy.',
+            limitation: 'Nephew\'s deep personal investment in the JCPOA may produce a systematically favourable assessment of sanctions effectiveness. He does not engage seriously with humanitarian critics who argue that broad economic sanctions disproportionately harm civilian populations rather than political elites.'
+        }
+    },
+    {
+        id: 'sl16',
+        title: '"Digital Authoritarianism and the Geopolitics of Internet Governance"',
+        attribution: 'Freedom House, Freedom on the Net 2023: The Repressive Power of Artificial Intelligence, Executive Summary',
+        excerpt: 'Internet freedom declined globally for the thirteenth consecutive year in 2023. Artificial intelligence is rapidly becoming a tool for authoritarian governments to tighten control over their populations, enabling faster, cheaper, and more sophisticated surveillance, censorship, and propaganda operations. At least 47 governments have deployed AI-enabled facial recognition technology in public spaces. At least 16 governments have used AI to monitor social media platforms. China continues to export its surveillance technology model through the Digital Silk Road, with Chinese companies supplying AI surveillance systems to governments in Africa, Asia, and Latin America that have used them to target political opponents and civil society. The so-called splinternet -- the fragmentation of the global internet along geopolitical lines -- is accelerating. Russia has made legal provision for operating a sovereign internet disconnected from the global network. These developments represent a fundamental challenge to the vision of the internet as a global commons governed by shared rules.',
+        modelOPVL: {
+            origin: 'Freedom House, a US-government-funded NGO based in Washington D.C. that monitors political rights and civil liberties globally, in its annual Freedom on the Net 2023 report.',
+            purpose: 'To document the global decline of internet freedom, highlight the role of AI in enabling digital authoritarianism, and raise concern about China\'s export of surveillance technology and accelerating internet fragmentation.',
+            value: 'Useful as a data-rich secondary source that documents patterns across many countries and years, providing comparative benchmarks for assessing digital rights trends. Specific examples of AI-enabled surveillance are useful for analysing technology as a tool of authoritarian governance.',
+            limitation: 'Freedom House is primarily funded by the US government, generating legitimate questions about whether its assessments systematically reflect US foreign policy priorities. The report does not engage critically with surveillance practices of Western liberal democracies, which use similar technologies under different legal frameworks.'
+        }
+    },
+    {
+        id: 'sl17',
+        title: '"A World Between Orders: The Crisis of Liberal Internationalism"',
+        attribution: 'John Ikenberry, Liberal Leviathan, Princeton University Press, 2011 -- Epilogue',
+        excerpt: 'The liberal international order that the United States built after 1945 was not simply a mechanism for American domination. It was a distinctive type of order -- one built around rules, institutions, and multilateral cooperation rather than imperial hierarchy. Rising powers were given a stake in this order; their participation lent it legitimacy that purely hegemonic orders lack. The question the 21st century poses is whether this order can survive the relative decline of the power that created it. China is not a revolutionary state seeking to overturn all existing institutions -- it is a revisionist state seeking to modify them in its favour. Russia is more genuinely destabilising. But the deeper threat may come not from challengers outside the liberal order but from within it -- from the United States itself, which under certain administrations has questioned the very multilateralism it invented. An order that loses the commitment of its founder while facing revisionist external pressure is in structural danger. What emerges from that danger will determine the shape of global politics for decades to come.',
+        modelOPVL: {
+            origin: 'John Ikenberry, a leading American International Relations scholar at Princeton University, in the Epilogue to "Liberal Leviathan" (2011) -- a major theoretical work on the post-1945 US-led liberal international order.',
+            purpose: 'To assess structural challenges facing the liberal international order -- from rising powers and from internal erosion of American commitment to multilateralism -- and to argue that the order\'s future depends on its capacity to adapt to a more multipolar distribution of power.',
+            value: 'Highly valuable as a comprehensive secondary source from a leading theorist of the liberal order. Ikenberry\'s distinction between revolutionary and revisionist challengers is analytically useful for categorising state behaviour in current geopolitical contests.',
+            limitation: 'As an American scholar writing within the liberal internationalist tradition, Ikenberry tends to treat the post-1945 order as more legitimate than postcolonial critics would accept. The 2011 publication date also predates many of the most significant tests of his framework: Trump, Ukraine, COVID-19.'
+        }
+    },
+    {
+        id: 'sl18',
+        title: '"The Rohingya Crisis and the Failure of ASEAN\'s Non-Interference Principle"',
+        attribution: 'Phil Robertson, Deputy Director, Human Rights Watch Asia, Foreign Policy commentary, September 2017',
+        excerpt: 'ASEAN has failed the Rohingya catastrophically -- and the failure is structural, not accidental. The Association\'s founding principle of non-interference was designed to protect Southeast Asian governments from external pressure on their domestic policies, including their human rights records. In the case of Myanmar, it has functioned as a diplomatic shield for ethnic cleansing. When 700,000 people flee across a border in a month, that is not an "internal matter." It is a regional crisis with regional consequences for Bangladesh, Thailand, Malaysia, and Indonesia -- all ASEAN members. The bloc\'s consensus-based decision-making structure means that any single member state can prevent collective action. The ASEAN Five-Point Consensus, agreed in April 2021 following the military coup, has been consistently ignored by the junta with no meaningful ASEAN response. ASEAN has no enforcement mechanism and no suspension procedure. This is not regional multilateralism. It is a mutual protection arrangement for authoritarian governments that prioritises diplomatic comfort over human lives.',
+        modelOPVL: {
+            origin: 'Phil Robertson, Deputy Director of the Asia Division at Human Rights Watch -- one of the world\'s largest international human rights NGOs -- writing a commentary for Foreign Policy magazine in September 2017, at the height of the Rohingya military crackdown.',
+            purpose: 'To expose ASEAN\'s deliberate structural failure to respond to the Rohingya crisis and to call for a fundamentally different approach to regional multilateralism that prioritises accountability over non-interference.',
+            value: 'Valuable as a primary advocacy source from a major international human rights organisation with direct field access in the region. Robertson\'s critique of ASEAN\'s structural limitations is analytically precise and useful for comparing regional governance models.',
+            limitation: 'Human Rights Watch\'s mandate produces inherently partisan analysis in favour of intervention. Robertson does not seriously engage with the practical risks of abandoning non-interference or with the geopolitical constraints smaller ASEAN members face in confronting Myanmar.'
+        }
+    },
+    {
+        id: 'sl19',
+        title: '"The Reparations Debate: Justice, History, and Sovereignty"',
+        attribution: 'Caribbean Community (CARICOM), Ten-Point Plan for Reparatory Justice, 2014',
+        excerpt: 'The CARICOM Reparations Commission calls upon European governments, whose nations were enriched by their enslavement of African people and indigenous genocide in the Caribbean, to establish a reparations framework to address the persistent harm done to Caribbean communities. Science has demonstrated that the persistent ill-health of our peoples, the poverty, the illiteracy, the crime and violence that disproportionately affect us, are rooted in the Atlantic slavery experience. Caribbean nations today are net losers in the globalisation process as a direct result of slavery and colonial policies that structured modern inequalities. Structural poverty is the primary legacy of slavery. The debt was created by European governments which imposed slavery and genocide upon our ancestors and extracted from their unpaid labour such vast wealth that it financed European industrialisation. Europe must acknowledge this historic wrong and act decisively. Reparations are not charity. They are compensation for crimes against humanity and the foundation upon which sustainable Caribbean development can be constructed.',
+        modelOPVL: {
+            origin: 'The Caribbean Community (CARICOM) Reparations Commission, representing 15 Caribbean nation-states and dependencies, in its Ten-Point Plan for Reparatory Justice, formally released in 2014. CARICOM is the principal intergovernmental organisation of Caribbean states.',
+            purpose: 'To formally articulate a collective Caribbean demand for reparations from European governments for slavery and indigenous genocide, framing reparations as legal compensation for historical crimes against humanity rather than charity.',
+            value: 'Significant as a collective primary source representing the official position of multiple sovereign states on reparations -- elevating what was a civil society demand to the level of intergovernmental diplomacy. Valuable for analysing the politics of historical justice and the Postcolonial critique of the liberal international order.',
+            limitation: 'As an advocacy document, the Ten-Point Plan simplifies complex historical causation and does not engage with contested questions in reparations theory: who qualifies, how to calculate damages, or how to structure compensation without creating new injustices.'
+        }
+    },
+    {
+        id: 'sl20',
+        title: '"The Arctic\'s Melting Logic: Climate, Resources, and Geopolitical Competition"',
+        attribution: 'Arctic Council, Arctic Climate Change Update 2021: Key Trends and Impacts -- Summary for Policy-Makers',
+        excerpt: 'The Arctic is warming at more than twice the rate of the global average. By 2050, the Arctic Ocean is projected to be virtually ice-free in summer for the first time in recorded human history. This transformation is simultaneously an ecological catastrophe and a geopolitical opportunity. As sea ice recedes, previously inaccessible shipping routes -- the Northern Sea Route along Russia\'s coast and the Northwest Passage through Canada\'s Arctic Archipelago -- are becoming commercially viable for longer portions of the year. Shipping through the Northern Sea Route can reduce the distance between Europe and Asia by up to 40 percent compared to the Suez Canal route. The region also holds an estimated 30 percent of the world\'s undiscovered natural gas reserves and 13 percent of its oil. Russia, with the world\'s longest Arctic coastline, is best positioned to benefit. China, despite having no Arctic territory, has declared itself a "near-Arctic state" and invested heavily in Arctic research and infrastructure partnerships.',
+        modelOPVL: {
+            origin: 'The Arctic Council, an intergovernmental forum of the eight Arctic states plus six indigenous peoples\' organisations as Permanent Participants, in its 2021 Arctic Climate Change Update summary document.',
+            purpose: 'To communicate scientific consensus on Arctic warming to policymakers, identify key ecological and physical impacts, and flag the geopolitical dimensions of Arctic transformation for policy attention.',
+            value: 'Highly credible as the official collective scientific assessment of all eight Arctic states -- it represents genuine scientific consensus rather than a single state\'s position. Valuable for connecting climate change to sovereignty, resources, and great power competition simultaneously.',
+            limitation: 'The Arctic Council operates by consensus, which may produce diplomatic language that softens assessments of Russian and Chinese behaviour. Russia\'s suspension from the Council following the 2022 invasion of Ukraine occurred after this report\'s publication, significantly altering Arctic governance dynamics.'
+        }
+    },
+];
+
+
+const FlashcardDrillStation = ({ onKnownChange }) => {
+    const terms = Object.keys(FLASHCARD_DEFS);
+    const [idx, setIdx] = useState(0);
+    const [flipped, setFlipped] = useState(false);
+    const [ratings, setRatings] = useState({});
+
+    const term = terms[idx];
+    const rated = Object.keys(ratings);
+    const knownCount = Object.values(ratings).filter(r => r === 'know').length;
+    const unsureCount = Object.values(ratings).filter(r => r === 'unsure').length;
+    const reviewCount = Object.values(ratings).filter(r => r === 'review').length;
+    const weakTerms = terms.filter(t => ratings[t] === 'review');
+
+    const rate = (r) => {
+        const newRatings = { ...ratings, [term]: r };
+        setRatings(newRatings);
+        onKnownChange(Object.keys(newRatings).filter(t => newRatings[t] === 'know').length);
+        setFlipped(false);
+        setIdx(prev => (prev < terms.length - 1 ? prev + 1 : prev));
+    };
+
+    const reset = () => { setIdx(0); setFlipped(false); setRatings({}); onKnownChange(0); };
+    const progress = Math.round((rated.length / terms.length) * 100);
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
+                <div className="flex gap-3 text-xs font-bold">
+                    <span className="text-emerald-400">&#10003; Know: {knownCount}</span>
+                    <span className="text-amber-400">~ Unsure: {unsureCount}</span>
+                    <span className="text-red-400">&#10007; Review: {reviewCount}</span>
+                </div>
+                <button onClick={reset} className="text-[10px] text-gray-500 hover:text-white border border-white/10 px-3 py-1 rounded-lg transition-colors">Reset</button>
+            </div>
+            <div className="w-full bg-white/5 rounded-full h-1.5 mb-4">
+                <div className="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+            </div>
+
+            {idx < terms.length ? (
+                <>
+                    <div
+                        onClick={() => setFlipped(!flipped)}
+                        className="relative cursor-pointer min-h-[200px] rounded-2xl border-2 border-white/10 hover:border-blue-500/40 transition-all select-none overflow-hidden"
+                    >
+                        <div className={`w-full h-full transition-all duration-500 p-8 flex flex-col items-center justify-center text-center ${flipped ? 'bg-blue-900/20 border-blue-500/30' : 'bg-white/5'}`}>
+                            {!flipped ? (
+                                <>
+                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-4">IB Concept &mdash; Click to reveal</p>
+                                    <h2 className="text-4xl font-black text-white">{term}</h2>
+                                    <p className="text-xs text-gray-600 mt-4">Card {idx + 1} of {terms.length}</p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-[10px] text-blue-400 uppercase tracking-widest font-bold mb-4">{term}</p>
+                                    <p className="text-gray-200 text-sm leading-relaxed max-w-md">{FLASHCARD_DEFS[term]}</p>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {flipped && (
+                        <div className="flex gap-3 animate-in fade-in duration-300">
+                            <button onClick={() => rate('know')} className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-500 text-white transition-all">&#10003; Know It</button>
+                            <button onClick={() => rate('unsure')} className="flex-1 py-3 rounded-xl font-bold text-sm bg-amber-600 hover:bg-amber-500 text-white transition-all">~ Unsure</button>
+                            <button onClick={() => rate('review')} className="flex-1 py-3 rounded-xl font-bold text-sm bg-red-700 hover:bg-red-600 text-white transition-all">&#10007; Review</button>
+                        </div>
+                    )}
+                    {!flipped && <p className="text-center text-xs text-gray-600 italic">Click the card to flip it, then rate your confidence</p>}
+                </>
+            ) : (
+                <div className="text-center p-8 bg-white/5 rounded-2xl border border-white/10">
+                    <p className="text-2xl font-black mb-2">Deck Complete!</p>
+                    <p className="text-gray-400 mb-6 text-sm">You know <span className="text-emerald-400 font-bold">{knownCount}</span> of {terms.length} terms.</p>
+                    {weakTerms.length > 0 && (
+                        <div className="mb-6 p-4 bg-red-900/20 border border-red-500/20 rounded-xl text-left">
+                            <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-2">Terms to Review</p>
+                            <div className="flex flex-wrap gap-2">{weakTerms.map(t => <span key={t} className="text-xs bg-red-500/20 text-red-300 px-2 py-1 rounded">{t}</span>)}</div>
+                        </div>
+                    )}
+                    <button onClick={reset} className="px-6 py-2 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white text-sm transition-all">Restart Deck</button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const TheoryLensMatcherStation = ({ onScoreChange }) => {
+    const [idx, setIdx] = useState(0);
+    const [selected, setSelected] = useState(null);
+    const [revealed, setRevealed] = useState(false);
+    const [score, setScore] = useState({ correct: 0, total: 0 });
+
+    const q = THEORY_QUOTES[idx];
+    const theories = Object.keys(IR_THEORIES);
+
+    const handle = (theory) => {
+        if (revealed) return;
+        setSelected(theory);
+        setRevealed(true);
+        const isCorrect = theory === q.answer;
+        const newScore = { correct: score.correct + (isCorrect ? 1 : 0), total: score.total + 1 };
+        setScore(newScore);
+        onScoreChange(newScore);
+    };
+
+    const next = () => {
+        if (idx < THEORY_QUOTES.length - 1) { setIdx(idx + 1); }
+        else { setIdx(0); }
+        setSelected(null);
+        setRevealed(false);
+    };
+
+    const accuracy = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-between items-center flex-wrap gap-2">
+                <p className="text-xs text-gray-500">Quote {idx + 1} of {THEORY_QUOTES.length}</p>
+                <p className="text-xs font-bold text-blue-400">Accuracy: <span className="text-white">{accuracy}%</span> ({score.correct}/{score.total})</p>
+            </div>
+
+            <div className="p-6 bg-white/5 border border-white/10 rounded-2xl">
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-4">Match this argument to the correct IR theory</p>
+                <p className="text-lg font-medium text-gray-100 leading-relaxed italic">"{q.quote}"</p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                {theories.map(t => {
+                    const isSelected = selected === t;
+                    const isCorrect = t === q.answer;
+                    let cls = 'p-3 rounded-xl border-2 font-bold text-sm text-center cursor-pointer transition-all ';
+                    if (!revealed) cls += 'border-white/10 text-gray-400 hover:border-blue-500/50 hover:text-white hover:bg-white/5';
+                    else if (isCorrect) cls += 'border-emerald-500 bg-emerald-500/20 text-emerald-300 scale-105';
+                    else if (isSelected) cls += 'border-red-500 bg-red-500/10 text-red-400';
+                    else cls += 'border-white/5 text-gray-600 opacity-40';
+                    return (
+                        <button key={t} onClick={() => handle(t)} className={cls}
+                            style={{ borderLeftColor: revealed && isCorrect ? IR_THEORIES[t].color : undefined }}>
+                            {t}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {revealed && (
+                <div className={`p-4 rounded-xl border animate-in zoom-in-95 duration-300 ${selected === q.answer ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-red-900/20 border-red-500/30'}`}>
+                    <p className="font-black mb-1 text-sm" style={{ color: selected === q.answer ? '#34d399' : '#f87171' }}>
+                        {selected === q.answer ? '&#10003; Correct!' : `\u2717 The answer is ${q.answer}`}
+                    </p>
+                    <p className="text-gray-300 text-xs leading-relaxed">{q.explanation}</p>
+                    <button onClick={next} className="mt-3 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all">
+                        {idx < THEORY_QUOTES.length - 1 ? 'Next Quote \u2192' : 'Restart \u2192'}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const CaseSpeedRoundStation = ({ onHighScore }) => {
+    const SPEED_CASES = [
+        // ── From Glopo Companion GLOBAL_CASES ────────────────────────────
+        {
+            answer: "South China Sea Dispute", facts: [
+                "China constructed artificial islands on top of submerged reefs and installed military installations, including missile batteries and runways.",
+                "The Permanent Court of Arbitration ruled in 2016 that China's nine-dash line claim had no basis under UNCLOS — China rejected the ruling entirely.",
+                "Vietnam, the Philippines, Malaysia, Brunei, and Taiwan all have overlapping sovereignty claims in these waters.",
+                "Freedom of Navigation Operations conducted by the US Navy have regularly challenged China's territorial claims since 2015.",
+            ]
+        },
+        {
+            answer: "Belt and Road Initiative", facts: [
+                "Launched by Xi Jinping in 2013, this infrastructure programme has invested over $1 trillion across 150+ countries.",
+                "Sri Lanka leased its Hambantota Port to China on a 99-year arrangement after failing to service its debt obligations.",
+                "Critics call this 'debt-trap diplomacy' — creditors argue the loan terms were accepted voluntarily and transparently.",
+                "The BRI includes both a land-based Silk Road Economic Belt and a 21st Century Maritime Silk Road.",
+            ]
+        },
+        {
+            answer: "Nigeria & Boko Haram", facts: [
+                "Boko Haram's name translates roughly as 'Western education is forbidden' — the group opposes secular governance and formal schooling.",
+                "In April 2014, the group kidnapped 276 girls from a school in Chibok, triggering the global #BringBackOurGirls campaign.",
+                "The group declared a caliphate in northern Nigeria in 2014 and later pledged allegiance to ISIS, rebranding as ISWAP.",
+                "Lake Chad basin states — Nigeria, Niger, Chad, and Cameroon — formed a Multinational Joint Task Force to combat the insurgency.",
+            ]
+        },
+        {
+            answer: "Myanmar Rohingya Crisis", facts: [
+                "Myanmar's military launched a clearance operation in Rakhine State in August 2017, which the UN labelled 'textbook genocide'.",
+                "Over 700,000 Rohingya fled to Cox's Bazar in Bangladesh, creating one of the world's largest refugee settlements.",
+                "Myanmar's constitution reserved 25% of parliamentary seats for the military, giving the Tatmadaw veto power over constitutional changes.",
+                "The International Court of Justice ordered provisional measures in 2020 to protect the Rohingya from further genocidal acts.",
+            ]
+        },
+        {
+            answer: "Syrian Civil War & Refugee Crisis", facts: [
+                "The Arab Spring protests began in Deraa in March 2011, escalating into a full civil war involving Assad's forces, rebels, ISIS, and Kurdish groups.",
+                "Over 6.6 million Syrians were registered as refugees by 2023, the largest refugee population from a single country in the world.",
+                "Russia used its UN Security Council veto repeatedly to block resolutions condemning Assad's government.",
+                "Chemical weapons attacks in Ghouta (2013) and Douma (2018) triggered international condemnation and limited US military strikes.",
+            ]
+        },
+        {
+            answer: "Ukrainian War & NATO Expansion", facts: [
+                "Russia annexed Crimea and triggered conflict in the Donbas in 2014 following Ukraine's Euromaidan revolution.",
+                "Russia launched a full-scale invasion of Ukraine on 24 February 2022, calling it a 'Special Military Operation'.",
+                "Finland and Sweden applied for NATO membership in 2022, a historic shift after decades of neutrality.",
+                "The UN General Assembly passed multiple resolutions demanding Russian withdrawal, but Russia vetoed Security Council action.",
+            ]
+        },
+        {
+            answer: "Iran Nuclear Deal (JCPOA)", facts: [
+                "The 2015 Joint Comprehensive Plan of Action limited Iran's uranium enrichment to 3.67% in exchange for sanctions relief.",
+                "The US withdrew from the JCPOA in 2018 under President Trump, reimposing 'maximum pressure' sanctions.",
+                "Iran responded by gradually exceeding its enrichment limits, reaching 60% and then 84% purity — near weapons-grade.",
+                "The IAEA lost continuous monitoring access at key Iranian nuclear facilities after US withdrawal.",
+            ]
+        },
+        {
+            answer: "Israel-Gaza Conflict", facts: [
+                "Hamas, designated a terrorist organisation by the US and EU, won Palestinian legislative elections in 2006 and has governed Gaza since 2007.",
+                "Hamas launched the October 7, 2023 attack on Israel, killing approximately 1,200 people — the deadliest day for Jews since the Holocaust.",
+                "Israel declared a formal state of war, launching an extensive military campaign that displaced over 1.7 million Gazans.",
+                "The ICJ ordered provisional measures in January 2024 after South Africa filed a genocide case against Israel.",
+            ]
+        },
+        {
+            answer: "Sahel Climate & Security Crisis", facts: [
+                "The Sahel region has experienced a 1.5x faster temperature rise than the global average, accelerating desertification and water scarcity.",
+                "Military coups in Mali (2021), Burkina Faso (2022), and Niger (2023) ousted elected governments and expelled French forces.",
+                "The Alliance of Sahel States — Mali, Burkina Faso, Niger — withdrew from ECOWAS and formed a confederation in 2023.",
+                "The Lake Chad basin has shrunk by 90% since the 1960s, displacing millions and intensifying resource conflict.",
+            ]
+        },
+        {
+            answer: "Climate Change & Pacific Islands", facts: [
+                "Tuvalu offered all citizens New Zealand citizenship in 2023 as their islands face total inundation from sea-level rise.",
+                "The Maldives held an underwater cabinet meeting in 2009 to highlight the threat of climate change to their sovereignty.",
+                "Under UNCLOS, a state's EEZ extends 200 nautical miles from its baseline — rising seas could eliminate habitable land and thus statehood.",
+                "Pacific Island nations formed the Pacific Islands Forum to collectively lobby for stronger global emissions commitments.",
+            ]
+        },
+        {
+            answer: "Sudan Civil War", facts: [
+                "War broke out in April 2023 between Sudan's national army (SAF) and the paramilitary Rapid Support Forces (RSF) over integration negotiations.",
+                "The RSF evolved from the Janjaweed militias responsible for the Darfur genocide in the 2000s.",
+                "Over 10 million people were internally displaced by 2024, the largest internal displacement crisis in the world.",
+                "Sudan's conflict has destabilised neighbouring Chad, Central African Republic, and Ethiopia, creating a regional humanitarian emergency.",
+            ]
+        },
+        {
+            answer: "Taiwan Strait Tensions", facts: [
+                "Taiwan has operated as a self-governing democracy since 1949, but the PRC claims it as a breakaway province.",
+                "China conducted its largest military exercises around Taiwan in August 2022 following Nancy Pelosi's visit to Taipei.",
+                "The US maintains a policy of 'strategic ambiguity' — selling arms to Taiwan but not committing to military defence.",
+                "Taiwan produces over 90% of the world's most advanced semiconductors through TSMC, giving it extraordinary global economic leverage.",
+            ]
+        },
+    ];
+
+    const allQuestions = SPEED_CASES.flatMap(c => c.facts.map(f => ({ fact: f, answer: c.answer })));
+    const [phase, setPhase] = useState('idle');
+    const [questions, setQuestions] = useState([]);
+    const [qIdx, setQIdx] = useState(0);
+    const [selected, setSelected] = useState(null);
+    const [score, setScore] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(60);
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [choices, setChoices] = useState([]);
+    const [highScore, setHighScore] = useState(0);
+
+    const caseNames = [...new Set(GLOBAL_CASES.map(c => c.name))];
+    const getChoices = (correct) => {
+        const others = caseNames.filter(n => n !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
+        return [correct, ...others].sort(() => Math.random() - 0.5);
+    };
+
+    useEffect(() => {
+        if (phase === 'playing' && questions.length > 0) {
+            setChoices(getChoices(questions[qIdx % questions.length].answer));
+        }
+    }, [qIdx, phase, questions]);
+
+    useEffect(() => {
+        if (phase !== 'playing') return;
+        const t = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) { clearInterval(t); setPhase('done'); return 0; }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(t);
+    }, [phase]);
+
+    const start = () => {
+        const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
+        setQuestions(shuffled);
+        setPhase('playing');
+        setQIdx(0);
+        setScore(0);
+        setTimeLeft(60);
+        setSelected(null);
+        setShowFeedback(false);
+        if (shuffled.length > 0) setChoices(getChoices(shuffled[0].answer));
+    };
+
+    const pick = (c) => {
+        if (showFeedback) return;
+        setSelected(c);
+        setShowFeedback(true);
+        if (questions.length > 0 && c === questions[qIdx % questions.length].answer) setScore(s => s + 1);
+        setTimeout(() => { setQIdx(i => i + 1); setSelected(null); setShowFeedback(false); }, 1100);
+    };
+
+    if (phase === 'idle') return (
+        <div className="text-center py-12 animate-in fade-in duration-500">
+            <p className="text-5xl mb-4">&#9889;</p>
+            <h3 className="text-2xl font-black mb-2">Case Study Speed Round</h3>
+            <p className="text-gray-400 text-sm mb-8 max-w-sm mx-auto">60 seconds. Read a key fact. Name the case study. As many as you can.</p>
+            {highScore > 0 && <p className="text-amber-400 font-bold text-sm mb-4">Your Best: {highScore}</p>}
+            <button onClick={start} className="px-8 py-3 rounded-xl font-black bg-amber-500 hover:bg-amber-400 text-black transition-all text-lg">Start Timer</button>
+        </div>
+    );
+
+    if (phase === 'done') {
+        const newHigh = score > highScore;
+        if (newHigh) { setHighScore(score); onHighScore(score); }
+        return (
+            <div className="text-center py-12 animate-in zoom-in-95 duration-300">
+                <p className="text-5xl mb-4">{score >= 10 ? '\ud83c\udfc6' : score >= 5 ? '\ud83c\udfaf' : '\ud83d\udcaa'}</p>
+                <h3 className="text-2xl font-black mb-2">Time's Up!</h3>
+                <p className="text-gray-400 mb-2">You answered <span className="text-amber-400 font-black text-3xl">{score}</span> correctly</p>
+                {newHigh && <p className="text-emerald-400 text-sm font-bold mb-6">\ud83d\udd25 New High Score!</p>}
+                <button onClick={start} className="px-8 py-3 rounded-xl font-black bg-amber-500 hover:bg-amber-400 text-black transition-all">Play Again</button>
+            </div>
+        );
+    }
+
+    const q = questions.length > 0 ? questions[qIdx % questions.length] : null;
+    return (
+        <div className="space-y-4 animate-in fade-in duration-300">
+            <div className="flex items-center justify-between">
+                <div className={`text-4xl font-black tabular-nums ${timeLeft <= 10 ? 'text-red-400 animate-pulse' : 'text-white'}`}>{timeLeft}s</div>
+                <div className="text-right"><p className="text-xs text-gray-500">Score</p><p className="text-3xl font-black text-amber-400">{score}</p></div>
+            </div>
+            <div className="w-full bg-white/5 rounded-full h-2">
+                <div className="bg-amber-500 h-2 rounded-full transition-all" style={{ width: `${(timeLeft / 60) * 100}%` }} />
+            </div>
+            {q && (
+                <>
+                    <div className="p-6 bg-white/5 border border-white/10 rounded-2xl">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-3">Which case study is this?</p>
+                        <p className="text-gray-100 font-medium leading-relaxed">"{q.fact}"</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {choices.map(c => {
+                            let cls = 'p-4 rounded-xl border-2 font-bold text-sm text-left transition-all cursor-pointer ';
+                            if (!showFeedback) cls += 'border-white/10 text-gray-300 hover:border-amber-500/50 hover:bg-amber-500/10';
+                            else if (c === q.answer) cls += 'border-emerald-500 bg-emerald-500/20 text-emerald-300';
+                            else if (c === selected) cls += 'border-red-500 bg-red-500/10 text-red-400';
+                            else cls += 'border-white/5 text-gray-600 opacity-40';
+                            return <button key={c} onClick={() => pick(c)} className={cls}>{c}</button>;
+                        })}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
+const SourceLabStation = () => {
+    const [srcIdx, setSrcIdx] = useState(0);
+    const [responses, setResponses] = useState({ origin: '', purpose: '', value: '', limitation: '' });
+    const [submitted, setSubmitted] = useState(false);
+
+    const src = SOURCE_LAB_ITEMS[srcIdx];
+    const changeSource = (i) => { setSrcIdx(i); setResponses({ origin: '', purpose: '', value: '', limitation: '' }); setSubmitted(false); };
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex gap-2 flex-wrap">
+                {SOURCE_LAB_ITEMS.map((s, i) => (
+                    <button key={s.id} onClick={() => changeSource(i)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${srcIdx === i ? 'bg-purple-600 border-purple-500 text-white' : 'border-white/10 text-gray-400 hover:border-purple-500/50'}`}>
+                        Source {i + 1}
+                    </button>
+                ))}
+            </div>
+            <div className="p-5 bg-purple-900/10 border border-purple-500/20 rounded-xl">
+                <p className="text-[10px] text-purple-400 uppercase tracking-widest font-bold mb-1">Source {srcIdx + 1}</p>
+                <p className="font-bold text-white mb-1">{src.title}</p>
+                <p className="text-[11px] text-gray-400 italic mb-4">{src.attribution}</p>
+                <p className="text-sm text-gray-300 leading-relaxed">{src.excerpt}</p>
+            </div>
+            {!submitted ? (
+                <div className="space-y-4">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Complete the OPVL Framework</p>
+                    {[
+                        { key: 'origin', label: 'O \u2014 Origin', hint: 'Who produced this? When and where?' },
+                        { key: 'purpose', label: 'P \u2014 Purpose', hint: 'Why was it produced? For what audience?' },
+                        { key: 'value', label: 'V \u2014 Value', hint: 'Why is this source useful to a historian/analyst?' },
+                        { key: 'limitation', label: 'L \u2014 Limitation', hint: 'What does it omit, exaggerate, or distort?' }
+                    ].map(({ key, label, hint }) => (
+                        <div key={key}>
+                            <label className="block text-xs font-bold text-purple-400 mb-1">{label}</label>
+                            <p className="text-[10px] text-gray-600 italic mb-1">{hint}</p>
+                            <textarea
+                                className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 text-sm h-20 focus:outline-none focus:border-purple-500 transition-colors resize-none leading-relaxed"
+                                placeholder="Your analysis..."
+                                value={responses[key]}
+                                onChange={e => setResponses({ ...responses, [key]: e.target.value })}
+                            />
+                        </div>
+                    ))}
+                    <button
+                        onClick={() => setSubmitted(true)}
+                        disabled={!responses.origin || !responses.purpose || !responses.value || !responses.limitation}
+                        className="w-full py-3 rounded-xl font-bold bg-purple-600 hover:bg-purple-500 text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        Submit &amp; See Model Answer
+                    </button>
+                </div>
+            ) : (
+                <div className="space-y-4 animate-in zoom-in-95 duration-300">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Model Analysis vs. Your Response</p>
+                    {[
+                        { key: 'origin', label: 'O \u2014 Origin' },
+                        { key: 'purpose', label: 'P \u2014 Purpose' },
+                        { key: 'value', label: 'V \u2014 Value' },
+                        { key: 'limitation', label: 'L \u2014 Limitation' }
+                    ].map(({ key, label }) => (
+                        <div key={key} className="grid md:grid-cols-2 gap-3">
+                            <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Your {label}</p>
+                                <p className="text-sm text-gray-300 leading-relaxed">{responses[key] || <span className="italic text-gray-600">No response</span>}</p>
+                            </div>
+                            <div className="p-4 bg-purple-900/20 border border-purple-500/20 rounded-xl">
+                                <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2">Model {label}</p>
+                                <p className="text-sm text-gray-300 leading-relaxed">{src.modelOPVL[key]}</p>
+                            </div>
+                        </div>
+                    ))}
+                    <button onClick={() => setSubmitted(false)} className="px-4 py-2 rounded-lg font-bold text-sm border border-white/10 text-gray-400 hover:text-white transition-all">&larr; Edit My Responses</button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const OpsRoom = () => {
+    const [station, setStation] = useState('flashcard');
+    const [flashcardKnown, setFlashcardKnown] = useState(0);
+    const [theoryScore, setTheoryScore] = useState({ correct: 0, total: 0 });
+    const [speedHighScore, setSpeedHighScore] = useState(0);
+
+    const stations = [
+        { id: 'flashcard', label: '\ud83c\udca3 Flashcard Drill', desc: '23 IB concepts \u2014 flip & rate' },
+        { id: 'theory', label: '\ud83d\udd2c Theory Matcher', desc: 'Match quotes to all 7 IR theories' },
+        { id: 'speed', label: '\u26a1 Speed Round', desc: '60-second case study recall' },
+        { id: 'source', label: '\ud83d\udcc4 Source Lab', desc: 'Paper 1 OPVL annotation' },
+        { id: 'bifurcation', label: '\u2696\ufe0f Bifurcation Drill', desc: 'Support / Challenge sorting' },
+        { id: 'warroom', label: '\ud83d\udea8 Policy War Room', desc: 'Graded scenario proposals' },
+    ];
+
+    return (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="mb-8">
+                <h2 className="text-2xl font-black mb-1 flex items-center gap-2">
+                    <Shield className="text-amber-400" /> Ops Room
+                </h2>
+                <p className="text-gray-500 text-sm">Gamified knowledge &amp; recall stations &mdash; no scaffolding, just you and the material.</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 mb-8 p-4 bg-white/5 border border-white/10 rounded-2xl">
+                <div className="text-center">
+                    <p className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mb-1">Flashcards Known</p>
+                    <p className="text-3xl font-black text-emerald-400">{flashcardKnown}<span className="text-gray-600 text-base font-normal">/23</span></p>
+                </div>
+                <div className="text-center border-x border-white/5">
+                    <p className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mb-1">Theory Accuracy</p>
+                    <p className="text-3xl font-black text-blue-400">
+                        {theoryScore.total > 0 ? Math.round((theoryScore.correct / theoryScore.total) * 100) : 0}<span className="text-gray-600 text-base font-normal">%</span>
+                    </p>
+                </div>
+                <div className="text-center">
+                    <p className="text-[10px] text-gray-600 uppercase tracking-widest font-bold mb-1">Speed High Score</p>
+                    <p className="text-3xl font-black text-amber-400">{speedHighScore}</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-8">
+                {stations.map(s => (
+                    <button key={s.id} onClick={() => setStation(s.id)}
+                        className={`px-4 py-3 rounded-xl font-bold text-sm border-2 transition-all text-left ${station === s.id ? 'bg-amber-500/20 border-amber-500/60 text-amber-300' : 'border-white/10 text-gray-500 hover:border-white/20 hover:text-gray-300'}`}>
+                        <span className="block">{s.label}</span>
+                        <span className="block text-[10px] font-normal opacity-60 mt-0.5">{s.desc}</span>
+                    </button>
+                ))}
+            </div>
+
+            <div>
+                {station === 'flashcard' && <FlashcardDrillStation onKnownChange={setFlashcardKnown} />}
+                {station === 'theory' && <TheoryLensMatcherStation onScoreChange={setTheoryScore} />}
+                {station === 'speed' && <CaseSpeedRoundStation onHighScore={setSpeedHighScore} />}
+                {station === 'source' && <SourceLabStation />}
+                {station === 'bifurcation' && <DrillMode />}
+                {station === 'warroom' && <WarRoom />}
+            </div>
+        </div>
+    );
+};
+
+
+
 export default function App() {
-    const [activeTab, setActiveTab] = useState('policy');
+    const [activeTab, setActiveTab] = useState('writing');
 
     return (
         <div className="min-h-screen bg-glopo-dark text-gray-100 p-4 md:p-8">
@@ -2636,13 +3439,11 @@ export default function App() {
 
                 <nav className="flex gap-2 mb-8 justify-start sm:justify-center overflow-x-auto pb-2 scrollbar-hide sm:flex-wrap">
                     {[
-                        { id: 'policy', label: 'Policy Engine', icon: Shield },
                         { id: 'writing', label: 'Writing Studio', icon: PenTool },
                         { id: 'cases', label: 'Case Library', icon: Shield },
                         { id: 'glossary', label: 'IB Concept Glossary', icon: FileText },
                         { id: 'exams', label: 'Mock Exam Zone', icon: BookOpen },
-                        { id: 'drill', label: 'Drill Mode', icon: Zap },
-                        { id: 'warroom', label: 'War Room', icon: AlertTriangle },
+                        { id: 'opsroom', label: '🎯 Ops Room', icon: Zap },
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -2658,13 +3459,11 @@ export default function App() {
                 </nav>
 
                 <main className="min-h-[400px]">
-                    {activeTab === 'policy' && <PolicyEngine />}
                     {activeTab === 'writing' && <WritingStudio />}
                     {activeTab === 'cases' && <CaseLibrary />}
                     {activeTab === 'glossary' && <LoreLexicon />}
                     {activeTab === 'exams' && <MockExamZone />}
-                    {activeTab === 'drill' && <DrillMode />}
-                    {activeTab === 'warroom' && <WarRoom />}
+                    {activeTab === 'opsroom' && <OpsRoom />}
                 </main>
 
                 <footer className="mt-16 pt-12 pb-20 border-t border-cyan-500/30 text-center">
