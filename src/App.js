@@ -958,7 +958,7 @@ REQUIREMENTS (all must be met for a Band 7 introduction):
 OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic register). No headers, no bullet points, no meta-commentary.`;
 
                     const geminiResponse = await fetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
                         {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
@@ -969,7 +969,7 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
                     if (geminiResponse.status === 429) {
                         await new Promise(r => setTimeout(r, 3000));
                         const retryResp = await fetch(
-                            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+                            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
                             { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
                         );
                         if (retryResp.ok) {
@@ -2096,7 +2096,7 @@ One precise, actionable tip that would most significantly raise this response's 
             }
             try {
                 const geminiResponse = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
                     {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -2111,7 +2111,7 @@ One precise, actionable tip that would most significantly raise this response's 
                     console.log("Direct API rate limited, retrying in 3s...");
                     await new Promise(r => setTimeout(r, 3000));
                     const retryResp = await fetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
                         { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
                     );
                     if (retryResp.status === 429) {
