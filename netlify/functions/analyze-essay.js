@@ -19,7 +19,7 @@ exports.handler = async (event, context) => {
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-pro",
+            model: "gemini-2.0-flash",
             systemInstruction: `You are an IB Global Politics Senior Examiner for the 2026 syllabus. 
             Your goal is to provide constructive, pedagogically sound, and strictly unbiased feedback. 
             Maintain a neutral, academic tone. Avoid taking ideological sides; instead, evaluate the student's ability to synthesize competing perspectives (e.g., Realism vs. Liberalism). 
