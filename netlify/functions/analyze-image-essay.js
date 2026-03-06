@@ -68,25 +68,33 @@ AO1: [Band 1/2/3] | AO2: [Band 1/2/3] | AO3: [Band 1/2/3] | AO4: [Band 1/2/3]`;
         };
 
         const callGemini = async () => {
-            const res = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }
-            );
-            if (!res.ok) {
-                const errText = await res.text();
-                throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 20000); // 20s — safely under Netlify's 26s limit
+            try {
+                const res = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+                    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody), signal: controller.signal }
+                );
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
+                }
+                const data = await res.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            } finally {
+                clearTimeout(timeout);
             }
-            const data = await res.json();
-            return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         };
 
         let text;
         try {
             text = await callGemini();
         } catch (firstErr) {
+            if (firstErr.name === 'AbortError') {
+                throw new Error('Analysis timed out — your image may be too large or complex. Try a clearer photo or smaller file.');
+            }
             if (firstErr.message.includes('429') || firstErr.message.includes('quota')) {
-                console.log('Rate limited — retrying in 3s...');
-                await new Promise(r => setTimeout(r, 3000));
+                await new Promise(r => setTimeout(r, 2000));
                 text = await callGemini();
             } else {
                 throw firstErr;
