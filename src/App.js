@@ -1199,6 +1199,10 @@ const WritingStudio = () => {
         const [generatedIntro, setGeneratedIntro] = useState('');
         const [introLoading, setIntroLoading] = useState(false);
         const [introError, setIntroError] = useState('');
+        const [introReview, setIntroReview] = useState(null);
+        const [introReviewLoading, setIntroReviewLoading] = useState(false);
+        const [studentIntro, setStudentIntro] = useState('');
+        const [introReviewError, setIntroReviewError] = useState('');
         const updateData = (key, val) => setData({ ...data, [key]: val });
 
         const generateIntro = async () => {
@@ -1275,7 +1279,7 @@ REQUIREMENTS (all must be met for a Band 7 introduction):
 OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic register). No headers, no bullet points, no meta-commentary.`;
 
                     const geminiResponse = await fetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
                         {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
@@ -1286,7 +1290,7 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
                     if (geminiResponse.status === 429) {
                         await new Promise(r => setTimeout(r, 3000));
                         const retryResp = await fetch(
-                            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+                            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
                             { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
                         );
                         if (retryResp.ok) {
@@ -1308,6 +1312,40 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
             } else {
                 setIntroError("Could not generate introduction. Please try again in a moment.");
             }
+        };
+
+        const reviewMyIntro = async () => {
+            if (!studentIntro.trim() || studentIntro.trim().length < 30) return;
+            setIntroReviewLoading(true); setIntroReview(null); setIntroReviewError('');
+            try {
+                const prompt = `You are an IB Global Politics examiner (2026 syllabus). Review this student introduction paragraph and return ONLY valid JSON:
+{"score":"Band 1-7","strengths":["specific strength 1","strength 2"],"improvements":[{"issue":"what needs fixing","fix":"how to fix it","example":"improved phrase or sentence"}],"rewritten":"your improved version of the intro (80-120 words)","bandJump":"Band X → Band Y"}
+
+IB CRITERIA: hook specificity, concept definition quality, analytical tension, case study integration, thesis strength, roadmap clarity.
+
+Student introduction:
+${studentIntro}
+
+Return ONLY the JSON.`;
+                const res = await fetch('/.netlify/functions/peel-review', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        paragraph: studentIntro,
+                        customPrompt: prompt,
+                        mode: 'intro'
+                    })
+                });
+                if (res.ok) {
+                    const d = await res.json();
+                    // Try to parse as intro review, fall back to raw peel result
+                    if (d.improved || d.rewritten || d.score) {
+                        setIntroReview(d.rewritten ? d : { improved: d.improved || studentIntro, changes: d.changes || [], bandJump: d.bandJump || '' });
+                    }
+                } else throw new Error(`Review error ${res.status}`);
+            } catch (e) {
+                setIntroReviewError('Could not review. Try again in a moment.');
+            }
+            setIntroReviewLoading(false);
         };
 
         const resetWizard = () => {
@@ -1421,9 +1459,58 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
                         </div>
                     </div>
                 )}
+
+                {/* ── Review My Own Intro ─────────────────────────── */}
+                <div className="mt-6 border-t border-white/10 pt-5 space-y-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-purple-400">✏️ Review My Own Introduction</p>
+                    <p className="text-[10px] text-gray-500">Paste your intro paragraph and get IB examiner feedback + a Band 7 rewrite.</p>
+                    <textarea
+                        className="w-full bg-glopo-dark border border-white/20 rounded-xl p-4 text-xs text-gray-300 h-36 focus:border-purple-500 outline-none transition-all placeholder:text-gray-600 resize-y"
+                        placeholder="Paste your introduction paragraph here..."
+                        value={studentIntro}
+                        onChange={e => { setStudentIntro(e.target.value); setIntroReview(null); setIntroReviewError(''); }}
+                    />
+                    <Button onClick={reviewMyIntro} disabled={introReviewLoading || studentIntro.trim().length < 30} className="bg-purple-700 hover:bg-purple-600 text-white">
+                        {introReviewLoading ? '⟳ Reviewing...' : '🔍 Review My Intro'}
+                    </Button>
+                    {introReviewError && <p className="text-red-400 text-xs mt-1">{introReviewError}</p>}
+                    {introReview && (
+                        <div className="space-y-3 mt-3">
+                            <div className="flex items-center gap-3">
+                                {introReview.score && <span className="text-xs font-black bg-purple-800 text-purple-200 px-2 py-0.5 rounded">{introReview.score}</span>}
+                                {introReview.bandJump && <span className="text-[10px] text-emerald-400 font-bold">{introReview.bandJump}</span>}
+                            </div>
+                            {introReview.strengths?.length > 0 && (
+                                <div className="bg-emerald-950/40 border border-emerald-500/20 rounded-lg p-3">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-1">✅ Strengths</p>
+                                    {introReview.strengths.map((s, i) => <p key={i} className="text-xs text-gray-300 mb-0.5">• {s}</p>)}
+                                </div>
+                            )}
+                            {introReview.improvements?.length > 0 && (
+                                <div className="bg-amber-950/40 border border-amber-500/20 rounded-lg p-3 space-y-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-amber-400 mb-1">⬆️ Improvements</p>
+                                    {introReview.improvements.map((imp, i) => (
+                                        <div key={i} className="border-l-2 border-amber-500/40 pl-2">
+                                            <p className="text-xs text-amber-200 font-semibold">{imp.issue}</p>
+                                            <p className="text-[10px] text-gray-400">{imp.fix}</p>
+                                            {imp.example && <p className="text-[10px] text-emerald-300 italic mt-0.5">e.g. "{imp.example}"</p>}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {introReview.rewritten && (
+                                <div className="bg-emerald-900/20 border border-emerald-500/30 p-4 rounded-xl">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-2">✨ Rewritten — Band 7 Version</p>
+                                    <p className="text-xs text-gray-300 leading-relaxed">{introReview.rewritten}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
         );
     };
+
 
     const PeelLab = () => {
         const [data, setData] = useState({ point: '', evidence: '', explanation: '', link: '' });
