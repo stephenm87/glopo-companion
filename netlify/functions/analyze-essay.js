@@ -1,4 +1,5 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+// analyze-essay.js — Deep Critique for Mock Exam Zone
+// Uses native fetch (no SDK) to call Gemini REST API + optional Cloud NL API
 
 // Cloud Natural Language API — extract entities + sentiment from essay
 async function analyzeWithNlApi(text, apiKey) {
@@ -17,7 +18,6 @@ async function analyzeWithNlApi(text, apiKey) {
 
         if (entityRes.ok) {
             const data = await entityRes.json();
-            // Top 5 entities by salience
             const top = (data.entities || [])
                 .sort((a, b) => b.salience - a.salience)
                 .slice(0, 5)
@@ -32,7 +32,7 @@ async function analyzeWithNlApi(text, apiKey) {
 
         if (sentRes.ok) {
             const data = await sentRes.json();
-            const score = data.documentSentiment?.score ?? null; // -1 (neg) to +1 (pos)
+            const score = data.documentSentiment?.score ?? null;
             const magnitude = data.documentSentiment?.magnitude ?? null;
             sentimentSummary = { score, magnitude };
         }
@@ -68,33 +68,47 @@ function buildAoInsights(entitySummary, sentimentSummary) {
     return lines.join('\n');
 }
 
-exports.handler = async (event, context) => {
-    // Only allow POST requests
-    if (event.httpMethod !== "POST") {
-        return { statusCode: 405, body: "Method Not Allowed" };
+async function callGemini(prompt, apiKey) {
+    const body = {
+        system_instruction: {
+            parts: [{
+                text: `You are an IB Global Politics Senior Examiner for the 2026 syllabus. 
+Your goal is to provide constructive, pedagogically sound, and strictly unbiased feedback. 
+Maintain a neutral, academic tone. Avoid taking ideological sides; instead, evaluate the student's ability to synthesize competing perspectives (e.g., Realism vs. Liberalism). 
+Always identify how the 4 core concepts (Power, Sovereignty, Legitimacy, Interdependence) are applied.`
+            }]
+        },
+        contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ google_search: {} }]  // Search grounding — cites real sources when available
+    };
+
+    const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    );
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
+    }
+
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+exports.handler = async (event) => {
+    if (event.httpMethod !== 'POST') {
+        return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
     try {
         const { essayText, questionText, marks } = JSON.parse(event.body);
         const apiKey = process.env.GEMINI_API_KEY;
-        const nlApiKey = process.env.GOOGLE_NL_API_KEY || apiKey; // Fallback to same GCP key
+        const nlApiKey = process.env.GOOGLE_NL_API_KEY || apiKey;
 
-        if (!apiKey || apiKey === "YOUR_API_KEY_HERE") {
-            return {
-                statusCode: 500,
-                body: JSON.stringify({ error: "Gemini API Key not configured." })
-            };
+        if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+            return { statusCode: 500, body: JSON.stringify({ error: 'Gemini API Key not configured.' }) };
         }
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-pro",
-            tools: [{ googleSearch: {} }],  // Search grounding — cites real sources when available
-            systemInstruction: `You are an IB Global Politics Senior Examiner for the 2026 syllabus. 
-            Your goal is to provide constructive, pedagogically sound, and strictly unbiased feedback. 
-            Maintain a neutral, academic tone. Avoid taking ideological sides; instead, evaluate the student's ability to synthesize competing perspectives (e.g., Realism vs. Liberalism). 
-            Always identify how the 4 core concepts (Power, Sovereignty, Legitimacy, Interdependence) are applied.`
-        });
 
         const prompt = `
 Question: ${questionText}
@@ -103,7 +117,7 @@ Marks Available: ${marks || 15}
 Student Response:
 ${essayText}
 
-Please provide a rigorous assessment. 
+Please provide a rigorous assessment.
 
 REQUIRED SECTIONS:
 ## Glow
@@ -120,20 +134,15 @@ REQUIRED SECTIONS:
 `;
 
         // Run Gemini + NL API in parallel
-        let text;
-        const [geminiResult, nlResult] = await Promise.all([
+        let [geminiText, nlResult] = await Promise.all([
             (async () => {
                 try {
-                    const result = await model.generateContent(prompt);
-                    const response = await result.response;
-                    return response.text();
+                    return await callGemini(prompt, apiKey);
                 } catch (genError) {
-                    if (genError.status === 429 || genError.message?.includes('429') || genError.message?.includes('quota')) {
-                        console.log("Rate limited by Gemini, retrying in 3s...");
+                    if (genError.message.includes('429') || genError.message.includes('quota')) {
+                        console.log('Rate limited by Gemini, retrying in 3s...');
                         await new Promise(r => setTimeout(r, 3000));
-                        const retryResult = await model.generateContent(prompt);
-                        const retryResponse = await retryResult.response;
-                        return retryResponse.text();
+                        return await callGemini(prompt, apiKey);
                     }
                     throw genError;
                 }
@@ -141,25 +150,21 @@ REQUIRED SECTIONS:
             analyzeWithNlApi(essayText, nlApiKey)
         ]);
 
-        text = geminiResult;
-
-        // Append NL API AO insights to the response
+        // Append NL API AO insights
         const aoInsights = buildAoInsights(nlResult.entitySummary, nlResult.sentimentSummary);
-        if (aoInsights) text += aoInsights;
+        if (aoInsights) geminiText += aoInsights;
 
         return {
             statusCode: 200,
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ analysis: text })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ analysis: geminiText })
         };
 
     } catch (error) {
-        console.error("Gemini Analysis Error:", error);
+        console.error('Gemini Analysis Error:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: "Failed to analyze essay. " + error.message })
+            body: JSON.stringify({ error: 'Failed to analyze essay. ' + error.message })
         };
     }
 };
