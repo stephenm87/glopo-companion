@@ -2770,7 +2770,15 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                 }
 
             } catch (err) {
-                setImageError('Failed to analyse image: ' + err.message);
+                const msg = err.message || '';
+                if (msg.includes('429') || msg.includes('quota') || msg.includes('Resource exhausted')) {
+                    setImageError('The AI is currently busy (rate limit). Please wait 30 seconds and try again.');
+                } else if (msg.startsWith('Failed to analyse') || msg.startsWith('Analysis timed out')) {
+                    setImageError(msg); // already a clean message from the function
+                } else {
+                    setImageError('Failed to analyse image: ' + msg);
+                }
+
             } finally {
                 setImageLoading(false);
             }
