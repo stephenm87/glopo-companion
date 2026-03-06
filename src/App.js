@@ -2711,15 +2711,47 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
         setImageError(null);
         setImageResult(null);
 
+        // Large files (>1MB) bypass the Netlify function (26s limit) and go direct to Gemini
+        const isLargeFile = file.size > 1 * 1024 * 1024;
+
+
         // Show preview
         const reader = new FileReader();
         reader.onload = async (evt) => {
             const dataUrl = evt.target.result;
             setImagePreview(dataUrl);
 
-            // Extract base64 (strip data:image/...;base64, prefix)
-            const base64 = dataUrl.split(',')[1];
-            const mimeType = file.type;
+            // Compress images before sending — large phone photos cause Vision timeouts
+            // PDFs pass through unchanged
+            let base64, mimeType;
+            if (file.type !== 'application/pdf') {
+                try {
+                    const compressed = await new Promise((resolve) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const MAX = 1600;
+                            let { width, height } = img;
+                            if (width > MAX || height > MAX) {
+                                if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+                                else { width = Math.round(width * MAX / height); height = MAX; }
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width; canvas.height = height;
+                            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                            resolve(canvas.toDataURL('image/jpeg', 0.85));
+                        };
+                        img.src = dataUrl;
+                    });
+                    base64 = compressed.split(',')[1];
+                    mimeType = 'image/jpeg';
+                } catch {
+                    base64 = dataUrl.split(',')[1];
+                    mimeType = file.type;
+                }
+            } else {
+                base64 = dataUrl.split(',')[1];
+                mimeType = file.type;
+            }
 
             setImageLoading(true);
             try {
@@ -2737,24 +2769,26 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                     };
                     const gemRes = await fetch(
                         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-                        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(30000) }
+                        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }
                     );
                     const gemData = await gemRes.json();
                     if (!gemRes.ok) throw new Error(gemData.error?.message || `Gemini API error ${gemRes.status}`);
                     return gemData.candidates?.[0]?.content?.parts?.[0]?.text || 'No feedback returned.';
                 };
 
-                if (isLocalDev && clientKey) {
-                    // Local dev: go direct — Netlify functions aren't available via npm start
+                if ((isLocalDev || isLargeFile) && clientKey) {
+                    // Local dev OR large file: go direct to Gemini — no 26s Netlify ceiling
                     const result = await runDirectApi(clientKey);
                     setImageResult(result);
+                } else if (isLargeFile && !clientKey) {
+                    throw new Error('Large file detected but no direct API key available. Please contact your teacher.');
                 } else {
-                    // Production: try Netlify function first
+                    // Small file on production: use Netlify function
                     const response = await fetch('/.netlify/functions/analyze-image-essay', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ imageBase64: base64, mimeType, questionText: q.text, marks: q.marks || 15 }),
-                        signal: AbortSignal.timeout(45000)
+                        signal: AbortSignal.timeout(30000)
                     });
                     if (response.ok) {
                         const data = await response.json();

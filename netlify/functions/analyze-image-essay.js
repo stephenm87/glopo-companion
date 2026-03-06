@@ -69,7 +69,7 @@ AO1: [Band 1/2/3] | AO2: [Band 1/2/3] | AO3: [Band 1/2/3] | AO4: [Band 1/2/3]`;
 
         const callGemini = async () => {
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 20000); // 20s — safely under Netlify's 26s limit
+            const timeout = setTimeout(() => controller.abort(), 23000); // 23s — safely under Netlify's 26s limit
             try {
                 const res = await fetch(
                     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
