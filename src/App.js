@@ -1318,30 +1318,56 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
             if (!studentIntro.trim() || studentIntro.trim().length < 30) return;
             setIntroReviewLoading(true); setIntroReview(null); setIntroReviewError('');
             try {
-                const prompt = `You are an IB Global Politics examiner (2026 syllabus). Review this student introduction paragraph and return ONLY valid JSON:
-{"score":"Band 1-7","strengths":["specific strength 1","strength 2"],"improvements":[{"issue":"what needs fixing","fix":"how to fix it","example":"improved phrase or sentence"}],"rewritten":"your improved version of the intro (80-120 words)","bandJump":"Band X → Band Y"}
+                const introPrompt = `You are an IB Global Politics examiner (2026 syllabus). Review this student introduction paragraph and return ONLY valid JSON with this exact structure:
+{"score":"Band 1-7","bandJump":"Band X \u2192 Band Y","strengths":["specific strength 1","strength 2"],"improved":"your improved version of the intro (80-120 words, preserve student voice)","changes":[{"ao":"AO1","label":"Hook Specificity","original":"exact phrase being changed","fix":"what was improved and why this raises the band"}]}
 
-IB CRITERIA: hook specificity, concept definition quality, analytical tension, case study integration, thesis strength, roadmap clarity.
+IB CRITERIA for changes: hook specificity (AO1), concept definition quality (AO1), analytical tension setup (AO2), case study integration (AO2), thesis strength (AO3), roadmap clarity (AO3). Label each change with the relevant AO.
 
 Student introduction:
 ${studentIntro}
 
-Return ONLY the JSON.`;
-                const res = await fetch('/.netlify/functions/peel-review', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        paragraph: studentIntro,
-                        customPrompt: prompt,
-                        mode: 'intro'
-                    })
-                });
-                if (res.ok) {
-                    const d = await res.json();
-                    // Try to parse as intro review, fall back to raw peel result
-                    if (d.improved || d.rewritten || d.score) {
-                        setIntroReview(d.rewritten ? d : { improved: d.improved || studentIntro, changes: d.changes || [], bandJump: d.bandJump || '' });
-                    }
-                } else throw new Error(`Review error ${res.status}`);
+Return ONLY the JSON. No markdown, no backticks, no commentary.`;
+
+                const isLocalDev = window.location.hostname === 'localhost';
+                const clientKey = process.env.REACT_APP_GEMINI_API_KEY;
+                let d = null;
+
+                if (!isLocalDev) {
+                    // Production: try Netlify function first
+                    const res = await fetch('/.netlify/functions/peel-review', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ paragraph: studentIntro, customPrompt: introPrompt, mode: 'intro' }),
+                        signal: AbortSignal.timeout(25000)
+                    });
+                    if (res.ok) d = await res.json();
+                }
+
+                if (!d && clientKey) {
+                    // Local dev OR Netlify function failed: call Gemini directly
+                    const resp = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${clientKey}`,
+                        {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: introPrompt }] }],
+                                generationConfig: { response_mime_type: 'application/json' }
+                            })
+                        }
+                    );
+                    if (resp.ok) {
+                        const gData = await resp.json();
+                        const raw = gData?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+                        d = JSON.parse(raw);
+                    } else throw new Error(`Gemini error ${resp.status}`);
+                } else if (!d) {
+                    throw new Error('No API key available locally');
+                }
+
+                if (d?.rewritten || d?.score) {
+                    setIntroReview(d);
+                } else if (d?.improved) {
+                    setIntroReview({ improved: d.improved, changes: d.changes || [], bandJump: d.bandJump || '' });
+                }
             } catch (e) {
                 setIntroReviewError('Could not review. Try again in a moment.');
             }
@@ -1471,37 +1497,66 @@ Return ONLY the JSON.`;
                         onChange={e => { setStudentIntro(e.target.value); setIntroReview(null); setIntroReviewError(''); }}
                     />
                     <Button onClick={reviewMyIntro} disabled={introReviewLoading || studentIntro.trim().length < 30} className="bg-purple-700 hover:bg-purple-600 text-white">
-                        {introReviewLoading ? '⟳ Reviewing...' : '🔍 Review My Intro'}
+                        {introReviewLoading ? '⟳ Coaching...' : '✏️ Coach My Writing'}
                     </Button>
                     {introReviewError && <p className="text-red-400 text-xs mt-1">{introReviewError}</p>}
                     {introReview && (
-                        <div className="space-y-3 mt-3">
-                            <div className="flex items-center gap-3">
-                                {introReview.score && <span className="text-xs font-black bg-purple-800 text-purple-200 px-2 py-0.5 rounded">{introReview.score}</span>}
-                                {introReview.bandJump && <span className="text-[10px] text-emerald-400 font-bold">{introReview.bandJump}</span>}
+                        <div className="space-y-4 mt-3 animate-in fade-in duration-300">
+                            {/* Score + Band Jump */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {introReview.score && <span className="text-[9px] font-black bg-purple-800/50 text-purple-200 px-2 py-0.5 rounded">{introReview.score}</span>}
+                                {introReview.bandJump && <span className="text-[9px] font-black bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">{introReview.bandJump}</span>}
                             </div>
+                            {/* Strengths */}
                             {introReview.strengths?.length > 0 && (
-                                <div className="bg-emerald-950/40 border border-emerald-500/20 rounded-lg p-3">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-1">✅ Strengths</p>
+                                <div className="p-3 bg-emerald-950/40 border border-emerald-500/20 rounded-xl">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-1.5">✅ Strengths</p>
                                     {introReview.strengths.map((s, i) => <p key={i} className="text-xs text-gray-300 mb-0.5">• {s}</p>)}
                                 </div>
                             )}
-                            {introReview.improvements?.length > 0 && (
-                                <div className="bg-amber-950/40 border border-amber-500/20 rounded-lg p-3 space-y-2">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-amber-400 mb-1">⬆️ Improvements</p>
+                            {/* Original paragraph */}
+                            <div className="p-4 bg-white/3 border border-white/10 rounded-xl">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-2">📄 Your Original</p>
+                                <p className="text-sm text-gray-400 leading-relaxed italic">{studentIntro}</p>
+                            </div>
+                            {/* Improved version */}
+                            {(introReview.improved || introReview.rewritten) && (
+                                <div className="p-4 bg-emerald-900/20 border border-emerald-500/30 rounded-xl">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-2">✨ Improved Version</p>
+                                    <p className="text-sm text-gray-200 leading-relaxed">{introReview.improved || introReview.rewritten}</p>
+                                </div>
+                            )}
+                            {/* Changes Made — AO-labelled (new schema) */}
+                            {introReview.changes?.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">📝 Changes Made</p>
+                                    {introReview.changes.map((c, i) => {
+                                        const aoColor = c.ao === 'AO1' ? '#3399ff' : c.ao === 'AO2' ? '#00cc77' : c.ao === 'AO3' ? '#ff9900' : '#cc44ff';
+                                        const aoBg = c.ao === 'AO1' ? '#3399ff22' : c.ao === 'AO2' ? '#00cc7722' : c.ao === 'AO3' ? '#ff990022' : '#cc44ff22';
+                                        return (
+                                            <div key={i} className="p-3 bg-white/5 border border-white/10 rounded-lg">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[9px] font-black px-2 py-0.5 rounded" style={{ background: aoBg, color: aoColor }}>{c.ao}</span>
+                                                    <span className="text-xs font-bold text-gray-300">{c.label}</span>
+                                                </div>
+                                                {c.original && <p className="text-[10px] text-gray-600 italic mb-1 line-through">❝ {c.original}</p>}
+                                                <p className="text-[11px] text-gray-300 leading-relaxed">→ {c.fix}</p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            {/* Improvements — backward compat with old schema */}
+                            {!introReview.changes?.length && introReview.improvements?.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">⬆️ Improvements</p>
                                     {introReview.improvements.map((imp, i) => (
-                                        <div key={i} className="border-l-2 border-amber-500/40 pl-2">
+                                        <div key={i} className="p-3 bg-white/5 border border-white/10 rounded-lg border-l-2 border-l-amber-500/40">
                                             <p className="text-xs text-amber-200 font-semibold">{imp.issue}</p>
                                             <p className="text-[10px] text-gray-400">{imp.fix}</p>
                                             {imp.example && <p className="text-[10px] text-emerald-300 italic mt-0.5">e.g. "{imp.example}"</p>}
                                         </div>
                                     ))}
-                                </div>
-                            )}
-                            {introReview.rewritten && (
-                                <div className="bg-emerald-900/20 border border-emerald-500/30 p-4 rounded-xl">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-2">✨ Rewritten — Band 7 Version</p>
-                                    <p className="text-xs text-gray-300 leading-relaxed">{introReview.rewritten}</p>
                                 </div>
                             )}
                         </div>
@@ -1528,8 +1583,9 @@ Return ONLY the JSON.`;
             if (!reviewPara.trim()) return;
             setReviewLoading(true); setReviewResult(null); setReviewError(null);
 
-            // Strategy 1: Netlify serverless function (works when deployed)
-            try {
+            // Strategy 1: Netlify function — skipped on localhost
+            const isLocalDev = window.location.hostname === 'localhost';
+            if (!isLocalDev) try {
                 const res = await fetch('/.netlify/functions/peel-review', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paragraph: reviewPara }),
@@ -2667,25 +2723,10 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
 
             setImageLoading(true);
             try {
-                // Try Netlify function first
-                const response = await fetch('/.netlify/functions/analyze-image-essay', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        imageBase64: base64,
-                        mimeType,
-                        questionText: q.text,
-                        marks: q.marks || 15
-                    }),
-                    signal: AbortSignal.timeout(45000)
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    setImageResult(data.analysis || 'No feedback returned.');
-                } else {
-                    // Fallback: direct Gemini API with vision
-                    const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-                    if (!apiKey) throw new Error('API key not configured.');
+                const isLocalDev = window.location.hostname === 'localhost';
+                const clientKey = process.env.REACT_APP_GEMINI_API_KEY;
+
+                const runDirectApi = async (key) => {
                     const body = {
                         contents: [{
                             parts: [
@@ -2695,12 +2736,39 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                         }]
                     };
                     const gemRes = await fetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-                        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${key}`,
+                        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(45000) }
                     );
                     const gemData = await gemRes.json();
-                    setImageResult(gemData.candidates?.[0]?.content?.parts?.[0]?.text || 'No feedback returned.');
+                    if (!gemRes.ok) throw new Error(gemData.error?.message || `Gemini API error ${gemRes.status}`);
+                    return gemData.candidates?.[0]?.content?.parts?.[0]?.text || 'No feedback returned.';
+                };
+
+                if (isLocalDev && clientKey) {
+                    // Local dev: go direct — Netlify functions aren't available via npm start
+                    const result = await runDirectApi(clientKey);
+                    setImageResult(result);
+                } else {
+                    // Production: try Netlify function first
+                    const response = await fetch('/.netlify/functions/analyze-image-essay', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imageBase64: base64, mimeType, questionText: q.text, marks: q.marks || 15 }),
+                        signal: AbortSignal.timeout(45000)
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        setImageResult(data.analysis || 'No feedback returned.');
+                    } else if (clientKey) {
+                        // Function failed — direct API fallback
+                        const result = await runDirectApi(clientKey);
+                        setImageResult(result);
+                    } else {
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(errData.error || `Server error ${response.status}`);
+                    }
                 }
+
             } catch (err) {
                 setImageError('Failed to analyse image: ' + err.message);
             } finally {
@@ -2995,13 +3063,95 @@ const ExamSelector = ({ exams, paperKey, selectedIndex, onChange, color }) => (
     </div>
 );
 
+// --- Custom Question Panel (module-level to prevent focus-stealing re-renders) ---
+const CustomQuestionPanel = ({
+    customQuestion, setCustomQuestion,
+    customMarks, setCustomMarks,
+    customQuestionActive, setCustomQuestionActive,
+    timerSeconds, timerRunning, timerLimit, startTimer, toggleTimer, resetTimer, timerColor, formatTime,
+    labProps
+}) => {
+    if (!customQuestionActive || customQuestion.trim().length < 20) {
+        return (
+            <div className="space-y-6">
+                <div className="border-b border-white/10 pb-4">
+                    <h3 className="text-xl font-bold text-purple-400">My Class Essay</h3>
+                    <p className="text-xs text-gray-500 mt-1">Paste your teacher-assigned prompt below — then get Quick Analysis, Deep Critique, or upload your handwritten PDF.</p>
+                </div>
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-purple-400 block mb-2">Essay Question / Prompt</label>
+                        <textarea
+                            className="w-full min-h-[120px] p-4 bg-white/5 border border-purple-500/30 rounded-xl text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/60 resize-y"
+                            placeholder={`e.g. "To what extent does the rise of emerging powers challenge the existing liberal international order? Refer to at least two case studies." (Paper 2 — 15 marks)`}
+                            value={customQuestion}
+                            onChange={e => setCustomQuestion(e.target.value)}
+                        />
+                        <p className="text-[10px] text-gray-600 mt-1">{customQuestion.trim().length} chars — minimum 20 required</p>
+                    </div>
+                    <div className="flex items-center gap-4 flex-wrap">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Marks Available</label>
+                        {[8, 12, 15, 20, 25, 28, 30].map(m => (
+                            <button
+                                key={m}
+                                onClick={() => setCustomMarks(m)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${customMarks === m
+                                    ? 'bg-purple-600/20 border-purple-500 text-purple-200'
+                                    : 'bg-white/5 border-white/10 text-gray-500 hover:border-purple-500/40'
+                                    }`}
+                            >{m}</button>
+                        ))}
+                    </div>
+                    <button
+                        onClick={() => setCustomQuestionActive(true)}
+                        disabled={customQuestion.trim().length < 20}
+                        className="px-6 py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-all"
+                    >
+                        🚀 Start Practice
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    const q = { num: 1, text: customQuestion, marks: customMarks };
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-white/10 pb-4">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">My Class Essay</span>
+                        <span className="text-[9px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-bold">{customMarks} MARKS</span>
+                    </div>
+                    <p className="text-sm text-gray-200 leading-relaxed">{customQuestion}</p>
+                </div>
+                <button
+                    onClick={() => setCustomQuestionActive(false)}
+                    className="text-[10px] text-gray-500 hover:text-purple-400 border border-white/10 hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-colors shrink-0"
+                >
+                    ← Change Question
+                </button>
+            </div>
+            <TimerBar seconds={timerSeconds} running={timerRunning} limit={timerLimit} start={startTimer} toggle={toggleTimer} reset={resetTimer} color={timerColor} formatTime={formatTime} />
+            <div className="p-4 bg-white/5 border border-purple-500/20 rounded-xl">
+                <PracticeLab q={q} {...labProps} />
+            </div>
+        </div>
+    );
+};
+
 const MockExamZone = () => {
     const [subTab, setSubTab] = useState('paper1');
     const [timerSeconds, setTimerSeconds] = useState(0);
     const [timerRunning, setTimerRunning] = useState(false);
     const [timerLimit, setTimerLimit] = useState(0);
-    const [selectedExam, setSelectedExam] = useState({ paper1: 0, paper2: 0, paper3: 0 });
-    const [expandedSources, setExpandedSources] = useState([0]); // Default first source open
+    const [selectedExam, setSelectedExam] = useState({ paper1: 0, paper2: 0, paper3: 0, custom: 0 });
+    const [expandedSources, setExpandedSources] = useState([0]);
+
+    // Custom question state
+    const [customQuestion, setCustomQuestion] = useState('');
+    const [customMarks, setCustomMarks] = useState(15);
+    const [customQuestionActive, setCustomQuestionActive] = useState(false);
 
     // Practice Lab State
     const [userAnswers, setUserAnswers] = useState({});
@@ -3114,20 +3264,20 @@ One precise, actionable tip that would most significantly raise this response's 
 
         let analysisText = null;
 
-        // Strategy 1: Try Netlify function (works on Netlify-hosted site and netlify dev)
-        try {
+        // Strategy 1: Try Netlify function — skipped on localhost (not available via npm start)
+        const isLocalDev = window.location.hostname === 'localhost';
+        if (!isLocalDev) try {
             const response = await fetch("/.netlify/functions/analyze-essay", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ essayText: text, questionText: q.text, marks: q.marks || 15 }),
-                signal: AbortSignal.timeout(25000) // 25s — Netlify free tier allows up to 26s
+                signal: AbortSignal.timeout(25000)
             });
 
             if (response.ok) {
                 const data = await response.json();
                 if (data.analysis) analysisText = data.analysis;
             } else if (response.status === 429) {
-                // Rate limit from Netlify function — retry once after 3s
                 console.log("Rate limited on first attempt, retrying in 3s...");
                 await new Promise(r => setTimeout(r, 3000));
                 const retry = await fetch("/.netlify/functions/analyze-essay", {
@@ -3165,7 +3315,7 @@ One precise, actionable tip that would most significantly raise this response's 
             }
             try {
                 const geminiResponse = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
                     {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -3176,11 +3326,10 @@ One precise, actionable tip that would most significantly raise this response's 
                 );
 
                 if (geminiResponse.status === 429) {
-                    // Retry once after a brief wait
                     console.log("Direct API rate limited, retrying in 3s...");
                     await new Promise(r => setTimeout(r, 3000));
                     const retryResp = await fetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
                         { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
                     );
                     if (retryResp.status === 429) {
@@ -3467,7 +3616,8 @@ One precise, actionable tip that would most significantly raise this response's 
                 {[
                     { id: 'paper1', label: 'Paper 1 (25 marks)', color: 'blue' },
                     { id: 'paper2', label: 'Paper 2 (30 marks)', color: 'emerald' },
-                    { id: 'paper3', label: 'Paper 3 (28 marks)', color: 'red' }
+                    { id: 'paper3', label: 'Paper 3 (28 marks)', color: 'red' },
+                    { id: 'custom', label: '✏️ My Class Essay', color: 'purple' }
                 ].map(b => (
                     <button
                         key={b.id}
@@ -3482,10 +3632,19 @@ One precise, actionable tip that would most significantly raise this response's 
                 ))}
             </div>
 
-            <Card className={subTab === 'paper1' ? "border-blue-500/20" : subTab === 'paper2' ? "border-emerald-500/20" : "border-red-500/20"}>
+            <Card className={subTab === 'paper1' ? "border-blue-500/20" : subTab === 'paper2' ? "border-emerald-500/20" : subTab === 'paper3' ? "border-red-500/20" : "border-purple-500/20"}>
                 {subTab === 'paper1' && <Paper1 />}
                 {subTab === 'paper2' && <Paper2 />}
                 {subTab === 'paper3' && <Paper3 />}
+                {subTab === 'custom' && <CustomQuestionPanel
+                    customQuestion={customQuestion} setCustomQuestion={setCustomQuestion}
+                    customMarks={customMarks} setCustomMarks={setCustomMarks}
+                    customQuestionActive={customQuestionActive} setCustomQuestionActive={setCustomQuestionActive}
+                    timerSeconds={timerSeconds} timerRunning={timerRunning} timerLimit={timerLimit}
+                    startTimer={startTimer} toggleTimer={toggleTimer} resetTimer={resetTimer}
+                    timerColor={timerColor} formatTime={formatTime}
+                    labProps={LabProps('custom')}
+                />}
             </Card>
         </div>
     );
