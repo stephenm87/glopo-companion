@@ -1,15 +1,16 @@
-// PEEL Paragraph Review — returns improved version + change explanations (server-side Gemini)
-// Uses response_mime_type: application/json for reliable structured output
+// PEEL / Intro Paragraph Review — returns structured JSON feedback (server-side Gemini)
+// Supports a customPrompt for non-PEEL review modes (e.g. intro review)
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
     try {
-        const { paragraph } = JSON.parse(event.body);
+        const { paragraph, customPrompt } = JSON.parse(event.body);
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured on server' }) };
 
-        const prompt = `You are an IB Global Politics senior examiner reviewing a student's PEEL paragraph.
+        // If a custom prompt is provided (e.g. from intro review), use it directly
+        const prompt = customPrompt || `You are an IB Global Politics senior examiner reviewing a student's PEEL paragraph.
 
 Student paragraph:
 "${paragraph}"
@@ -46,7 +47,13 @@ Rules:
 
         const data = await res.json();
         const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-        const parsed = JSON.parse(raw); // JSON mode guarantees valid JSON — no stripping needed
+        let parsed;
+        try {
+            parsed = JSON.parse(raw);
+        } catch {
+            // JSON mode should always return valid JSON, but handle parse failure
+            return { statusCode: 500, body: JSON.stringify({ error: 'Failed to parse AI response' }) };
+        }
 
         return {
             statusCode: 200,
@@ -57,3 +64,4 @@ Rules:
         return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
     }
 };
+
