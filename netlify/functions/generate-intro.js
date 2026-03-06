@@ -18,7 +18,7 @@ exports.handler = async (event, context) => {
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-pro",
             systemInstruction: `You are an IB Global Politics essay writing coach for the 2026 syllabus. 
 You help students craft exemplary introduction paragraphs for Paper 2 essays. 
 Your introductions should be academically rigorous, analytically sharp, and demonstrate the "Golden Thread" structure that examiners reward.

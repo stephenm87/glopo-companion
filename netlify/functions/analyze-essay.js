@@ -1,5 +1,73 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+// Cloud Natural Language API — extract entities + sentiment from essay
+async function analyzeWithNlApi(text, apiKey) {
+    try {
+        const nlEndpoint = `https://language.googleapis.com/v1/documents:analyzeEntities?key=${apiKey}`;
+        const sentEndpoint = `https://language.googleapis.com/v1/documents:analyzeSentiment?key=${apiKey}`;
+        const doc = { document: { type: 'PLAIN_TEXT', content: text } };
+
+        const [entityRes, sentRes] = await Promise.all([
+            fetch(nlEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc) }),
+            fetch(sentEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc) })
+        ]);
+
+        let entitySummary = null;
+        let sentimentSummary = null;
+
+        if (entityRes.ok) {
+            const data = await entityRes.json();
+            // Top 5 entities by salience
+            const top = (data.entities || [])
+                .sort((a, b) => b.salience - a.salience)
+                .slice(0, 5)
+                .map(e => `${e.name} (${e.type}, salience: ${(e.salience * 100).toFixed(0)}%)`)
+                .join(', ');
+            const people = (data.entities || []).filter(e => e.type === 'PERSON').length;
+            const orgs = (data.entities || []).filter(e => e.type === 'ORGANIZATION').length;
+            const locations = (data.entities || []).filter(e => e.type === 'LOCATION').length;
+            const events = (data.entities || []).filter(e => e.type === 'EVENT').length;
+            entitySummary = { top, counts: { people, orgs, locations, events }, total: (data.entities || []).length };
+        }
+
+        if (sentRes.ok) {
+            const data = await sentRes.json();
+            const score = data.documentSentiment?.score ?? null; // -1 (neg) to +1 (pos)
+            const magnitude = data.documentSentiment?.magnitude ?? null;
+            sentimentSummary = { score, magnitude };
+        }
+
+        return { entitySummary, sentimentSummary };
+    } catch (err) {
+        console.warn('NL API error (non-fatal):', err.message);
+        return { entitySummary: null, sentimentSummary: null };
+    }
+}
+
+function buildAoInsights(entitySummary, sentimentSummary) {
+    if (!entitySummary && !sentimentSummary) return '';
+
+    const lines = ['\n\n---\n## 📊 AO Insights (Cloud NL Analysis)'];
+
+    if (entitySummary) {
+        const { counts, total, top } = entitySummary;
+        const density = total >= 8 ? '✅ High (Band 3 AO1)' : total >= 4 ? '⚠️ Moderate (Band 2)' : '❌ Low (Band 1–2)';
+        lines.push(`**AO1 — Entity Density:** ${density} · ${total} named entities detected.`);
+        lines.push(`Top entities: ${top}`);
+        lines.push(`Breakdown: ${counts.people} people · ${counts.orgs} organisations · ${counts.locations} locations · ${counts.events} events`);
+    }
+
+    if (sentimentSummary?.score !== null) {
+        const { score, magnitude } = sentimentSummary;
+        const balanced = Math.abs(score) < 0.2 ? '✅ Balanced (AO3 Band 3)' : score > 0.2 ? '⚠️ Positively skewed — counter-argument may be weak' : '⚠️ Negatively skewed — consider adding a concession';
+        const depth = magnitude > 1.5 ? '✅ High argumentative depth' : '⚠️ Low argumentative depth — expand evaluative language';
+        lines.push(`\n**AO3 — Argumentative Balance:** ${balanced}`);
+        lines.push(`Sentiment score: ${score.toFixed(2)} · Magnitude: ${magnitude?.toFixed(2)} · ${depth}`);
+    }
+
+    return lines.join('\n');
+}
+
 exports.handler = async (event, context) => {
     // Only allow POST requests
     if (event.httpMethod !== "POST") {
@@ -9,6 +77,7 @@ exports.handler = async (event, context) => {
     try {
         const { essayText, questionText, marks } = JSON.parse(event.body);
         const apiKey = process.env.GEMINI_API_KEY;
+        const nlApiKey = process.env.GOOGLE_NL_API_KEY || apiKey; // Fallback to same GCP key
 
         if (!apiKey || apiKey === "YOUR_API_KEY_HERE") {
             return {
@@ -19,7 +88,8 @@ exports.handler = async (event, context) => {
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-pro",
+            tools: [{ googleSearch: {} }],  // Search grounding — cites real sources when available
             systemInstruction: `You are an IB Global Politics Senior Examiner for the 2026 syllabus. 
             Your goal is to provide constructive, pedagogically sound, and strictly unbiased feedback. 
             Maintain a neutral, academic tone. Avoid taking ideological sides; instead, evaluate the student's ability to synthesize competing perspectives (e.g., Realism vs. Liberalism). 
@@ -49,23 +119,33 @@ REQUIRED SECTIONS:
 [A one-sentence 'golden tip' on how to bridge these perspectives for a higher mark band.]
 `;
 
+        // Run Gemini + NL API in parallel
         let text;
-        try {
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            text = response.text();
-        } catch (genError) {
-            // Retry once on rate limit (429) after a brief pause
-            if (genError.status === 429 || genError.message?.includes('429') || genError.message?.includes('quota')) {
-                console.log("Rate limited by Gemini, retrying in 3s...");
-                await new Promise(r => setTimeout(r, 3000));
-                const retryResult = await model.generateContent(prompt);
-                const retryResponse = await retryResult.response;
-                text = retryResponse.text();
-            } else {
-                throw genError;
-            }
-        }
+        const [geminiResult, nlResult] = await Promise.all([
+            (async () => {
+                try {
+                    const result = await model.generateContent(prompt);
+                    const response = await result.response;
+                    return response.text();
+                } catch (genError) {
+                    if (genError.status === 429 || genError.message?.includes('429') || genError.message?.includes('quota')) {
+                        console.log("Rate limited by Gemini, retrying in 3s...");
+                        await new Promise(r => setTimeout(r, 3000));
+                        const retryResult = await model.generateContent(prompt);
+                        const retryResponse = await retryResult.response;
+                        return retryResponse.text();
+                    }
+                    throw genError;
+                }
+            })(),
+            analyzeWithNlApi(essayText, nlApiKey)
+        ]);
+
+        text = geminiResult;
+
+        // Append NL API AO insights to the response
+        const aoInsights = buildAoInsights(nlResult.entitySummary, nlResult.sentimentSummary);
+        if (aoInsights) text += aoInsights;
 
         return {
             statusCode: 200,

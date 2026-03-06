@@ -32,6 +32,31 @@ const CONCEPT_THEMES = {
     "Technology": { theme: "HL Global Challenges", color: "amber" }
 };
 
+// ── Shared case pool — used by CaseLibrary inline search AND standalone CaseFinder ──
+const SHARED_CASE_POOL = [
+    { name: 'South China Sea Dispute', concepts: 'Power, Sovereignty, Security', themes: 'sovereignty power realism maritime security China Philippines military conflict UNCLOS', url: 'https://www.bbc.com/news/world-asia-pacific-13748349' },
+    { name: 'Russia-Ukraine War', concepts: 'Sovereignty, Power, Security', themes: 'sovereignty territorial integrity NATO expansion war realism liberalism humanitarian refugees', url: 'https://www.bbc.com/news/world-europe-56720589' },
+    { name: 'Syrian Civil War & R2P', concepts: 'Legitimacy, Sovereignty, Human Rights', themes: 'humanitarian intervention R2P sovereignty human rights refugees legitimacy UN veto', url: 'https://www.bbc.com/news/world-middle-east-35806229' },
+    { name: 'Venezuela Collapse', concepts: 'Legitimacy, Development, Sovereignty', themes: 'economic collapse authoritarian development poverty inequality sovereignty legitimacy sanctions', url: 'https://www.bbc.com/news/world-latin-america-19652777' },
+    { name: 'US-China Trade War', concepts: 'Interdependence, Power, Technology', themes: 'trade war tariffs economic interdependence globalization WTO technology decoupling great power', url: 'https://www.bbc.com/news/business-45899310' },
+    { name: 'Afghan War & State-Building', concepts: 'Legitimacy, Sovereignty, Development', themes: 'statebuilding intervention sovereignty legitimacy human rights women development security Taliban', url: 'https://www.bbc.com/news/world-asia-58113421' },
+    { name: 'Israel-Palestine Conflict', concepts: 'Sovereignty, Human Rights, Legitimacy', themes: 'occupation sovereignty human rights humanitarian two-state UN legitimacy power identity', url: 'https://www.bbc.com/news/world-middle-east-29701816' },
+    { name: 'Paris Climate Agreement', concepts: 'Interdependence, Sustainability, Equality', themes: 'climate environment sustainability interdependence multilateralism sovereignty emissions development inequality', url: 'https://unfccc.int/process-and-meetings/the-paris-agreement' },
+    { name: 'North Korea Nuclear Program', concepts: 'Security, Sovereignty, Power', themes: 'nuclear weapons security proliferation sanctions deterrence realism sovereignty Kim denuclearization', url: 'https://www.bbc.com/news/world-asia-pacific-11813699' },
+    { name: 'Rwanda Genocide', concepts: 'Human Rights, Legitimacy, Sovereignty', themes: 'genocide ethnic conflict humanitarian R2P sovereignty human rights peacekeeping legitimacy failure', url: 'https://www.bbc.com/news/world-africa-26875506' },
+    { name: 'Iran Nuclear Deal (JCPOA)', concepts: 'Sovereignty, Power, Interdependence', themes: 'nuclear deal diplomacy multilateral sanctions sovereignty Non-Proliferation Treaty realism liberalism', url: 'https://www.bbc.com/news/world-middle-east-33521655' },
+    { name: 'Brexit & EU Sovereignty', concepts: 'Sovereignty, Interdependence, Identity', themes: 'Brexit European Union sovereignty interdependence globalization trade nationalism identity liberalism', url: 'https://www.bbc.com/news/uk-politics-32810887' },
+    { name: 'Arab Spring', concepts: 'Legitimacy, Sovereignty, Identity', themes: 'democracy sovereignty legitimacy human rights protest revolution authoritarianism identity regime change', url: 'https://www.bbc.com/news/world-middle-east-12301713' },
+    { name: 'COVID-19 Pandemic Response', concepts: 'Interdependence, Health, Equality', themes: 'pandemic health global governance interdependence sovereignty borders WHO development inequality technology', url: 'https://www.who.int/emergencies/diseases/novel-coronavirus-2019' },
+    { name: 'Rohingya Crisis', concepts: 'Human Rights, Sovereignty, Identity', themes: 'ethnic cleansing genocide sovereignty human rights humanitarian R2P stateless identity Myanmar ASEAN', url: 'https://www.bbc.com/news/world-asia-41566561' },
+    // ── 2025–2026 Current Affairs ────────────────────────────────────
+    { name: 'US & Israel Strikes on Iran (2026)', concepts: 'Sovereignty, Security, Legitimacy', themes: 'US Israel Iran nuclear strikes Operation Epic Fury military sovereignty legitimacy preemptive war security unilateral intervention 2026', url: 'https://www.bbc.com/news/world-middle-east' },
+    { name: 'Venezuela: Maduro Captured (2025)', concepts: 'Legitimacy, Sovereignty, Power', themes: 'Venezuela Maduro captured authoritarian regime change legitimacy sovereignty democracy sanctions ICC accountability Latin America', url: 'https://www.bbc.com/news/world-latin-america' },
+    { name: 'Sudan Civil War & Humanitarian Crisis', concepts: 'Human Rights, Security, Development', themes: 'Sudan civil war RSF SAF humanitarian crisis famine displacement R2P sovereignty ethnic conflict development equality', url: 'https://www.bbc.com/news/world-africa-68116732' },
+    { name: 'Gaza Ceasefire & Reconstruction', concepts: 'Legitimacy, Human Rights, Interdependence', themes: 'Gaza ceasefire Israel Palestine Hamas hostages reconstruction humanitarian law sovereignty legitimacy two-state UN intervention 2025', url: 'https://www.bbc.com/news/world-middle-east' },
+    { name: 'Trump Tariff Shock & Global Trade (2025)', concepts: 'Interdependence, Power, Development', themes: 'Trump tariffs US trade war protectionism WTO globalization interdependence economic sovereignty China EU retaliation 2025', url: 'https://www.bbc.com/news/business' },
+];
+
 const GLOBAL_CASES = [
     {
         name: "South China Sea Dispute", theme: "Sovereignty + Power",
@@ -456,74 +481,169 @@ const PolicyEngine = () => {
     const [actor, setActor] = useState('');
     const [target, setTarget] = useState('');
     const [mechanism, setMechanism] = useState('');
+    const [issue, setIssue] = useState('');
     const [result, setResult] = useState(null);
+
+    const THEORIES = [
+        {
+            name: 'Realism',
+            lens: 'state self-interest and power maximisation',
+            institution: 'coercive bilateral pressure',
+            limit: 'states will defect from agreements when national interest diverges',
+            concept: 'sovereignty and the balance of power'
+        },
+        {
+            name: 'Liberalism',
+            lens: 'institutional cooperation and collective-gains logic',
+            institution: 'multilateral coordination through international institutions',
+            limit: 'coordination is vulnerable to domestic political resistance and free-riding',
+            concept: 'interdependence and global governance'
+        },
+        {
+            name: 'Constructivism',
+            lens: 'norm diffusion, identity formation, and socialisation',
+            institution: 'diplomatic socialisation and norm-setting frameworks',
+            limit: 'norm internalisation is a slow and non-linear process that cannot be coerced',
+            concept: 'human rights norms and the evolving international order'
+        },
+    ];
 
     const generateSolution = () => {
         if (!actor || !target) return;
+        const tIdx = (actor.length + target.length) % 3;
+        const t = THEORIES[tIdx];
+        const mech = mechanism || 'targeted diplomatic pressure';
+        const iss = issue || 'the underlying geopolitical tension';
 
         setResult({
-            surgical: `${actor} should implement a targeted intervention using ${mechanism || 'localized diplomatic pressure'} specifically aimed at ${target} to address the systemic tension.`,
-            risk: `A major challenge to this policy is potential political pushback or resource diversion from local stakeholders, which must be mitigated by clear transparency and NGO partnership.`
+            basic: {
+                tier: 'Band 3–4',
+                label: 'States the policy — but no theory, no causal logic, no evaluation.',
+                text: `${actor} should use ${mech} on ${target} to deal with ${iss}. This would put pressure on them and help fix the situation. If they do not comply, ${actor} can increase the pressure until ${target} changes its behaviour.`,
+            },
+            elevate1: [
+                `Name the IR theory lens (e.g. ${t.name}) — why does this actor behave this way, and through what logic does this mechanism produce change?`,
+                `Explain the causal mechanism: how does ${mech} specifically alter ${target}'s incentives or calculations?`,
+                `Replace vague phrases ("fix the situation", "put pressure on them") with precise political science vocabulary`,
+                `Acknowledge at least one structural constraint on ${actor}'s ability to act effectively`,
+            ],
+            proficient: {
+                tier: 'Band 5–6',
+                label: 'Theory-linked, causally explained, one constraint evaluated.',
+                text: `From a ${t.name.toLowerCase()} perspective — which emphasises ${t.lens} — ${actor} is well-positioned to deploy ${mech} in response to ${iss}. This mechanism functions by altering the cost-benefit calculus facing ${target}: by raising the costs of non-compliance through ${t.institution}, ${actor} can incentivise behavioural adjustment without direct escalation. However, a significant constraint is that ${t.limit}, meaning that sustained, credible commitment from ${actor} is essential for the policy to produce durable outcomes.`,
+            },
+            elevate2: [
+                `Introduce a competing stakeholder or third-party dynamic — how do other international actors shape or constrain this policy?`,
+                `Embed a historical precedent or analogous case that substantiates (or complicates) the mechanism's track record`,
+                `Evaluate the trade-off or unintended consequence of deploying ${mech} — what does it risk producing?`,
+                `Use hedged, evaluative language ("while X may… Y remains contingent on…") to signal scholarly sophistication`,
+                `Connect to a broader IB concept such as ${t.concept} to demonstrate analytical range`,
+            ],
+            band7: {
+                tier: 'Band 7',
+                label: 'Multi-perspective, historically grounded, trade-offs evaluated, hedged throughout.',
+                text: `While ${actor}'s deployment of ${mech} represents a structurally plausible response to ${iss}, its effectiveness is contingent on several compounding variables that a ${t.name.toLowerCase()} framework only partially captures. The ${t.name.toLowerCase()} lens — centred on ${t.lens} — illuminates how ${mech} reshapes the incentive structure surrounding ${target}; however, as demonstrated by comparable cases of coercive international engagement, such tools frequently generate diminishing returns when target actors possess alternative alliances or ideological resistance to external pressure. Furthermore, ${actor}'s legitimacy in deploying this mechanism depends on whether action is pursued through ${t.institution}, since unilateral intervention risks norm-backlash and counter-mobilisation that could entrench rather than resolve ${iss}. A more analytically complete response must therefore account for the question of ${t.concept}: durable resolution requires not only sustained deployment of ${mech}, but a complementary strategy that addresses the structural incentives underpinning ${target}'s behaviour — recognising, as ${t.name.toLowerCase()} theory cautions, that ${t.limit}.`,
+            },
         });
     };
 
+    const TierCard = ({ tier, label, text, color }) => {
+        const styles = {
+            slate: { border: 'border-slate-500/30', bg: 'bg-slate-900/30', badge: 'bg-slate-700 text-slate-200', heading: 'text-slate-300' },
+            blue: { border: 'border-blue-500/30', bg: 'bg-blue-900/20', badge: 'bg-blue-800 text-blue-200', heading: 'text-blue-400' },
+            emerald: { border: 'border-emerald-500/30', bg: 'bg-emerald-900/20', badge: 'bg-emerald-800 text-emerald-200', heading: 'text-emerald-400' },
+        };
+        const c = styles[color];
+        return (
+            <div className={`border ${c.border} ${c.bg} rounded-xl p-5`}>
+                <div className="flex items-center gap-3 mb-3 flex-wrap">
+                    <span className={`text-xs font-bold px-2 py-1 rounded ${c.badge}`}>{tier}</span>
+                    <span className={`text-xs ${c.heading} italic`}>{label}</span>
+                </div>
+                <p className="text-gray-200 leading-relaxed text-sm">&ldquo;{text}&rdquo;</p>
+            </div>
+        );
+    };
+
+    const ElevationMoves = ({ moves, toTier }) => (
+        <div className="border border-amber-500/20 bg-amber-950/20 rounded-xl px-5 py-4">
+            <p className="text-amber-400 text-xs font-bold mb-3 flex items-center gap-2">
+                🔼 MOVES THAT ELEVATE TO {toTier.toUpperCase()}
+            </p>
+            <ul className="space-y-2">
+                {moves.map((move, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-amber-200/80">
+                        <span className="text-amber-500 mt-0.5 shrink-0">→</span>
+                        <span>{move}</span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+            <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
                 <Shield className="text-blue-500" /> Policy Engine
             </h2>
+            <p className="text-gray-400 text-sm mb-6">See what a Band 3–4, Band 5–6, and Band 7 policy response looks like — and the exact moves that elevate each one.</p>
             <Card>
                 <div className="grid gap-4 mb-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm text-gray-400 mb-1">Actor <span className="text-red-400">*</span></label>
+                            <input
+                                type="text"
+                                className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+                                placeholder="e.g. UN Security Council"
+                                value={actor}
+                                onChange={(e) => setActor(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm text-gray-400 mb-1">Target <span className="text-red-400">*</span></label>
+                            <input
+                                type="text"
+                                className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+                                placeholder="e.g. Myanmar Military Junta"
+                                value={target}
+                                onChange={(e) => setTarget(e.target.value)}
+                            />
+                        </div>
+                    </div>
                     <div>
-                        <label className="block text-sm text-gray-400 mb-1">Actor (Who has the power?)</label>
+                        <label className="block text-sm text-gray-400 mb-1">Issue / Context</label>
                         <input
                             type="text"
-                            className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="e.g., UN Security Council"
-                            value={actor}
-                            onChange={(e) => setActor(e.target.value)}
+                            className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+                            placeholder="e.g. ongoing human rights violations and democratic backsliding"
+                            value={issue}
+                            onChange={(e) => setIssue(e.target.value)}
                         />
                     </div>
                     <div>
-                        <label className="block text-sm text-gray-400 mb-1">Target (Who is impacted?)</label>
+                        <label className="block text-sm text-gray-400 mb-1">Mechanism <span className="text-gray-600">(optional)</span></label>
                         <input
                             type="text"
-                            className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="e.g., Regional Militia leaders"
-                            value={target}
-                            onChange={(e) => setTarget(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm text-gray-400 mb-1">Mechanism (Optional)</label>
-                        <input
-                            type="text"
-                            className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="e.g., Targeted Magnitsky Sanctions"
+                            className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+                            placeholder="e.g. Magnitsky-style targeted sanctions"
                             value={mechanism}
                             onChange={(e) => setMechanism(e.target.value)}
                         />
                     </div>
                 </div>
-                <Button onClick={generateSolution} className="w-full">
-                    <Zap size={18} /> Generate Surgical Solution
+                <Button onClick={generateSolution} className="w-full" disabled={!actor || !target}>
+                    <Zap size={18} /> Generate Tiered Policy Responses
                 </Button>
             </Card>
 
             {result && (
-                <div className="space-y-4 animate-in zoom-in-95 duration-300">
-                    <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-xl">
-                        <h3 className="text-blue-400 font-bold mb-2 flex items-center gap-2">
-                            <CheckCircle size={18} /> Level 2: Surgical Solution
-                        </h3>
-                        <p className="text-gray-200 italic">"{result.surgical}"</p>
-                    </div>
-                    <div className="bg-amber-900/20 border border-amber-500/30 p-4 rounded-xl">
-                        <h3 className="text-amber-400 font-bold mb-2 flex items-center gap-2">
-                            <AlertTriangle size={18} /> Level 3: Scholars' Risk Check
-                        </h3>
-                        <p className="text-gray-200 italic">"{result.risk}"</p>
-                    </div>
+                <div className="mt-6 space-y-3 animate-in zoom-in-95 duration-300">
+                    <TierCard tier={result.basic.tier} label={result.basic.label} text={result.basic.text} color="slate" />
+                    <ElevationMoves moves={result.elevate1} toTier="Band 5–6" />
+                    <TierCard tier={result.proficient.tier} label={result.proficient.label} text={result.proficient.text} color="blue" />
+                    <ElevationMoves moves={result.elevate2} toTier="Band 7" />
+                    <TierCard tier={result.band7.tier} label={result.band7.label} text={result.band7.text} color="emerald" />
                 </div>
             )}
         </div>
@@ -534,6 +654,37 @@ const PolicyEngine = () => {
 const CaseLibrary = () => {
     const [expanded, setExpanded] = useState(null);
     const [selectedTheory, setSelectedTheory] = useState('Realism');
+    const [caseQuery, setCaseQuery] = useState('');
+    const [caseResults, setCaseResults] = useState(null);
+    const [caseLoading, setCaseLoading] = useState(false);
+    const [expandedSearch, setExpandedSearch] = useState(null);
+    const [selectedSearchTheory, setSelectedSearchTheory] = useState('Realism');
+
+    // ── Case Finder logic — chain: semantic-search → find-cases → keyword fallback ──
+    const findMatchingCases = async () => {
+        if (!caseQuery.trim()) return;
+        setCaseLoading(true); setCaseResults(null);
+        const kwScore = (c, q) => { const ws = q.toLowerCase().split(/\W+/).filter(w => w.length > 3); return ws.reduce((s, w) => s + (c.themes.toLowerCase().includes(w) ? 1 : 0), 0); };
+        const angleFor = n => /war|nuclear|military|conflict|territory|south china|korea/i.test(n) ? 'Realism' : /climate|trade|pandemic|brexit|eu|covid/i.test(n) ? 'Liberalism' : 'Constructivism';
+        const enrich = (results) => results.map(r => { const m = SHARED_CASE_POOL.find(c => c.name === r.name); return { ...r, concepts: m?.concepts || '', url: m?.url || '' }; });
+        // 1. Semantic search (Gemini embeddings)
+        try {
+            const semRes = await fetch('/.netlify/functions/semantic-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: caseQuery, topK: 5 }) });
+            if (semRes.ok) { const d = await semRes.json(); if (!d.error && d.results?.length) { setCaseResults(enrich(d.results.map((r, i) => ({ rank: i + 1, name: r.name, relevance: `Semantic match (score: ${r.score.toFixed(2)})`, angle: angleFor(r.name) })))); setCaseLoading(false); return; } }
+        } catch { }
+        // 2. AI case finder (Gemini)
+        try {
+            const fnRes = await fetch('/.netlify/functions/find-cases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: caseQuery }) });
+            if (fnRes.ok) { const d = await fnRes.json(); if (!d.error) { setCaseResults(enrich(d.results)); setCaseLoading(false); return; } }
+        } catch { }
+        // 3. Keyword fallback
+        const scored = SHARED_CASE_POOL.map(c => ({ ...c, score: kwScore(c, caseQuery) })).sort((a, b) => b.score - a.score);
+        const topN = scored.some(c => c.score > 0) ? scored.filter(c => c.score > 0).slice(0, 5) : scored.slice(0, 5);
+        const local = topN.map((c, i) => ({ rank: i + 1, name: c.name, concepts: c.concepts, relevance: 'Keyword match. Review for thematic alignment.', angle: angleFor(c.name), url: c.url }));
+        setCaseResults(local);
+        setCaseLoading(false);
+    };
+
     const cases = GLOBAL_CASES;
     const fiveWHLabels = [
         { key: 'who', label: 'Who', icon: '👤' },
@@ -546,6 +697,135 @@ const CaseLibrary = () => {
     return (
         <div className="space-y-4">
             <h3 className="text-lg font-bold text-emerald-400">Case Library: The Intersection Series</h3>
+
+            {/* ── Case Finder Search ───────────────────────────────────────── */}
+            <div className="p-4 bg-violet-500/5 border border-violet-500/20 rounded-xl space-y-3">
+                <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest">🔍 Find Cases for Your Argument</p>
+                <div className="flex gap-2">
+                    <input value={caseQuery} onChange={e => setCaseQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && findMatchingCases()}
+                        placeholder="Type your thesis or argument..."
+                        className="flex-1 bg-glopo-dark border border-white/20 rounded-xl p-2.5 text-sm text-gray-300 outline-none focus:border-violet-500 transition-colors placeholder:text-gray-600" />
+                    <button onClick={findMatchingCases} disabled={caseLoading || !caseQuery.trim()}
+                        className="px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white text-xs font-black rounded-xl transition-all shrink-0">
+                        {caseLoading ? '...' : 'FIND CASES'}
+                    </button>
+                </div>
+                {caseResults && (
+                    <div className="space-y-2 mt-1">
+                        <p className="text-[10px] text-gray-600 uppercase font-bold tracking-widest">{caseResults.length} cases matched — click to expand full evaluation</p>
+                        {caseResults.map(r => {
+                            const full = GLOBAL_CASES.find(gc => gc.name === r.name);
+                            const isOpen = expandedSearch === r.rank;
+                            return (
+                                <div key={r.rank}
+                                    className={`border rounded-xl transition-all cursor-pointer ${isOpen ? 'border-violet-500/50 bg-violet-500/5' : 'border-violet-500/15 bg-white/[0.02] hover:border-violet-500/30'}`}
+                                    onClick={() => setExpandedSearch(isOpen ? null : r.rank)}>
+                                    {/* Header row */}
+                                    <div className="flex items-center gap-3 p-3">
+                                        <span className="w-6 h-6 rounded-full bg-violet-600 text-white text-[9px] font-black flex items-center justify-center shrink-0">#{r.rank}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-black text-violet-200 leading-tight">{r.name}</p>
+                                            <p className="text-[10px] text-gray-500 mt-0.5">
+                                                <span className="text-violet-400 font-bold">Angle: </span>{r.angle}
+                                                {r.concepts && <><span className="mx-1 text-gray-700">·</span><span className="text-violet-400 font-bold">Concepts: </span>{r.concepts}</>}
+                                            </p>
+                                        </div>
+                                        <span className="text-gray-600 text-xs shrink-0">{isOpen ? '▲' : '▼'}</span>
+                                    </div>
+
+                                    {/* Expanded full evaluation */}
+                                    {isOpen && (
+                                        <div className="px-4 pb-4 space-y-4" onClick={e => e.stopPropagation()}>
+                                            {/* IR Theory Analysis */}
+                                            <div className="p-4 bg-glopo-dark/50 border border-white/5 rounded-xl">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <h5 className="text-[9px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
+                                                        <Zap size={10} className="text-blue-500" /> Theoretical Analysis (IR Lenses)
+                                                    </h5>
+                                                    <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+                                                        {Object.keys(IR_THEORIES).map(t => (
+                                                            <button key={t} onClick={() => setSelectedSearchTheory(t)}
+                                                                className={`px-2 py-1 rounded text-[9px] font-bold transition-all border whitespace-nowrap ${selectedSearchTheory === t ? 'bg-white/10 border-white/20 text-white' : 'bg-transparent border-transparent text-gray-600 hover:text-gray-400'}`}
+                                                                style={{ borderLeftColor: selectedSearchTheory === t ? IR_THEORIES[t].color : 'transparent', borderLeftWidth: selectedSearchTheory === t ? '3px' : '1px' }}>
+                                                                {t}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                {full ? (
+                                                    <div>
+                                                        <p className="text-[11px] leading-relaxed text-gray-300">
+                                                            <span className="font-black mr-2 uppercase tracking-tighter" style={{ color: IR_THEORIES[selectedSearchTheory].color }}>{selectedSearchTheory}:</span>
+                                                            {IR_THEORIES[selectedSearchTheory].getInterpretation(full)}
+                                                        </p>
+                                                        <p className="text-[9px] text-gray-500 mt-2 italic">{IR_THEORIES[selectedSearchTheory].description}</p>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-[11px] text-gray-500 italic">Full theory analysis available when this case is added to the static library. <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-violet-400">Read source →</a></p>
+                                                )}
+                                            </div>
+
+                                            {/* 5WH + IB Linkage */}
+                                            {full?.fiveWH && (
+                                                <div className="flex flex-col md:flex-row gap-4">
+                                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        {fiveWHLabels.map(({ key, label, icon }) => (
+                                                            <div key={key} className="p-3 bg-white/5 border border-white/10 rounded-lg">
+                                                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">{icon} {label}</p>
+                                                                <p className="text-xs text-gray-300 leading-relaxed">{full.fiveWH[key]}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    {full?.ibLinkage && (
+                                                        <div className="md:w-48 p-4 bg-blue-900/20 border border-blue-500/20 rounded-lg shrink-0">
+                                                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">IB Concept Linkage</p>
+                                                            <div className="space-y-3">
+                                                                <div>
+                                                                    <p className="text-[9px] text-gray-500 uppercase font-bold mb-1">Core Concepts</p>
+                                                                    <div className="flex flex-wrap gap-1">{full.ibLinkage.core.map((t, j) => <span key={j} className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">{t}</span>)}</div>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[9px] text-gray-500 uppercase font-bold mb-1">Challenges</p>
+                                                                    <div className="flex flex-wrap gap-1">{full.ibLinkage.challenge.map((t, j) => <span key={j} className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">{t}</span>)}</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* HL Global Challenges */}
+                                            {full?.globalChallenges && (
+                                                <div className="p-4 bg-amber-900/10 border border-amber-500/20 rounded-xl">
+                                                    <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-500/70 mb-3 flex items-center gap-2">
+                                                        <AlertTriangle size={10} className="text-amber-500" /> HL Global Challenges Analysis
+                                                    </h5>
+                                                    <div className="grid gap-3 md:grid-cols-2">
+                                                        {Object.entries(full.globalChallenges).map(([ch, an]) => (
+                                                            <div key={ch} className="p-3 bg-amber-500/5 border border-amber-500/10 rounded-lg">
+                                                                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-1.5">{ch}</p>
+                                                                <p className="text-[11px] text-gray-400 leading-relaxed">{an}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Quick facts fallback + source link */}
+                                            {!full?.fiveWH && (
+                                                <p className="text-[11px] text-gray-500 italic p-3 bg-white/5 rounded-lg">
+                                                    Detailed 5W+H analysis not yet available for this case.
+                                                    {r.url && <> <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-violet-400">🔗 Read Source</a></>}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
                 {cases.map((c, i) => (
                     <div key={i} className={`p-4 bg-white/5 border rounded-lg transition-all cursor-pointer ${expanded === i ? 'border-emerald-500/50 md:col-span-2 bg-white/[0.07]' : 'border-white/10 hover:border-emerald-500/30'}`} onClick={() => setExpanded(expanded === i ? null : i)}>
@@ -869,6 +1149,43 @@ const WritingStudio = () => {
                                 </div>
                             ))}
                         </div>
+
+                        {/* Band tier: how to USE perspectives in writing */}
+                        <div className="border-t border-white/10 pt-4 space-y-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">🎯 How to use these perspectives in your writing</p>
+                            <div className="border border-slate-500/30 bg-slate-900/30 rounded-xl p-4">
+                                <span className="text-xs font-bold bg-slate-700 text-slate-200 px-2 py-0.5 rounded mr-2">Band 3–4</span>
+                                <span className="text-xs text-slate-400 italic">Names a perspective — no causal logic.</span>
+                                <p className="text-gray-300 text-xs leading-relaxed mt-2">&ldquo;Realists would say states act in self-interest. This explains why this issue is hard to solve.&rdquo;</p>
+                            </div>
+                            <div className="border border-amber-500/20 bg-amber-950/20 rounded-xl px-4 py-3">
+                                <p className="text-amber-400 text-xs font-bold mb-2">🔼 MOVES THAT ELEVATE TO BAND 5–6</p>
+                                <ul className="space-y-1">
+                                    {['Apply the theory — explain what it predicts, not just what it is', 'Use the theoretical lens to analyse your specific case', 'Add "therefore" or "this demonstrates" to connect theory to your argument'].map((m, i) => (
+                                        <li key={i} className="flex items-start gap-2 text-xs text-amber-200/80"><span className="text-amber-500 shrink-0">→</span><span>{m}</span></li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <div className="border border-blue-500/30 bg-blue-900/20 rounded-xl p-4">
+                                <span className="text-xs font-bold bg-blue-800 text-blue-200 px-2 py-0.5 rounded mr-2">Band 5–6</span>
+                                <span className="text-xs text-blue-400 italic">Applied theory with analytical connective.</span>
+                                <p className="text-gray-300 text-xs leading-relaxed mt-2">&ldquo;From a Realist perspective, states prioritise survival over cooperation; therefore, the failure to resolve this issue demonstrates that power maximisation consistently overrides normative obligations in the international system.&rdquo;</p>
+                            </div>
+                            <div className="border border-amber-500/20 bg-amber-950/20 rounded-xl px-4 py-3">
+                                <p className="text-amber-400 text-xs font-bold mb-2">🔼 MOVES THAT ELEVATE TO BAND 7</p>
+                                <ul className="space-y-1">
+                                    {['Counter the first perspective with a second theoretical lens', 'Evaluate which perspective is more persuasive and why', 'Hedge: "while X… Y is contingent on…" to show scholarly nuance'].map((m, i) => (
+                                        <li key={i} className="flex items-start gap-2 text-xs text-amber-200/80"><span className="text-amber-500 shrink-0">→</span><span>{m}</span></li>
+                                    ))}
+                                </ul>
+                            </div>
+                            <div className="border border-emerald-500/30 bg-emerald-900/20 rounded-xl p-4">
+                                <span className="text-xs font-bold bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded mr-2">Band 7</span>
+                                <span className="text-xs text-emerald-400 italic">Multi-theory evaluation with hedged judgement.</span>
+                                <p className="text-gray-300 text-xs leading-relaxed mt-2">&ldquo;While the Realist framework persuasively accounts for the persistence of this tension through its emphasis on power maximisation and survival, a Constructivist rejoinder holds that state behaviour is equally shaped by evolving norms and identity — suggesting that, ultimately, the resolution of this issue depends not solely on material interests, but on whether a shared normative framework can be institutionalised.&rdquo;</p>
+                            </div>
+                        </div>
+
                         <Button variant="outline" onClick={() => { setShowDebate(false); setThesis(''); }}>Try different Prompt</Button>
                     </div>
                 )}
@@ -1015,11 +1332,28 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
                         <p className="text-sm text-red-300 flex items-center gap-2"><AlertTriangle size={16} /> {introError}</p>
                     </div>
                 ) : (
-                    <div className="bg-emerald-900/20 border border-emerald-500/30 p-6 rounded-xl leading-relaxed text-gray-300">
-                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest block mb-3 flex items-center gap-2">
-                            <Zap size={10} /> AI-Generated Model Introduction
-                        </span>
-                        <p className="text-sm">{generatedIntro}</p>
+                    <div className="space-y-4">
+                        <div className="bg-emerald-900/20 border border-emerald-500/30 p-6 rounded-xl leading-relaxed text-gray-300">
+                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest block mb-3 flex items-center gap-2">
+                                <span className="text-xs font-bold bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded mr-1">Band 7</span> AI-Generated Model Introduction
+                            </span>
+                            <p className="text-sm">{generatedIntro}</p>
+                        </div>
+                        <div className="border border-amber-500/20 bg-amber-950/20 rounded-xl px-4 py-3">
+                            <p className="text-amber-400 text-xs font-bold mb-2">🔼 WHAT MAKES THIS BAND 7</p>
+                            <ul className="space-y-1">
+                                {[
+                                    'Opens with a real-world hook specific to the concept — not a generic statement',
+                                    'Weaves the student definition into analysis, not as a standalone sentence',
+                                    'Identifies the central conceptual tension (not just "for" vs. "against")',
+                                    'Introduces BOTH case studies with a brief analytical clause explaining their relevance',
+                                    'Thesis is earned — it feels like a conclusion from the preceding analysis',
+                                    'Closes with a one-sentence roadmap signalling structure and evaluative scope',
+                                ].map((m, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-xs text-amber-200/80"><span className="text-amber-500 shrink-0">→</span><span>{m}</span></li>
+                                ))}
+                            </ul>
+                        </div>
                     </div>
                 )}
 
@@ -1095,6 +1429,104 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
         const [data, setData] = useState({ point: '', evidence: '', explanation: '', link: '' });
         const updateData = (key, val) => setData({ ...data, [key]: val });
         const [showResult, setShowResult] = useState(false);
+        const [reviewPara, setReviewPara] = useState('');
+        const [reviewResult, setReviewResult] = useState(null);
+        const [reviewLoading, setReviewLoading] = useState(false);
+        const [reviewError, setReviewError] = useState(null);
+        const [grammarIssues, setGrammarIssues] = useState(null);
+        const [grammarLoading, setGrammarLoading] = useState(false);
+        const [isSpeaking, setIsSpeaking] = useState(false);
+
+        const getPeelFeedback = async () => {
+            if (!reviewPara.trim()) return;
+            setReviewLoading(true); setReviewResult(null); setReviewError(null);
+
+            // Strategy 1: Netlify serverless function (works when deployed)
+            try {
+                const res = await fetch('/.netlify/functions/peel-review', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paragraph: reviewPara }),
+                    signal: AbortSignal.timeout(25000)
+                });
+                if (res.ok) {
+                    const d = await res.json();
+                    if (!d.error) { setReviewResult(d); setReviewLoading(false); return; }
+                }
+            } catch (e) {
+                console.log('Netlify peel-review unavailable, trying direct API...');
+            }
+
+            // Strategy 2: Direct Gemini API call (local dev fallback)
+            const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+            if (!apiKey) {
+                setReviewError('AI feedback requires deployment. To enable locally, add REACT_APP_GEMINI_API_KEY to your .env file.');
+                setReviewLoading(false); return;
+            }
+            try {
+                const prompt = `You are an IB Global Politics examiner. Review this PEEL paragraph and return ONLY valid JSON with this exact structure:
+{"original":"<the paragraph as written>","improved":"<your improved version>","bandJump":"Band X → Band Y","changes":[{"ao":"AO1|AO2|AO3|AO4","label":"short label","original":"phrase replaced","fix":"explanation of change"}]}
+
+PEEL paragraph to review:
+${reviewPara}
+
+Return ONLY the JSON with no markdown, no backticks, no commentary.`;
+
+                const resp = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
+                    {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { response_mime_type: 'application/json' }
+                        })
+                    }
+                );
+                if (resp.ok) {
+                    const gData = await resp.json();
+                    const raw = gData?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+                    setReviewResult(JSON.parse(raw)); // JSON mode guarantees valid JSON
+                } else { throw new Error(`Gemini error ${resp.status}`); }
+            } catch (e) {
+                setReviewError(`AI feedback requires running via Netlify Dev (npx netlify dev) — direct API calls are geo-restricted on this network. ${e.message}`);
+            }
+            setReviewLoading(false);
+        };
+
+        const runGrammarCheck = async () => {
+            if (!reviewPara.trim() || reviewPara.trim().length < 20) return;
+            setGrammarLoading(true); setGrammarIssues(null);
+            try {
+                const res = await fetch('/.netlify/functions/grammar-check', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: reviewPara })
+                });
+                if (!res.ok) throw new Error(`Grammar check error ${res.status}`);
+                const d = await res.json();
+                setGrammarIssues(d.issues || []);
+            } catch {
+                setGrammarIssues([]); // Show empty panel rather than leaving spinner
+            }
+            setGrammarLoading(false);
+        };
+
+        // Cancel TTS if component unmounts while speaking
+        React.useEffect(() => {
+            return () => { window.speechSynthesis?.cancel(); };
+        }, []);
+
+        const speakText = (text) => {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const plain = text.replace(/#{1,6}\s/g, '').replace(/[*_`]/g, '');
+            const utt = new SpeechSynthesisUtterance(plain);
+            utt.lang = 'en-GB'; utt.rate = 0.92;
+            utt.onend = () => setIsSpeaking(false);
+            utt.onerror = () => setIsSpeaking(false);
+            setIsSpeaking(true);
+            window.speechSynthesis.speak(utt);
+        };
+
+        const stopSpeaking = () => { window.speechSynthesis.cancel(); setIsSpeaking(false); };
+
 
         // Inline Argument Strength dims (embedded — no separate tab needed)
         const argDims = [
@@ -1167,9 +1599,135 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
                                 ))}
                             </div>
                         </div>
+
+                        {/* PEEL tier examples */}
+                        <div className="border border-white/10 rounded-xl p-4 space-y-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">📐 What a tiered PEEL paragraph looks like</p>
+                            <div className="border border-slate-500/30 bg-slate-900/30 rounded-xl p-3">
+                                <span className="text-xs font-bold bg-slate-700 text-slate-200 px-2 py-0.5 rounded mr-2">Band 3–4</span>
+                                <span className="text-xs text-slate-400 italic">Claim + basic evidence. No theory or evaluative link.</span>
+                                <p className="text-gray-400 text-xs leading-relaxed mt-2 italic">&ldquo;The South China Sea dispute shows that states sometimes break international rules. China built artificial islands there. This shows that powerful states can do what they want.&rdquo;</p>
+                            </div>
+                            <div className="border border-amber-500/20 bg-amber-950/20 rounded-xl px-4 py-3">
+                                <p className="text-amber-400 text-xs font-bold mb-2">🔼 MOVES THAT ELEVATE TO BAND 5–6</p>
+                                <ul className="space-y-1">{['Name a specific year, UN resolution, or treaty as evidence', 'Apply a named IR theory and explain HOW it illuminates the case', 'Use "therefore" / "this demonstrates" to connect E→E→L analytically'].map((m, i) => <li key={i} className="flex items-start gap-2 text-xs text-amber-200/80"><span className="text-amber-500 shrink-0">→</span><span>{m}</span></li>)}</ul>
+                            </div>
+                            <div className="border border-blue-500/30 bg-blue-900/20 rounded-xl p-3">
+                                <span className="text-xs font-bold bg-blue-800 text-blue-200 px-2 py-0.5 rounded mr-2">Band 5–6</span>
+                                <span className="text-xs text-blue-400 italic">Theory applied, evaluative connective used.</span>
+                                <p className="text-gray-300 text-xs leading-relaxed mt-2 italic">&ldquo;China's militarisation of contested features in the South China Sea — despite the 2016 UNCLOS arbitral ruling — demonstrates a structurally Realist pattern of behaviour: when national interest diverges from international law, powerful states prioritise capability over compliance. This therefore challenges the liberal assumption that international institutions can consistently constrain great powers.&rdquo;</p>
+                            </div>
+                            <div className="border border-amber-500/20 bg-amber-950/20 rounded-xl px-4 py-3">
+                                <p className="text-amber-400 text-xs font-bold mb-2">🔼 MOVES THAT ELEVATE TO BAND 7</p>
+                                <ul className="space-y-1">{['Add a counter-argument: "However, a Constructivist would argue..."', 'Reach an evaluative judgement: "Overall, the more persuasive view is..."', 'Link back to the thesis concept using precise IB vocabulary'].map((m, i) => <li key={i} className="flex items-start gap-2 text-xs text-amber-200/80"><span className="text-amber-500 shrink-0">→</span><span>{m}</span></li>)}</ul>
+                            </div>
+                            <div className="border border-emerald-500/30 bg-emerald-900/20 rounded-xl p-3">
+                                <span className="text-xs font-bold bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded mr-2">Band 7</span>
+                                <span className="text-xs text-emerald-400 italic">Multi-perspective, evaluated, linked to thesis.</span>
+                                <p className="text-gray-300 text-xs leading-relaxed mt-2 italic">&ldquo;China's construction of artificial islands in the South China Sea — in defiance of the 2016 PCA ruling — exemplifies the Realist logic that sovereignty claims are ultimately enforced through material power rather than legal obligation. However, a Constructivist counterpoint holds that Beijing's framing of its claims as historically legitimate reveals how identity and narrative, not just capability, shape state behaviour. Ultimately, this case study demonstrates that while coercive sovereignty assertions can succeed in the short term, their long-term legitimacy — and thus durability — depends on whether they are accepted as normatively valid within the international community.&rdquo;</p>
+                            </div>
+                        </div>
+
                         <Button variant="outline" onClick={() => setShowResult(false)}><RefreshCw size={16} /> Edit Details</Button>
                     </div>
                 )}
+
+                {/* ── Paragraph Review Section ──────────────────────────────────── */}
+                <div className="border-t border-white/10 pt-5 space-y-3">
+                    <div>
+                        <p className="text-sm font-black text-emerald-400 mb-0.5">✍️ Review a Completed Paragraph</p>
+                        <p className="text-[11px] text-gray-500">Paste any PEEL paragraph — the feedback engine will show your original, an improved version, and explain each change by AO criterion.</p>
+                    </div>
+                    <textarea
+                        value={reviewPara}
+                        onChange={e => setReviewPara(e.target.value)}
+                        className="w-full bg-glopo-dark border border-glopo-border rounded-xl p-3 h-28 text-sm text-gray-300 outline-none focus:border-emerald-500 transition-colors resize-none"
+                        placeholder="Paste your completed paragraph here..."
+                    />
+                    <div className="flex gap-2 flex-wrap">
+                        <Button onClick={getPeelFeedback} disabled={reviewLoading || reviewPara.trim().length < 30}>
+                            {reviewLoading ? 'Analysing...' : '✨ Coach My Writing'}
+                        </Button>
+                        <button
+                            onClick={runGrammarCheck}
+                            disabled={grammarLoading || reviewPara.trim().length < 20}
+                            className="px-4 py-2 text-[10px] font-black rounded-lg border border-amber-500/30 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition-all disabled:opacity-40"
+                        >
+                            {grammarLoading ? 'Checking...' : '📝 Check Grammar'}
+                        </button>
+                    </div>
+
+                    {grammarIssues !== null && (
+                        <div className="p-3 bg-white/3 border border-white/10 rounded-xl space-y-2">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">📝 Grammar & Style — {grammarIssues.length} issue{grammarIssues.length !== 1 ? 's' : ''} found</p>
+                            {grammarIssues.length === 0 ? (
+                                <p className="text-[11px] text-emerald-400">No issues detected. Well structured.</p>
+                            ) : grammarIssues.map((issue, i) => (
+                                <div key={i} className="p-2 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                                    <p className="text-[10px] font-bold text-amber-400">{issue.category} — {issue.shortMessage}</p>
+                                    <p className="text-[10px] text-gray-400 mt-0.5">{issue.message}</p>
+                                    {issue.suggestions?.length > 0 && (
+                                        <p className="text-[10px] text-emerald-400 mt-0.5">Suggestion: {issue.suggestions.join(' / ')}</p>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {reviewError && (
+                        <div className="p-3 bg-amber-900/20 border border-amber-500/30 rounded-xl text-[11px] text-amber-300">{reviewError}</div>
+                    )}
+
+                    {reviewResult && (
+                        <div className="space-y-4 animate-in fade-in duration-300">
+                            {/* Original */}
+                            <div className="p-4 bg-white/3 border border-white/10 rounded-xl">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-2">📄 Your Original</p>
+                                <p className="text-sm text-gray-400 leading-relaxed italic">{reviewResult.original}</p>
+                            </div>
+                            {/* Improved */}
+                            <div className="p-4 bg-emerald-900/20 border border-emerald-500/30 rounded-xl">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400">✨ Improved Version</p>
+                                    <div className="flex items-center gap-2">
+                                        {reviewResult.bandJump && <span className="text-[9px] font-black bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">{reviewResult.bandJump}</span>}
+                                        <button
+                                            onClick={isSpeaking ? stopSpeaking : () => speakText(reviewResult.improved)}
+                                            title={isSpeaking ? 'Stop reading' : 'Read aloud'}
+                                            className={`text-xs px-2 py-0.5 rounded font-bold transition-all ${isSpeaking ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-gray-400 hover:text-white'}`}
+                                        >
+                                            {isSpeaking ? '⏹ Stop' : '🔊'}
+                                        </button>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-gray-200 leading-relaxed">{reviewResult.improved}</p>
+                            </div>
+                            {/* Changes */}
+                            {reviewResult.changes?.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">📝 Changes Made</p>
+                                    {reviewResult.changes.map((c, i) => {
+                                        const aoColor = c.ao === 'AO1' ? '#3399ff' : c.ao === 'AO2' ? '#00cc77' : c.ao === 'AO3' ? '#ff9900' : '#cc44ff';
+                                        const aoBg = c.ao === 'AO1' ? '#3399ff22' : c.ao === 'AO2' ? '#00cc7722' : c.ao === 'AO3' ? '#ff990022' : '#cc44ff22';
+                                        return (
+                                            <div key={i} className="p-3 bg-white/5 border border-white/10 rounded-lg">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[9px] font-black px-2 py-0.5 rounded" style={{ background: aoBg, color: aoColor }}>{c.ao}</span>
+                                                    <span className="text-xs font-bold text-gray-300">{c.label}</span>
+                                                </div>
+                                                {c.original && <p className="text-[10px] text-gray-600 italic mb-1 line-through">❝ {c.original}</p>}
+                                                <p className="text-[11px] text-gray-300 leading-relaxed">→ {c.fix}</p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            <Button variant="outline" onClick={() => { setReviewResult(null); setReviewPara(''); }}>
+                                <RefreshCw size={14} /> Review Another Paragraph
+                            </Button>
+                        </div>
+                    )}
+                </div>
             </div>
         );
     };
@@ -1356,26 +1914,230 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
 
     // ── F9: Thesis Variations ─────────────────────────────────────────────────
     const ThesisVariations = () => {
-
         const [concept, setConcept] = useState('');
         const [core, setCore] = useState('');
         const [variations, setVariations] = useState(null);
+
         const generate = () => {
             if (!concept || !core) return;
             setVariations([
-                { level: 'Foundation', color: '#888', text: `${concept} is relevant to global politics because ${core}.` },
-                { level: 'Proficient', color: '#00cc77', text: `While ${concept} remains central to global governance, ${core}, suggesting that states must balance self-interest with collective responsibility.` },
-                { level: 'Distinction', color: '#cc44ff', text: `The concept of ${concept} is not a fixed condition but a contested, dynamic arena: ${core}. This claim must be qualified by examining structural constraints and the diverging interests of major powers, emerging economies, and non-state actors who each construct ${concept} through their own normative frameworks.` },
+                {
+                    tier: 'Band 3–4', color: 'slate',
+                    label: 'States the argument — no conceptual tension, no theory, no nuance.',
+                    text: `${concept} is relevant to global politics because ${core}.`
+                },
+                {
+                    tier: 'Band 5–6', color: 'blue',
+                    label: 'Introduces tension and signals theoretical framing.',
+                    text: `While ${concept} remains central to global governance, ${core}, suggesting that states must balance competing self-interest with collective normative obligations — a tension that a Realist lens illuminates as structurally irresolvable in the absence of a central authority.`
+                },
+                {
+                    tier: 'Band 7', color: 'emerald',
+                    label: 'Contested concept, multi-actor, evaluative scope signal, hedged.',
+                    text: `The concept of ${concept} is not a fixed condition but a contested, dynamic arena: ${core}. This claim must be qualified by examining structural constraints and the diverging postures of major powers, emerging economies, and non-state actors — each of whom constructs ${concept} through their own normative and material frameworks — making a universally applicable conclusion conditional rather than definitive.`
+                },
             ]);
         };
+
+        const TIER_STYLES = {
+            slate: { border: 'border-slate-500/30', bg: 'bg-slate-900/30', badge: 'bg-slate-700 text-slate-200', label: 'text-slate-300' },
+            blue: { border: 'border-blue-500/30', bg: 'bg-blue-900/20', badge: 'bg-blue-800 text-blue-200', label: 'text-blue-400' },
+            emerald: { border: 'border-emerald-500/30', bg: 'bg-emerald-900/20', badge: 'bg-emerald-800 text-emerald-200', label: 'text-emerald-400' },
+        };
+
+        const elevate1 = [
+            `Replace the generic "is relevant because" opener with a conceptual tension or paradox`,
+            `Signal the theoretical lens you will use to analyse ${concept || 'the concept'}`,
+            `Indicate the scope: which case studies will anchor your argument?`,
+            `Move from assertion to analysis — your thesis should make a claim that can be debated`,
+        ];
+        const elevate2 = [
+            `Make the concept itself contested, not just the argument — ${concept || 'your concept'} should be problematised`,
+            `Acknowledge the multi-actor dynamic: major powers, emerging economies, and non-state actors may construct the concept differently`,
+            `Use hedging language ("conditional", "contingent on", "structurally irresolvable") to signal scholarly sophistication`,
+            `Close with an implicit essay roadmap — signal evaluative scope without listing paragraph topics`,
+        ];
+
         return (
             <div className="space-y-4">
                 <h3 className="text-lg font-bold text-pink-400">✨ Thesis Variations</h3>
-                <p className="text-xs text-gray-400">Enter your IB concept + core argument. Get 3 thesis phrasings at Foundation, Proficient, and Distinction level.</p>
+                <p className="text-xs text-gray-400">Enter your IB concept and core argument — see how the same idea reads at Band 3–4, Band 5–6, and Band 7, with the specific moves that elevate each.</p>
                 <input className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 text-sm" placeholder="IB Concept (e.g., Sovereignty, Power, Peace)" value={concept} onChange={e => setConcept(e.target.value)} />
-                <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-20 text-sm" placeholder="Core argument (e.g., 'great powers undermine sovereignty through economic coercion')" value={core} onChange={e => setCore(e.target.value)} />
+                <textarea className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-3 h-20 text-sm" placeholder="Core argument (e.g., great powers undermine sovereignty through economic coercion)" value={core} onChange={e => setCore(e.target.value)} />
                 <Button onClick={generate} disabled={!concept || !core}>Generate Thesis Variations</Button>
-                {variations && <div className="space-y-3 animate-in fade-in duration-300">{variations.map((v, i) => <div key={i} className="p-4 rounded-xl border-l-4" style={{ borderColor: v.color, background: v.color + '11' }}><span className="text-[10px] font-black uppercase tracking-widest block mb-2" style={{ color: v.color }}>{v.level}</span><p className="text-sm text-gray-200 leading-relaxed italic">"{v.text}"</p></div>)}</div>}
+
+                {variations && (
+                    <div className="space-y-3 animate-in fade-in duration-300">
+                        {variations.map((v, i) => {
+                            const s = TIER_STYLES[v.color];
+                            return (
+                                <>
+                                    <div key={i} className={`border ${s.border} ${s.bg} rounded-xl p-4`}>
+                                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${s.badge}`}>{v.tier}</span>
+                                            <span className={`text-xs italic ${s.label}`}>{v.label}</span>
+                                        </div>
+                                        <p className="text-sm text-gray-200 leading-relaxed italic">&ldquo;{v.text}&rdquo;</p>
+                                    </div>
+                                    {i === 0 && (
+                                        <div className="border border-amber-500/20 bg-amber-950/20 rounded-xl px-4 py-3">
+                                            <p className="text-amber-400 text-xs font-bold mb-2">🔼 MOVES THAT ELEVATE TO BAND 5–6</p>
+                                            <ul className="space-y-1">{elevate1.map((m, j) => <li key={j} className="flex items-start gap-2 text-xs text-amber-200/80"><span className="text-amber-500 shrink-0">→</span><span>{m}</span></li>)}</ul>
+                                        </div>
+                                    )}
+                                    {i === 1 && (
+                                        <div className="border border-amber-500/20 bg-amber-950/20 rounded-xl px-4 py-3">
+                                            <p className="text-amber-400 text-xs font-bold mb-2">🔼 MOVES THAT ELEVATE TO BAND 7</p>
+                                            <ul className="space-y-1">{elevate2.map((m, j) => <li key={j} className="flex items-start gap-2 text-xs text-amber-200/80"><span className="text-amber-500 shrink-0">→</span><span>{m}</span></li>)}</ul>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // ── Case Finder: AI semantic search over IB case studies ─────────────────
+    const CaseFinder = () => {
+        const [query, setQuery] = useState('');
+        const [results, setResults] = useState(null);
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState(null);
+
+        // Uses module-level SHARED_CASE_POOL — add new cases there, not here
+        const CASE_POOL = SHARED_CASE_POOL;
+
+        const findCases = async () => {
+            if (!query.trim()) return;
+            setLoading(true); setError(null); setResults(null);
+
+            // ── Local keyword-scoring fallback (no API needed) ───────────────
+            const keywordScore = (caseItem, q) => {
+                const qWords = q.toLowerCase().split(/\W+/).filter(w => w.length > 3);
+                const haystack = caseItem.themes.toLowerCase();
+                return qWords.reduce((score, word) => score + (haystack.includes(word) ? 1 : 0), 0);
+            };
+            const angleFor = (name) => {
+                if (/war|nuclear|military|conflict|territory|south china|korea/i.test(name)) return 'Realism';
+                if (/climate|trade|pandemic|brexit|eu|covid/i.test(name)) return 'Liberalism';
+                if (/r2p|rwand|rohingya|human rights|arab|identity/i.test(name)) return 'Constructivism';
+                return 'Realism';
+            };
+            const localFallback = () => {
+                const scored = CASE_POOL
+                    .map(c => ({ ...c, score: keywordScore(c, query) }))
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 3)
+                    .map((c, i) => ({
+                        rank: i + 1, name: c.name, concepts: c.concepts,
+                        relevance: `Keyword match on your argument — review for direct thematic alignment.`,
+                        angle: angleFor(c.name), url: c.url, isLocal: true
+                    }));
+                return scored;
+            };
+
+            try {
+                // 1. Semantic search (Gemini embeddings — most accurate)
+                const semRes = await fetch('/.netlify/functions/semantic-search', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, topK: 3 })
+                });
+                if (semRes.ok) {
+                    const semData = await semRes.json();
+                    if (!semData.error && semData.results?.length) {
+                        const enriched = semData.results.map((r, i) => {
+                            const match = CASE_POOL.find(c => c.name === r.name);
+                            return {
+                                rank: i + 1, name: r.name, concepts: match?.concepts || '', url: match?.url || '',
+                                relevance: `Semantic match (score: ${r.score.toFixed(2)}) — high confidence thematic alignment.`,
+                                angle: angleFor(r.name)
+                            };
+                        });
+                        setResults(enriched);
+                        setLoading(false);
+                        return;
+                    }
+                }
+            } catch { /* fall through */ }
+
+            try {
+                // 2. AI case finder (Gemini — works when deployed)
+                const fnRes = await fetch('/.netlify/functions/find-cases', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                if (fnRes.ok) {
+                    const data = await fnRes.json();
+                    if (data.error) throw new Error(data.error);
+                    const enriched = (data.results || []).map(r => {
+                        const match = CASE_POOL.find(c => c.name === r.name);
+                        return { ...r, concepts: match?.concepts || '', url: match?.url || '' };
+                    });
+                    setResults(enriched);
+                    setLoading(false);
+                    return;
+                }
+            } catch { /* fall through to local */ }
+
+            // 3. Local keyword fallback (instant, works anywhere)
+            const local = localFallback();
+            setResults(local);
+            setError('Semantic and AI search unavailable locally. Showing keyword matches. Results improve when deployed.');
+            setLoading(false);
+
+        };
+
+        return (
+            <div className="space-y-4">
+                <div>
+                    <h3 className="text-lg font-bold text-violet-400 mb-1">🔍 Case Finder</h3>
+                    <p className="text-xs text-gray-400">Type your thesis or argument. AI surfaces the 3 most relevant IB case studies with an analytical angle.</p>
+                </div>
+                <div className="flex gap-2">
+                    <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && findCases()}
+                        placeholder="e.g. 'Great powers undermine sovereignty through economic coercion'"
+                        className="flex-1 bg-glopo-dark border border-white/20 rounded-xl p-3 text-sm text-gray-300 outline-none focus:border-violet-500 transition-colors placeholder:text-gray-600" />
+                    <button onClick={findCases} disabled={loading || !query.trim()}
+                        className="px-5 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white text-xs font-black rounded-xl transition-all shrink-0">
+                        {loading ? '...' : 'FIND CASES'}
+                    </button>
+                </div>
+                {loading && (
+                    <div className="flex items-center gap-3 p-4 bg-violet-500/5 border border-violet-500/20 rounded-xl">
+                        <RefreshCw className="animate-spin text-violet-400" size={16} />
+                        <span className="text-xs text-violet-300 font-bold animate-pulse">Matching across 20 IB case studies...</span>
+                    </div>
+                )}
+                {error && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl"><p className="text-xs text-red-400">{error}</p></div>}
+                {results && (
+                    <div className="space-y-3 animate-in fade-in duration-400">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Top Matches for Your Argument</p>
+                        {results.map(r => (
+                            <div key={r.rank} className="p-4 bg-violet-500/5 border border-violet-500/20 rounded-xl space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-5 h-5 rounded-full bg-violet-600 text-white text-[10px] font-black flex items-center justify-center shrink-0">#{r.rank}</span>
+                                        <span className="text-sm font-black text-violet-200">{r.name}</span>
+                                    </div>
+                                    {r.concepts && <span className="text-[9px] font-black text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded-full shrink-0">{r.concepts}</span>}
+                                </div>
+                                <p className="text-xs text-gray-300 leading-relaxed"><span className="font-bold text-violet-400">Why it fits: </span>{r.relevance}</p>
+                                <p className="text-xs text-gray-400 leading-relaxed"><span className="font-bold text-gray-300">Angle: </span>{r.angle}</p>
+                                {r.url && (
+                                    <a href={r.url} target="_blank" rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[10px] font-black text-violet-400 hover:text-violet-300 transition-colors pt-1">
+                                        🔗 Read Source <ChevronRight size={10} />
+                                    </a>
+                                )}
+                            </div>
+                        ))}
+                        <p className="text-[9px] text-gray-600 italic">Ranked by Gemini AI based on thematic alignment with your argument.</p>
+                    </div>
+                )}
             </div>
         );
     };
@@ -1386,7 +2148,7 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
                 <PenTool className="text-emerald-500" /> Writing Studio
             </h2>
 
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide whitespace-nowrap">
+            <div className="flex flex-wrap gap-2 mb-6">
                 {[
                     { id: 'bank', label: 'Q-Bank', icon: BookOpen },
                     { id: 'debate', label: 'Debate Lab', icon: MessageSquare },
@@ -1394,13 +2156,14 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
                     { id: 'peel', label: 'PEEL Lab', icon: PenTool },
                     { id: 'thesis', label: 'Thesis Var.', icon: PenTool },
                     { id: 'policy', label: 'Policy Engine', icon: Shield },
+
                 ].map(b => (
                     <button
                         key={b.id}
                         onClick={() => setSubTab(b.id)}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shrink-0 ${subTab === b.id ? "bg-emerald-600 text-white" : "bg-white/5 text-gray-500 hover:bg-white/10"}`}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${subTab === b.id ? "bg-emerald-600 text-white" : "bg-white/5 text-gray-500 hover:bg-white/10"}`}
                     >
-                        <b.icon size={14} /> {b.label}
+                        <b.icon size={13} /> {b.label}
                     </button>
                 ))}
             </div>
@@ -1412,6 +2175,7 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
                 {subTab === 'peel' && <PeelLab />}
                 {subTab === 'thesis' && <ThesisVariations />}
                 {subTab === 'policy' && <PolicyEngine />}
+
             </Card>
         </div>
     );
@@ -1768,6 +2532,13 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
     const feedback = analysis[key];
     const isActive = activeLab?.paper === paperKey && activeLab?.qNum === q.num;
 
+    // Image upload state
+    const [imagePreview, setImagePreview] = React.useState(null);
+    const [imageLoading, setImageLoading] = React.useState(false);
+    const [imageResult, setImageResult] = React.useState(null);
+    const [imageError, setImageError] = React.useState(null);
+    const imageInputRef = React.useRef(null);
+
     // Sync parent → local when the lab first opens (e.g. restoring from localStorage)
     React.useEffect(() => {
         setLocalAnswer(userAnswers[key] || '');
@@ -1786,6 +2557,116 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
         ? localAnswer.trim().split(/\s+/).filter(x => x.length > 0).length
         : 0;
 
+    const handleImageUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const SUPPORTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];
+        if (!SUPPORTED_FILE_TYPES.includes(file.type)) {
+            setImageError('Please upload an image (JPG, PNG, WEBP, HEIC) or PDF file.');
+            return;
+        }
+        setImageError(null);
+        setImageResult(null);
+
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const dataUrl = evt.target.result;
+            setImagePreview(dataUrl);
+
+            // Extract base64 (strip data:image/...;base64, prefix)
+            const base64 = dataUrl.split(',')[1];
+            const mimeType = file.type;
+
+            setImageLoading(true);
+            try {
+                // Try Netlify function first
+                const response = await fetch('/.netlify/functions/analyze-image-essay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imageBase64: base64,
+                        mimeType,
+                        questionText: q.text,
+                        marks: q.marks || 15
+                    }),
+                    signal: AbortSignal.timeout(45000)
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setImageResult(data.analysis || 'No feedback returned.');
+                } else {
+                    // Fallback: direct Gemini API with vision
+                    const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+                    if (!apiKey) throw new Error('API key not configured.');
+                    const body = {
+                        contents: [{
+                            parts: [
+                                { text: `You are an IB Global Politics examiner. Analyse this handwritten/printed student essay.\n\nQuestion: ${q.text}\nMarks: ${q.marks || 15}\n\nProvide: transcription, Glow, Grow, Alternative Approaches, Golden Tip, AO band estimates.` },
+                                { inline_data: { mime_type: mimeType, data: base64 } }
+                            ]
+                        }]
+                    };
+                    const gemRes = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
+                        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+                    );
+                    const gemData = await gemRes.json();
+                    setImageResult(gemData.candidates?.[0]?.content?.parts?.[0]?.text || 'No feedback returned.');
+                }
+            } catch (err) {
+                setImageError('Failed to analyse image: ' + err.message);
+            } finally {
+                setImageLoading(false);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // Voice input state
+    const [isRecording, setIsRecording] = React.useState(false);
+    const [voiceSupported] = React.useState(() => !!(window.SpeechRecognition || window.webkitSpeechRecognition));
+    const recognitionRef = React.useRef(null);
+
+    const toggleVoiceInput = () => {
+        if (!voiceSupported) return;
+        if (isRecording) {
+            recognitionRef.current?.stop();
+            setIsRecording(false);
+            return;
+        }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        let finalTranscript = localAnswer;
+
+        recognition.onresult = (event) => {
+            let interim = '';
+            let addedFinal = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const t = event.results[i][0].transcript;
+                if (event.results[i].isFinal) { addedFinal += t + ' '; }
+                else { interim = t; }
+            }
+            if (addedFinal) {
+                finalTranscript = finalTranscript.replace(/\[.*?\]$/, '') + addedFinal;
+            }
+            setLocalAnswer(finalTranscript + (interim ? `[${interim}]` : ''));
+        };
+        recognition.onend = () => {
+            // Strip any remaining interim bracket
+            setLocalAnswer(prev => prev.replace(/\[.*?\]$/, '').trimEnd() + ' ');
+            setIsRecording(false);
+        };
+        recognition.onerror = () => setIsRecording(false);
+
+        recognition.start();
+        recognitionRef.current = recognition;
+        setIsRecording(true);
+    };
+
     return (
         <div className="mt-4 border-t border-white/10 pt-4">
             <button
@@ -1798,39 +2679,140 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
             {isActive && (
                 <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
                     <div className="relative">
+                        {/* Mic / Stop row — above textarea, clear of pointer-event conflicts */}
+                        {voiceSupported && (
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <button
+                                    onClick={toggleVoiceInput}
+                                    title={isRecording ? 'Stop recording' : 'Dictate your response'}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all select-none ${isRecording
+                                        ? 'bg-red-500 text-white shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse'
+                                        : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
+                                        }`}
+                                >
+                                    {isRecording ? (
+                                        <><span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />{' '}⏹ STOP RECORDING</>
+                                    ) : (
+                                        <>🎤 DICTATE</>
+                                    )}
+                                </button>
+                                {isRecording && (
+                                    <span className="text-[9px] text-red-400 font-black uppercase tracking-widest animate-pulse">Recording…</span>
+                                )}
+                            </div>
+                        )}
                         <textarea
                             value={localAnswer}
                             onChange={handleChange}
                             onBlur={handleBlur}
                             placeholder="Type your response here... (Auto-saves to browser memory)"
-                            className="w-full bg-glopo-dark border border-white/20 rounded-xl p-4 text-xs text-gray-300 h-48 focus:border-cyan-500 outline-none transition-all placeholder:text-gray-600 resize-y"
+                            className={`w-full bg-glopo-dark border rounded-xl p-4 text-xs text-gray-300 h-48 focus:border-cyan-500 outline-none transition-all placeholder:text-gray-600 resize-y ${isRecording ? 'border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.4)]' : 'border-white/20'}`}
                         />
                         <div className="absolute bottom-2 right-4 text-[9px] text-gray-500 font-bold uppercase tracking-tighter pointer-events-none select-none">
                             {wordCount > 0 ? `${wordCount} Words` : 'Ready to write'}
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                         <button
                             onClick={() => { updateAnswer(key, localAnswer); analyzeDraft(paperKey, q, localAnswer); }}
-                            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-[10px] font-black rounded-lg transition-all"
+                            className="px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-[10px] font-black rounded-lg transition-all text-center"
                         >
                             QUICK LOCAL ANALYSIS
                         </button>
-                        {localAnswer.length > 20 && (
-                            <button
-                                onClick={() => { updateAnswer(key, localAnswer); requestDeepAnalysis(paperKey, q, localAnswer); }}
-                                className={`px-4 py-2 text-[10px] font-black rounded-lg transition-all flex items-center gap-2 ${feedback?.isDeep ? 'bg-purple-600 text-white' : 'bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30'}`}
-                            >
-                                <Zap size={10} /> {feedback?.isDeep ? 'DEEP CRITIQUE ACTIVE' : 'REQUEST DEEP CRITIQUE'}
-                            </button>
-                        )}
-                        {localAnswer.length > 0 && (
-                            <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-1">
-                                <Shield size={10} /> Auto-saved
-                            </span>
-                        )}
+                        <button
+                            onClick={() => { updateAnswer(key, localAnswer); requestDeepAnalysis(paperKey, q, localAnswer); }}
+                            disabled={localAnswer.length < 20}
+                            className={`px-3 py-2 text-[10px] font-black rounded-lg transition-all flex items-center justify-center gap-1.5 ${localAnswer.length < 20
+                                ? 'opacity-40 cursor-not-allowed bg-purple-600/10 border border-purple-500/20 text-purple-500'
+                                : feedback?.isDeep
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30'
+                                }`}
+                        >
+                            <Zap size={10} /> {feedback?.isDeep ? 'DEEP CRITIQUE ACTIVE' : 'REQUEST DEEP CRITIQUE'}
+                        </button>
+                        {/* 📷 Image Upload Button */}
+                        <input
+                            ref={imageInputRef}
+                            type="file"
+                            accept="image/*,application/pdf"
+                            style={{ display: 'none' }}
+                            onChange={handleImageUpload}
+                        />
+                        <button
+                            onClick={() => imageInputRef.current?.click()}
+                            className="px-3 py-2 text-[10px] font-black rounded-lg transition-all flex items-center justify-center gap-1.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
+                            title="Upload a photo of your handwritten or printed essay for AI grading"
+                        >
+                            📎 SCAN ESSAY / PDF
+                        </button>
                     </div>
+                    {localAnswer.length > 0 && (
+                        <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-1">
+                            <Shield size={10} /> Auto-saved
+                        </span>
+                    )}
+
+                    {/* Image Upload Result Panel */}
+                    {(imagePreview || imageLoading || imageResult || imageError) && (
+                        <div className="mt-4 p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h5 className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                                    📷 Essay Vision Analysis
+                                </h5>
+                                <button
+                                    onClick={() => { setImagePreview(null); setImageResult(null); setImageError(null); setImageLoading(false); }}
+                                    className="text-[9px] text-gray-500 hover:text-gray-300 transition-colors"
+                                >✕ Clear</button>
+                            </div>
+
+                            {/* Thumbnail Preview */}
+                            {imagePreview && (
+                                <div className="flex items-start gap-3">
+                                    <img
+                                        src={imagePreview}
+                                        alt="Uploaded essay"
+                                        className="w-24 h-24 object-cover rounded-lg border border-amber-500/20 shrink-0"
+                                    />
+                                    <p className="text-[9px] text-gray-500 leading-relaxed pt-1">
+                                        Gemini is reading your handwriting and applying IB 2026 exam criteria. This may take 10–20 seconds.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Loading */}
+                            {imageLoading && (
+                                <div className="flex flex-col items-center justify-center py-6 space-y-2">
+                                    <RefreshCw className="animate-spin text-amber-400" size={20} />
+                                    <div className="text-[10px] text-amber-300 font-black uppercase tracking-widest animate-pulse">Reading essay...</div>
+                                    <p className="text-[9px] text-gray-500">Gemini Vision is transcribing + grading your work</p>
+                                </div>
+                            )}
+
+                            {/* Error */}
+                            {imageError && !imageLoading && (
+                                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+                                    <p className="text-[10px] font-black text-red-400 uppercase mb-1">⚠ Vision Error</p>
+                                    <p className="text-[11px] text-red-300">{imageError}</p>
+                                </div>
+                            )}
+
+                            {/* Result */}
+                            {imageResult && !imageLoading && (
+                                <div className="space-y-2 animate-in fade-in duration-500">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-px flex-1 bg-amber-500/20" />
+                                        <div className="text-[9px] font-black text-amber-400 uppercase tracking-tighter">Examiner Vision Feedback</div>
+                                        <div className="h-px flex-1 bg-amber-500/20" />
+                                    </div>
+                                    <div className="text-[11px] text-gray-300 leading-relaxed whitespace-pre-wrap bg-amber-500/5 p-4 rounded-xl border border-amber-500/10 shadow-inner overflow-auto max-h-[500px]">
+                                        {imageResult}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {feedback && (
                         <div className={`p-4 rounded-xl border transition-all ${feedback.isDeep ? 'bg-purple-500/5 border-purple-500/30' : 'bg-cyan-500/5 border-cyan-500/20'}`}>
@@ -1838,7 +2820,7 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                                 <Zap size={10} /> {feedback.isDeep ? 'Agentic Health Scan' : (feedback.relevanceAlert ? 'Relevance Check Failed' : 'Technical Draft Scan')}
                             </h5>
                             <p className="text-[9px] text-gray-500 mb-3 italic">
-                                {feedback.isDeep ? 'Bespoke structural and conceptual audit. Switch to Antigravity for qualitative nuance.' : 'Note: This scanner checks for structural health and conceptual presence, not semantic argument quality.'}
+                                {feedback.isDeep ? 'Bespoke structural and conceptual audit. Switch to Antigravity for qualitative nuance.' : 'Note: This is a keyword and structure check. It does not read or evaluate your argument. Use Deep Critique for full examiner-level feedback.'}
                             </p>
 
                             <div className="space-y-4">
