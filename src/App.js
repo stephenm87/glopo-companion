@@ -1241,12 +1241,18 @@ const WritingStudio = () => {
                 console.log("Netlify function unavailable, trying direct API...");
             }
 
-            // Strategy 2: Direct Gemini API call (localhost fallback)
+            // Strategy 2: Direct Gemini API call (localhost or production fallback via get-token)
             if (!introText) {
-                const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+                let apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+                if (!apiKey) {
+                    try {
+                        const tkRes = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
+                        if (tkRes.ok) { const tkData = await tkRes.json(); apiKey = tkData.key; }
+                    } catch { }
+                }
                 if (!apiKey) {
                     setIntroLoading(false);
-                    setIntroError("AI not configured. Please add your API key to generate personalised introductions.");
+                    setIntroError("AI not configured. Please contact your teacher.");
                     return;
                 }
                 try {
@@ -1329,7 +1335,13 @@ ${studentIntro}
 Return ONLY the JSON. No markdown, no backticks, no commentary.`;
 
                 const isLocalDev = window.location.hostname === 'localhost';
-                const clientKey = process.env.REACT_APP_GEMINI_API_KEY;
+                let clientKey = process.env.REACT_APP_GEMINI_API_KEY;
+                if (!clientKey && !isLocalDev) {
+                    try {
+                        const tkRes = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
+                        if (tkRes.ok) { const tkData = await tkRes.json(); clientKey = tkData.key; }
+                    } catch { }
+                }
                 let d = null;
 
                 if (!isLocalDev) {
@@ -1599,10 +1611,16 @@ Return ONLY the JSON. No markdown, no backticks, no commentary.`;
                 console.log('Netlify peel-review unavailable, trying direct API...');
             }
 
-            // Strategy 2: Direct Gemini API call (local dev fallback)
-            const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+            // Strategy 2: Direct Gemini API call (local or production fallback via get-token)
+            let apiKey = process.env.REACT_APP_GEMINI_API_KEY;
             if (!apiKey) {
-                setReviewError('AI feedback requires deployment. To enable locally, add REACT_APP_GEMINI_API_KEY to your .env file.');
+                try {
+                    const tkRes = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
+                    if (tkRes.ok) { const tkData = await tkRes.json(); apiKey = tkData.key; }
+                } catch { }
+            }
+            if (!apiKey) {
+                setReviewError('AI feedback not available. Please contact your teacher.');
                 setReviewLoading(false); return;
             }
             try {
@@ -3355,12 +3373,18 @@ One precise, actionable tip that would most significantly raise this response's 
             console.log("Netlify function unavailable or timed out, checking local fallback.");
         }
 
-        // Strategy 2: Direct Gemini API call (works on localhost:3000 with REACT_APP_ key)
+        // Strategy 2: Direct Gemini API call (local key or production get-token proxy)
         if (!analysisText) {
-            const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-            console.log("🔑 Gemini API key present:", !!apiKey, "| Length:", apiKey?.length);
+            let apiKey = process.env.REACT_APP_GEMINI_API_KEY;
             if (!apiKey) {
-                setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], deepLoading: false, deepError: "API key not configured. Restart npm start after adding REACT_APP_GEMINI_API_KEY to .env" } }));
+                try {
+                    const tkRes = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
+                    if (tkRes.ok) { const tkData = await tkRes.json(); apiKey = tkData.key; }
+                } catch { }
+            }
+            console.log("🔑 Gemini API key present:", !!apiKey);
+            if (!apiKey) {
+                setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], deepLoading: false, deepError: "AI not available. Please contact your teacher." } }));
                 return;
             }
             try {
