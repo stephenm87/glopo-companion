@@ -2756,7 +2756,18 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
             setImageLoading(true);
             try {
                 const isLocalDev = window.location.hostname === 'localhost';
-                const clientKey = process.env.REACT_APP_GEMINI_API_KEY;
+                const localKey = process.env.REACT_APP_GEMINI_API_KEY;
+
+                // Helper: get key for direct Gemini call
+                // - localhost: use .env key directly
+                // - production: fetch from /get-token (uses server-side GEMINI_API_KEY, no REACT_APP_ needed)
+                const getApiKey = async () => {
+                    if (isLocalDev && localKey) return localKey;
+                    const res = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
+                    if (!res.ok) throw new Error('Could not retrieve API token.');
+                    const data = await res.json();
+                    return data.key;
+                };
 
                 const runDirectApi = async (key) => {
                     const body = {
@@ -2776,14 +2787,13 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                     return gemData.candidates?.[0]?.content?.parts?.[0]?.text || 'No feedback returned.';
                 };
 
-                if ((isLocalDev || isLargeFile) && clientKey) {
-                    // Local dev OR large file: go direct to Gemini — no 26s Netlify ceiling
-                    const result = await runDirectApi(clientKey);
+                if (isLargeFile || isLocalDev) {
+                    // Large file OR local dev: go direct to Gemini — no 26s Netlify ceiling
+                    const key = await getApiKey();
+                    const result = await runDirectApi(key);
                     setImageResult(result);
-                } else if (isLargeFile && !clientKey) {
-                    throw new Error('Large file detected but no direct API key available. Please contact your teacher.');
                 } else {
-                    // Small file on production: use Netlify function
+                    // Small file on production: use Netlify function (Flash, fast)
                     const response = await fetch('/.netlify/functions/analyze-image-essay', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2793,13 +2803,11 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                     if (response.ok) {
                         const data = await response.json();
                         setImageResult(data.analysis || 'No feedback returned.');
-                    } else if (clientKey) {
-                        // Function failed — direct API fallback
-                        const result = await runDirectApi(clientKey);
-                        setImageResult(result);
                     } else {
-                        const errData = await response.json().catch(() => ({}));
-                        throw new Error(errData.error || `Server error ${response.status}`);
+                        // Netlify function failed — try direct API
+                        const key = await getApiKey();
+                        const result = await runDirectApi(key);
+                        setImageResult(result);
                     }
                 }
 
