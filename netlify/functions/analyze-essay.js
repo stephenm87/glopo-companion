@@ -1,5 +1,6 @@
 // analyze-essay.js — Deep Critique for Mock Exam Zone
 // Uses native fetch (no SDK) to call Gemini REST API + optional Cloud NL API
+const { callGeminiWithRetry } = require('./gemini-retry');
 
 // Cloud Natural Language API — extract entities + sentiment from essay
 async function analyzeWithNlApi(text, apiKey) {
@@ -79,12 +80,12 @@ Always identify how the 4 core concepts (Power, Sovereignty, Legitimacy, Interde
             }]
         },
         contents: [{ parts: [{ text: prompt }] }],
-        tools: [{ google_search: {} }]  // Search grounding — cites real sources when available
+        tools: [{ google_search: {} }]
     };
 
-    const res = await fetch(
+    const res = await callGeminiWithRetry(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+        body
     );
 
     if (!res.ok) {
@@ -135,18 +136,7 @@ REQUIRED SECTIONS:
 
         // Run Gemini + NL API in parallel
         let [geminiText, nlResult] = await Promise.all([
-            (async () => {
-                try {
-                    return await callGemini(prompt, apiKey);
-                } catch (genError) {
-                    if (genError.message.includes('429') || genError.message.includes('quota')) {
-                        console.log('Rate limited by Gemini, retrying in 3s...');
-                        await new Promise(r => setTimeout(r, 3000));
-                        return await callGemini(prompt, apiKey);
-                    }
-                    throw genError;
-                }
-            })(),
+            callGemini(prompt, apiKey),
             analyzeWithNlApi(essayText, nlApiKey)
         ]);
 

@@ -1,5 +1,6 @@
 // generate-intro.js — Intro Builder Netlify function
 // Uses native fetch (no SDK) to avoid missing package issues on Netlify Functions
+const { callGeminiWithRetry } = require('./gemini-retry');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
@@ -44,31 +45,16 @@ You must adapt your language, framing, and analytical tension to the SPECIFIC co
             contents: [{ parts: [{ text: prompt }] }]
         };
 
-        const callGemini = async () => {
-            const res = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-            );
-            if (!res.ok) {
-                const errText = await res.text();
-                throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
-            }
-            const data = await res.json();
-            return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        };
-
-        let text;
-        try {
-            text = await callGemini();
-        } catch (genError) {
-            if (genError.message.includes('429') || genError.message.includes('quota')) {
-                console.log('Rate limited by Gemini, retrying in 3s...');
-                await new Promise(r => setTimeout(r, 3000));
-                text = await callGemini();
-            } else {
-                throw genError;
-            }
+        const res = await callGeminiWithRetry(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
+            body
+        );
+        if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
         }
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
         return {
             statusCode: 200,

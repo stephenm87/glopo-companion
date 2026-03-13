@@ -477,7 +477,366 @@ const Button = ({ children, onClick, variant = "primary", className = "", disabl
 };
 
 // --- Tab 1: Policy Engine ---
+
+// --- Gemini Retry Helper (client-side) ---
+// Retries on 429 / 503 with exponential backoff (1.5s → 3s → 6s)
+const geminiRetryFetch = async (url, fetchOptions, maxRetries = 3) => {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const res = await fetch(url, fetchOptions);
+        if (res.ok || ![429, 503].includes(res.status)) return res;
+        if (attempt < maxRetries) {
+            const delay = 1500 * Math.pow(2, attempt);
+            console.log(`[gemini-retry] ${res.status} — retrying in ${delay}ms (${attempt + 1}/${maxRetries})`);
+            await new Promise(r => setTimeout(r, delay));
+        } else {
+            return res; // exhausted retries
+        }
+    }
+};
+
+// ── Solution Research Bot ────────────────────────────────────
+const SolutionResearch = () => {
+    const [step, setStep] = useState(1);
+    const [inputs, setInputs] = useState({ problem: '', actors: '', mechanism: '', rationale: '', risk: '', mitigation: '' });
+    const [riskCategory, setRiskCategory] = useState('');
+    const [feedback, setFeedback] = useState({});
+    const [loading, setLoading] = useState({});
+    const [researchResults, setResearchResults] = useState(null);
+    const [researchLoading, setResearchLoading] = useState(false);
+    const [showCard, setShowCard] = useState(false);
+    const [draftResult, setDraftResult] = useState(null);
+    const [draftLoading, setDraftLoading] = useState(false);
+    const [showActorBank, setShowActorBank] = useState(false);
+
+    const update = (field, val) => setInputs(prev => ({ ...prev, [field]: val }));
+    const FIELDS = ['problem', 'actors', 'mechanism', 'rationale', 'risk', 'mitigation'];
+    const STEP_META = [
+        { icon: '🔍', label: 'Problem', q: "What's broken?", hint: 'Describe the core problem in one sentence. Tip: A problem backed by a statistic, date, or named impact is far more powerful.' },
+        { icon: '🏛', label: 'Actors', q: 'Who has the power to fix it?', hint: 'Name 2–3 specific actors (with sub-bodies) who have the authority, resources, or jurisdiction.' },
+        { icon: '⚙️', label: 'Mechanism', q: "What's the move?", hint: 'Describe ONE concrete, verifiable policy action using a mechanism template (amend/certify/condition/establish).' },
+        { icon: '💡', label: 'Rationale', q: 'Why would it actually work?', hint: 'Provide 2–3 pieces of evidence: a precedent, an existing system, or data that supports urgency.' },
+        { icon: '⚠️', label: 'Risk', q: 'What could go wrong?', hint: 'Name the single most credible obstacle to your policy.' },
+        { icon: '🛡', label: 'Mitigation', q: 'How do you mitigate it?', hint: 'Propose a countermeasure naming a secondary actor or alternative mechanism.' }
+    ];
+
+    const ACTOR_BANK = [
+        { gpc: 'Security', actor: 'UN Security Council (Ch. VII)', tool: 'Binding resolutions, peacekeeping mandates, sanctions' },
+        { gpc: 'Security', actor: 'AU Peace & Security Council', tool: 'Continental early warning, African Standby Force' },
+        { gpc: 'Security', actor: 'ICC Office of the Prosecutor', tool: 'Investigations, arrest warrants, UNSC referrals' },
+        { gpc: 'Environment', actor: 'UNFCCC COP Presidency', tool: 'Binding emissions targets, climate finance' },
+        { gpc: 'Environment', actor: 'World Bank Climate Investment Funds', tool: 'Concessional loans, Clean Technology Fund' },
+        { gpc: 'Poverty', actor: 'World Bank IDA', tool: 'Zero-interest loans, debt relief' },
+        { gpc: 'Poverty', actor: 'WTO Dispute Settlement Body', tool: 'Trade dispute rulings, tariff adjustment' },
+        { gpc: 'Health', actor: 'WHO Director-General (IHR)', tool: 'PHEIC declarations, IHR enforcement' },
+        { gpc: 'Health', actor: 'Gavi, the Vaccine Alliance', tool: 'AMCs, COVAX-style pooled procurement' },
+        { gpc: 'Technology', actor: 'EU Commission DG CONNECT', tool: 'Digital Services Act, AI Act' },
+        { gpc: 'Equality', actor: 'UN Human Rights Council (UPR)', tool: 'Country reviews, Special Rapporteur mandates' },
+        { gpc: 'Equality', actor: 'ICJ', tool: 'Advisory opinions, binding judgments' }
+    ];
+
+    const MECH_TEMPLATES = [
+        { label: 'Amend', text: '[Actor] should amend [existing treaty/regulation] to require [specific new obligation] verified by [enforcement body].' },
+        { label: 'Certify', text: '[Actor] should require all [companies/states] to obtain a [certificate/audit] before accessing [market/funding].' },
+        { label: 'Condition', text: '[Actor] should condition [trade access/funding] on demonstrated compliance with [standard/protocol].' },
+        { label: 'Establish', text: '[Actor] should create a [board/commission] comprising [stakeholders], with authority to [review/approve actions].' }
+    ];
+
+    const RISK_CATEGORIES = [
+        { id: 'sovereignty', label: 'Sovereignty Resistance', desc: 'State may frame this as external interference.' },
+        { id: 'economic', label: 'Economic Disruption', desc: 'Risks disrupting supply chains or raising prices.' },
+        { id: 'enforcement', label: 'Enforcement Gap', desc: 'Target may block auditors or refuse compliance.' },
+        { id: 'timeline', label: 'Timeline Conflict', desc: 'Consultation processes may delay urgent action.' }
+    ];
+
+    // AI call — dual strategy (Netlify function → direct Gemini fallback)
+    const callAI = async (mode, stepNum, extraInputs) => {
+        const payload = { mode, step: stepNum, inputs: extraInputs || { text: inputs[FIELDS[stepNum - 1]] } };
+        const isLocalDev = window.location.hostname === 'localhost';
+        // Strategy 1: Netlify function
+        if (!isLocalDev) {
+            try {
+                const res = await fetch('/.netlify/functions/solution-research', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload), signal: AbortSignal.timeout(25000)
+                });
+                if (res.ok) return await res.json();
+            } catch {}
+        }
+        // Strategy 2: Direct Gemini
+        let apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+        if (!apiKey) {
+            try {
+                const tkRes = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
+                if (tkRes.ok) { const d = await tkRes.json(); apiKey = d.key; }
+            } catch {}
+        }
+        if (!apiKey) throw new Error('AI not configured');
+
+        const EVAL_PROMPTS = {
+            1: `You are an IB Global Politics exam coach evaluating a problem statement for Paper 3 Q2.\n\nStudent: "${extraInputs?.text || inputs.problem}"\n\nEvaluate for specificity, statistical evidence, clarity of harm.\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"stronger version if score<3"}`,
+            2: `You are an IB Global Politics exam coach evaluating actors.\n\nStudent: "${extraInputs?.text || inputs.actors}"\n\nEvaluate: specific sub-bodies? Named tools? Appropriate?\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"enhanced version"}`,
+            3: `You are an IB Global Politics exam coach evaluating a mechanism.\n\nStudent: "${extraInputs?.text || inputs.mechanism}"\n\nEvaluate: concrete? Verifiable? Follows template?\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"stronger version"}`,
+            4: `You are an IB Global Politics exam coach evaluating rationale.\n\nStudent: "${extraInputs?.text || inputs.rationale}"\n\nEvaluate: precedent? Existing system? Data?\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"enhanced version"}`,
+            5: `You are an IB Global Politics exam coach evaluating a risk.\n\nStudent: "${extraInputs?.text || inputs.risk}"\n\nEvaluate: credible? Specific actor/dynamic? Categorizable?\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"stronger version"}`,
+            6: `You are an IB Global Politics exam coach evaluating mitigation.\n\nStudent: "${extraInputs?.text || inputs.mitigation}"\n\nEvaluate: secondary actor? Specific? Addresses risk?\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"stronger version"}`
+        };
+
+        let prompt;
+        if (mode === 'evaluate') prompt = EVAL_PROMPTS[stepNum];
+        else if (mode === 'research') prompt = `You are a research assistant for IB Global Politics P3 Q2.\n\nProblem: "${inputs.problem}"\nActors: "${inputs.actors}"\n\nReturn JSON: {"caseContext":"paragraph","searchTerms":["5 terms"],"keyOrganizations":["3-4"],"usefulData":["3-4"],"policyPrecedents":["2-3"]}`;
+        else if (mode === 'draft') prompt = `You are an IB Global Politics senior examiner. Generate three tiered policy recommendation paragraphs.\n\nProblem: ${inputs.problem}\nActors: ${inputs.actors}\nMechanism: ${inputs.mechanism}\nRationale: ${inputs.rationale || 'N/A'}\nRisk: ${inputs.risk || 'N/A'}\nMitigation: ${inputs.mitigation || 'N/A'}\n\nReturn JSON: {"band34":{"label":"Band 3–4","description":"desc","text":"80-100 words"},"elevation1":["3-4 moves"],"band56":{"label":"Band 5–6","description":"desc","text":"120-150 words"},"elevation2":["3-4 moves"],"band7":{"label":"Band 7","description":"desc","text":"160-200 words"}}`;
+
+        const resp = await geminiRetryFetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { response_mime_type: 'application/json' } }) }
+        );
+        if (!resp.ok) throw new Error(`Gemini error ${resp.status}`);
+        const gData = await resp.json();
+        return JSON.parse(gData?.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
+    };
+
+    const evaluateStep = async (stepNum) => {
+        const field = FIELDS[stepNum - 1];
+        if (!inputs[field]?.trim()) return;
+        setLoading(prev => ({ ...prev, [field]: true }));
+        try {
+            const result = await callAI('evaluate', stepNum);
+            setFeedback(prev => ({ ...prev, [field]: result }));
+        } catch (e) {
+            setFeedback(prev => ({ ...prev, [field]: { error: e.message } }));
+        }
+        setLoading(prev => ({ ...prev, [field]: false }));
+    };
+
+    const runResearch = async () => {
+        if (!inputs.problem.trim()) return;
+        setResearchLoading(true); setResearchResults(null);
+        try { setResearchResults(await callAI('research', 0, inputs)); }
+        catch (e) { setResearchResults({ error: e.message }); }
+        setResearchLoading(false);
+    };
+
+    const generateDraft = async () => {
+        setDraftLoading(true); setDraftResult(null);
+        try { setDraftResult(await callAI('draft', 0, inputs)); }
+        catch (e) { setDraftResult({ error: e.message }); }
+        setDraftLoading(false);
+    };
+
+    const scoreColors = { 1: '#c0283e', 2: '#b07d10', 3: '#1a8a5a' };
+    const scoreLabels = { 1: 'Needs Work', 2: 'Getting There', 3: 'Strong' };
+    const field = FIELDS[step - 1];
+    const meta = STEP_META[step - 1];
+    const fb = feedback[field];
+
+    return (
+        <div className="space-y-4">
+            <h3 className="text-lg font-bold text-blue-400 flex items-center gap-2"><Search size={18} /> Solution Research Bot</h3>
+            <p className="text-[11px] text-gray-500">Build precise AMR² solution components for your case studies through a guided 6-step research sequence.</p>
+
+            {/* AMR² Reference Bar */}
+            <div className="flex items-center gap-2 flex-wrap p-3 bg-white/5 border border-white/10 rounded-xl">
+                <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest mr-1">AMR²:</span>
+                {[
+                    { label: 'Actor', color: 'blue' }, { label: 'Mechanism', color: 'emerald' },
+                    { label: 'Rationale', color: 'amber' }, { label: 'Risk', color: 'red' }
+                ].map((item, i) => (
+                    <React.Fragment key={item.label}>
+                        {i > 0 && <span className="text-gray-700 font-bold">+</span>}
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded bg-${item.color}-500/10 text-${item.color}-400`}>{item.label}</span>
+                    </React.Fragment>
+                ))}
+            </div>
+
+            {/* Step Navigation */}
+            <div className="flex gap-1.5 flex-wrap">
+                {STEP_META.map((s, i) => (
+                    <button key={i} onClick={() => setStep(i + 1)}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${step === i + 1 ? 'bg-blue-600 text-white' : inputs[FIELDS[i]]?.trim() ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-white/5 text-gray-600 border border-white/10 hover:bg-white/10'}`}>
+                        {s.icon} {s.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Current Step */}
+            <div className="p-5 bg-white/5 border border-blue-500/20 rounded-xl space-y-3">
+                <p className="text-sm font-black text-blue-400">{meta.icon} Step {step}: {meta.q}</p>
+                <p className="text-[11px] text-gray-500">{meta.hint}</p>
+                <textarea rows={3} value={inputs[field]} onChange={e => update(field, e.target.value)}
+                    className="w-full bg-glopo-dark border border-white/20 rounded-xl p-3 text-sm text-gray-300 outline-none focus:border-blue-500 transition-colors placeholder:text-gray-600"
+                    placeholder={`Type your ${meta.label.toLowerCase()} here...`} />
+
+                {/* Step-specific helpers */}
+                {step === 2 && (
+                    <div className="space-y-2">
+                        <button onClick={() => setShowActorBank(!showActorBank)} className="text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors">
+                            📘 {showActorBank ? 'Hide' : 'Show'} Actor Bank Reference
+                        </button>
+                        {showActorBank && (
+                            <div className="grid gap-1.5 max-h-48 overflow-y-auto p-2 bg-white/[0.02] rounded-lg border border-white/5">
+                                {ACTOR_BANK.map((a, i) => (
+                                    <div key={i} className="flex items-start gap-2 p-2 bg-white/5 rounded text-[10px]">
+                                        <span className="font-bold text-blue-400 whitespace-nowrap">{a.gpc}</span>
+                                        <span className="text-gray-300 font-bold">{a.actor}</span>
+                                        <span className="text-gray-500">— {a.tool}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+                {step === 3 && (
+                    <div className="space-y-1.5">
+                        <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">⚙️ Templates (click to insert)</p>
+                        {MECH_TEMPLATES.map((t, i) => (
+                            <div key={i} onClick={() => update('mechanism', t.text)}
+                                className="p-2.5 bg-emerald-500/5 border border-emerald-500/10 rounded-lg text-[11px] text-gray-400 cursor-pointer hover:border-emerald-500/30 transition-all">
+                                <span className="text-emerald-400 font-bold mr-1">{t.label}:</span> {t.text}
+                            </div>
+                        ))}
+                    </div>
+                )}
+                {step === 5 && (
+                    <div className="grid grid-cols-2 gap-2">
+                        {RISK_CATEGORIES.map(r => (
+                            <div key={r.id} onClick={() => setRiskCategory(r.id)}
+                                className={`p-2.5 rounded-lg border cursor-pointer transition-all text-[11px] ${riskCategory === r.id ? 'border-red-500/40 bg-red-500/10' : 'border-white/10 bg-white/[0.02] hover:border-red-500/20'}`}>
+                                <p className="font-bold text-red-400 text-[10px]">{r.label}</p>
+                                <p className="text-gray-500">{r.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* AI Feedback Display */}
+                {loading[field] && <p className="text-[11px] text-blue-400 animate-pulse">🤖 Analyzing...</p>}
+                {fb && !loading[field] && !fb.error && (
+                    <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-xl space-y-2">
+                        <p className="text-[10px] font-black text-blue-400">
+                            🤖 Feedback <span style={{ color: scoreColors[fb.score] }} className="ml-1">{scoreLabels[fb.score]} ({fb.score}/3)</span>
+                        </p>
+                        <p className="text-[11px] text-gray-300">{fb.feedback}</p>
+                        {fb.suggestions?.length > 0 && (
+                            <ul className="space-y-1">{fb.suggestions.map((s, i) => (
+                                <li key={i} className="text-[10px] text-gray-500 flex items-start gap-1"><span className="text-blue-400 shrink-0">→</span>{s}</li>
+                            ))}</ul>
+                        )}
+                        {fb.improved && fb.score < 3 && (
+                            <div className="p-2.5 bg-emerald-500/5 border border-emerald-500/15 rounded-lg">
+                                <p className="text-[9px] font-bold text-emerald-400 mb-1">✨ Suggested Improvement:</p>
+                                <p className="text-[11px] text-gray-300 italic">{fb.improved}</p>
+                                <button onClick={() => update(field, fb.improved)} className="mt-1.5 text-[9px] font-bold text-emerald-400 hover:text-emerald-300">Use This ↓</button>
+                            </div>
+                        )}
+                    </div>
+                )}
+                {fb?.error && <p className="text-[10px] text-red-400">⚠️ {fb.error}</p>}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 flex-wrap pt-1">
+                    {step > 1 && <button onClick={() => setStep(step - 1)} className="px-3 py-1.5 bg-white/5 text-gray-500 text-[10px] font-bold rounded-lg hover:bg-white/10 transition-all">← Back</button>}
+                    <button onClick={() => evaluateStep(step)} disabled={!inputs[field]?.trim() || loading[field]}
+                        className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-all">🤖 Evaluate</button>
+                    {step === 2 && <button onClick={runResearch} disabled={!inputs.problem?.trim() || researchLoading}
+                        className="px-3 py-1.5 bg-violet-600 text-white text-[10px] font-bold rounded-lg hover:bg-violet-700 disabled:opacity-40 transition-all">🔎 Research This Case</button>}
+                    {step < 6 && <button onClick={() => setStep(step + 1)} className="px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-all">Next →</button>}
+                    {step === 6 && <button onClick={() => setShowCard(true)} disabled={!inputs.problem?.trim() || !inputs.actors?.trim() || !inputs.mechanism?.trim()}
+                        className="px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 disabled:opacity-40 transition-all">📋 Generate Solution Card</button>}
+                </div>
+            </div>
+
+            {/* Research Results */}
+            {researchLoading && <p className="text-[11px] text-violet-400 animate-pulse">🔎 Researching your case...</p>}
+            {researchResults && !researchResults.error && (
+                <div className="p-4 bg-violet-500/5 border border-violet-500/20 rounded-xl space-y-3">
+                    <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest">🔎 Research Results</p>
+                    {researchResults.caseContext && <p className="text-[11px] text-gray-300">{researchResults.caseContext}</p>}
+                    {[
+                        { key: 'searchTerms', title: '🔍 Search Terms', color: 'text-blue-400' },
+                        { key: 'keyOrganizations', title: '🏛 Key Organizations', color: 'text-emerald-400' },
+                        { key: 'usefulData', title: '📊 Data Points', color: 'text-amber-400' },
+                        { key: 'policyPrecedents', title: '📜 Precedents', color: 'text-violet-400' }
+                    ].map(s => researchResults[s.key]?.length > 0 && (
+                        <div key={s.key}>
+                            <p className={`text-[9px] font-bold ${s.color} uppercase tracking-widest mb-1`}>{s.title}</p>
+                            <ul className="space-y-0.5">{researchResults[s.key].map((item, i) => (
+                                <li key={i} className="text-[10px] text-gray-400 flex items-start gap-1"><span className={s.color + ' shrink-0'}>→</span>{item}</li>
+                            ))}</ul>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Solution Card */}
+            {showCard && (
+                <div className="p-5 border-2 border-blue-500/30 bg-blue-500/5 rounded-xl space-y-2">
+                    <p className="text-sm font-black text-blue-400">📋 Solution Card</p>
+                    {[
+                        { f: 'problem', label: '🔍 PROBLEM', color: 'text-gray-400' },
+                        { f: 'actors', label: '🏛 ACTOR', color: 'text-blue-400' },
+                        { f: 'mechanism', label: '⚙️ MECHANISM', color: 'text-emerald-400' },
+                        { f: 'rationale', label: '💡 RATIONALE', color: 'text-amber-400' },
+                        { f: 'risk', label: '⚠️ RISK', color: 'text-red-400' },
+                        { f: 'mitigation', label: '🛡 MITIGATION', color: 'text-violet-400' }
+                    ].filter(s => inputs[s.f]?.trim()).map(s => (
+                        <div key={s.f} className="flex items-start gap-2">
+                            <span className={`text-[9px] font-black ${s.color} uppercase whitespace-nowrap`}>{s.label}</span>
+                            <span className="text-[11px] text-gray-300">{inputs[s.f]}</span>
+                        </div>
+                    ))}
+                    <button onClick={generateDraft} disabled={draftLoading}
+                        className="mt-2 px-4 py-2 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-all">
+                        ✍️ Generate AMR² Draft Paragraphs
+                    </button>
+                </div>
+            )}
+
+            {/* Tiered Draft Output */}
+            {draftLoading && <p className="text-[11px] text-blue-400 animate-pulse">✍️ Generating tiered drafts...</p>}
+            {draftResult && !draftResult.error && (
+                <div className="space-y-2 pt-2 border-t border-white/10">
+                    <p className="text-sm font-black text-blue-400">✍️ AMR² Draft Paragraphs</p>
+                    {draftResult.band34 && (
+                        <div className="border border-gray-500/20 bg-gray-500/5 rounded-xl p-3">
+                            <span className="text-[9px] font-bold bg-gray-700 text-gray-300 px-2 py-0.5 rounded mr-2">{draftResult.band34.label}</span>
+                            <span className="text-[9px] text-gray-500 italic">{draftResult.band34.description}</span>
+                            <p className="text-[11px] text-gray-400 mt-2 italic leading-relaxed">"{draftResult.band34.text}"</p>
+                        </div>
+                    )}
+                    {draftResult.elevation1?.length > 0 && (
+                        <div className="border border-amber-500/20 bg-amber-950/20 rounded-xl px-4 py-3">
+                            <p className="text-amber-400 text-[10px] font-bold mb-2">🔼 MOVES THAT ELEVATE TO BAND 5–6</p>
+                            <ul className="space-y-1">{draftResult.elevation1.map((m, i) => <li key={i} className="text-[10px] text-amber-200/80 flex items-start gap-1"><span className="text-amber-500 shrink-0">→</span>{m}</li>)}</ul>
+                        </div>
+                    )}
+                    {draftResult.band56 && (
+                        <div className="border border-blue-500/20 bg-blue-900/10 rounded-xl p-3">
+                            <span className="text-[9px] font-bold bg-blue-800 text-blue-200 px-2 py-0.5 rounded mr-2">{draftResult.band56.label}</span>
+                            <span className="text-[9px] text-blue-400 italic">{draftResult.band56.description}</span>
+                            <p className="text-[11px] text-gray-300 mt-2 italic leading-relaxed">"{draftResult.band56.text}"</p>
+                        </div>
+                    )}
+                    {draftResult.elevation2?.length > 0 && (
+                        <div className="border border-amber-500/20 bg-amber-950/20 rounded-xl px-4 py-3">
+                            <p className="text-amber-400 text-[10px] font-bold mb-2">🔼 MOVES THAT ELEVATE TO BAND 7</p>
+                            <ul className="space-y-1">{draftResult.elevation2.map((m, i) => <li key={i} className="text-[10px] text-amber-200/80 flex items-start gap-1"><span className="text-amber-500 shrink-0">→</span>{m}</li>)}</ul>
+                        </div>
+                    )}
+                    {draftResult.band7 && (
+                        <div className="border border-emerald-500/20 bg-emerald-900/10 rounded-xl p-3">
+                            <span className="text-[9px] font-bold bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded mr-2">{draftResult.band7.label}</span>
+                            <span className="text-[9px] text-emerald-400 italic">{draftResult.band7.description}</span>
+                            <p className="text-[11px] text-gray-300 mt-2 italic leading-relaxed">"{draftResult.band7.text}"</p>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
 const PolicyEngine = () => {
+    const [policyMode, setPolicyMode] = useState('engine');
     const [actor, setActor] = useState('');
     const [target, setTarget] = useState('');
     const [mechanism, setMechanism] = useState('');
@@ -586,7 +945,19 @@ const PolicyEngine = () => {
             <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
                 <Shield className="text-blue-500" /> Policy Engine
             </h2>
-            <p className="text-gray-400 text-sm mb-6">See what a Band 3–4, Band 5–6, and Band 7 policy response looks like — and the exact moves that elevate each one.</p>
+            <p className="text-gray-400 text-sm mb-4">Build and evaluate policy recommendations using the AMR² formula.</p>
+            {/* Mode Toggle */}
+            <div className="flex gap-2 mb-6">
+                <button onClick={() => setPolicyMode('engine')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${policyMode === 'engine' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-500 hover:bg-white/10 border border-white/10'}`}>
+                    <Shield size={13} /> Policy Scaffold
+                </button>
+                <button onClick={() => setPolicyMode('solutions')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${policyMode === 'solutions' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-500 hover:bg-white/10 border border-white/10'}`}>
+                    <Search size={13} /> Policy Solutions
+                </button>
+            </div>
+            {policyMode === 'solutions' ? <SolutionResearch /> : (<>
             <Card>
                 <div className="grid gap-4 mb-6">
                     <div className="grid grid-cols-2 gap-4">
@@ -646,6 +1017,7 @@ const PolicyEngine = () => {
                     <TierCard tier={result.band7.tier} label={result.band7.label} text={result.band7.text} color="emerald" />
                 </div>
             )}
+            </>)}
         </div>
     );
 };
@@ -1284,7 +1656,7 @@ REQUIREMENTS (all must be met for a Band 7 introduction):
 
 OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic register). No headers, no bullet points, no meta-commentary.`;
 
-                    const geminiResponse = await fetch(
+                    const geminiResponse = await geminiRetryFetch(
                         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
                         {
                             method: "POST",
@@ -1293,17 +1665,7 @@ OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic r
                         }
                     );
 
-                    if (geminiResponse.status === 429) {
-                        await new Promise(r => setTimeout(r, 3000));
-                        const retryResp = await fetch(
-                            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-                            { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
-                        );
-                        if (retryResp.ok) {
-                            const retryData = await retryResp.json();
-                            introText = retryData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                        }
-                    } else if (geminiResponse.ok) {
+                    if (geminiResponse.ok) {
                         const geminiData = await geminiResponse.json();
                         introText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
                     }
@@ -1356,7 +1718,7 @@ Return ONLY the JSON. No markdown, no backticks, no commentary.`;
 
                 if (!d && clientKey) {
                     // Local dev OR Netlify function failed: call Gemini directly
-                    const resp = await fetch(
+                    const resp = await geminiRetryFetch(
                         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${clientKey}`,
                         {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1632,7 +1994,7 @@ ${reviewPara}
 
 Return ONLY the JSON with no markdown, no backticks, no commentary.`;
 
-                const resp = await fetch(
+                const resp = await geminiRetryFetch(
                     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
                     {
                         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
@@ -2796,7 +3158,7 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                             ]
                         }]
                     };
-                    const gemRes = await fetch(
+                    const gemRes = await geminiRetryFetch(
                         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${key}`,
                         { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }
                     );
@@ -3388,7 +3750,7 @@ One precise, actionable tip that would most significantly raise this response's 
                 return;
             }
             try {
-                const geminiResponse = await fetch(
+                const geminiResponse = await geminiRetryFetch(
                     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
                     {
                         method: "POST",
@@ -3399,25 +3761,6 @@ One precise, actionable tip that would most significantly raise this response's 
                     }
                 );
 
-                if (geminiResponse.status === 429) {
-                    console.log("Direct API rate limited, retrying in 3s...");
-                    await new Promise(r => setTimeout(r, 3000));
-                    const retryResp = await fetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-                        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
-                    );
-                    if (retryResp.status === 429) {
-                        throw new Error("Temporarily rate-limited. Please wait 30 seconds and try again.");
-                    }
-                    if (!retryResp.ok) throw new Error(`Gemini API error: ${retryResp.status}`);
-                    const retryData = await retryResp.json();
-                    analysisText = retryData?.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (analysisText) {
-                        setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], isDeep: true, deepLoading: false, liveAnalysis: analysisText } }));
-                        navigator.clipboard.writeText(prompt).catch(() => { });
-                        return;
-                    }
-                }
                 if (!geminiResponse.ok) {
                     throw new Error(`Gemini API error: ${geminiResponse.status} ${geminiResponse.statusText}`);
                 }

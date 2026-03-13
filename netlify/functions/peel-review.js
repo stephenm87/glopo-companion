@@ -1,5 +1,6 @@
 // PEEL / Intro Paragraph Review — returns structured JSON feedback (server-side Gemini)
 // Supports a customPrompt for non-PEEL review modes (e.g. intro review)
+const { callGeminiWithRetry } = require('./gemini-retry');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -35,9 +36,9 @@ Rules:
             generationConfig: { response_mime_type: 'application/json' }
         };
 
-        const res = await fetch(
+        const res = await callGeminiWithRetry(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+            body
         );
 
         if (!res.ok) {

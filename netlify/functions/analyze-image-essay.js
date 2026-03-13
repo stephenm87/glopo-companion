@@ -1,5 +1,6 @@
 // analyze-image-essay.js — Essay Vision Analysis via Gemini
 // Uses native fetch (no SDK) to avoid missing package issues on Netlify Functions
+const { callGeminiWithRetry } = require('./gemini-retry');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
@@ -67,39 +68,17 @@ AO1: [Band 1/2/3] | AO2: [Band 1/2/3] | AO3: [Band 1/2/3] | AO4: [Band 1/2/3]`;
             }]
         };
 
-        const callGemini = async () => {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 23000); // 23s — safely under Netlify's 26s limit
-            try {
-                const res = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-                    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody), signal: controller.signal }
-                );
-                if (!res.ok) {
-                    const errText = await res.text();
-                    throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
-                }
-                const data = await res.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            } finally {
-                clearTimeout(timeout);
-            }
-        };
+        const res = await callGeminiWithRetry(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            requestBody
+        );
 
-        let text;
-        try {
-            text = await callGemini();
-        } catch (firstErr) {
-            if (firstErr.name === 'AbortError') {
-                throw new Error('Analysis timed out — your image may be too large or complex. Try a clearer photo or smaller file.');
-            }
-            if (firstErr.message.includes('429') || firstErr.message.includes('quota')) {
-                await new Promise(r => setTimeout(r, 2000));
-                text = await callGemini();
-            } else {
-                throw firstErr;
-            }
+        if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
         }
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
         return {
             statusCode: 200,

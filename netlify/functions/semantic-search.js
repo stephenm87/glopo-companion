@@ -1,6 +1,7 @@
 // Semantic Case Study Search — Gemini Embeddings API
 // Replaces Vertex AI textembedding-gecko with gemini text-embedding-004
 // Uses the same GEMINI_API_KEY already configured for all other functions.
+const { callGeminiWithRetry } = require('./gemini-retry');
 
 const CASE_SUMMARIES = [
     { name: "South China Sea Dispute", summary: "China territorial claims nine-dash line sovereignty power realism maritime security Philippines UNCLOS freedom of navigation military conflict" },
@@ -34,16 +35,12 @@ function cosineSimilarity(a, b) {
 }
 
 async function getEmbedding(text, apiKey) {
-    const res = await fetch(
+    const res = await callGeminiWithRetry(
         `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`,
         {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: 'models/text-embedding-004',
-                content: { parts: [{ text }] },
-                taskType: 'SEMANTIC_SIMILARITY'
-            })
+            model: 'models/text-embedding-004',
+            content: { parts: [{ text }] },
+            taskType: 'SEMANTIC_SIMILARITY'
         }
     );
     if (!res.ok) {
