@@ -2069,8 +2069,8 @@ Return ONLY the JSON with no markdown, no backticks, no commentary.`;
             },
             {
                 id: 'theory', label: 'Theory Link', color: '#cc44ff',
-                score: t => /realism|liberalism|constructivism|marxism|feminism|postcolonial|structuralism|critical theory/i.test(t) ? 3 : 1,
-                note: t => /realism|liberalism|constructivism|marxism|feminism|postcolonial|structuralism|critical theory/i.test(t)
+                score: t => /realis[mt]|liberalis[mt]|constructivis[mt]|marxis[mt]|feminis[mt]|postcolonial|structuralis[mt]|critical theory/i.test(t) ? 3 : 1,
+                note: t => /realis[mt]|liberalis[mt]|constructivis[mt]|marxis[mt]|feminis[mt]|postcolonial|structuralis[mt]|critical theory/i.test(t)
                     ? 'AO2 ✓ — IR theory applied.'
                     : 'Name a theory (Realism, Liberalism, Constructivism, Feminism…) to reach AO2 Band 3.'
             },
@@ -2284,7 +2284,7 @@ Return ONLY the JSON with no markdown, no backticks, no commentary.`;
             }
             if (ao === 'AO2') {
                 // AO2 (IB 2026): Application & Analysis — IR theory applied WITH analytical connectives
-                const hasTheory = /realism|liberalism|constructivism|marxism|feminism|postcolonial|structuralism|critical theory/i.test(text);
+                const hasTheory = /realis[mt]|liberalis[mt]|constructivis[mt]|marxis[mt]|feminis[mt]|postcolonial|structuralis[mt]|critical theory/i.test(text);
                 const hasAnalysis = /therefore|consequently|this (demonstrates|reveals|shows|suggests|illustrates)|because|thus|as a result|this explains|which means/i.test(text);
                 const hasLink = /through a .+ lens|from a .+ perspective|viewed through|analysed via/i.test(text);
                 return hasTheory && hasAnalysis
