@@ -1023,7 +1023,483 @@ const PolicyEngine = () => {
 };
 
 // --- Tab 2: Writing Studio ---
+// ── Cross-Case Analysis (moved to Case Library) ──────────────────────
+// ── F5: Comparative Analysis Builder ─────────────────────────────────────
+const PRELOADED_PAIRS = [
+    {
+        id: 'ru-ua_il-ps', label: 'Russia-Ukraine vs. Israel-Palestine',
+        caseA: 'Russia-Ukraine War', caseB: 'Israel-Palestine Conflict',
+        theme: 'Sovereignty & Intervention',
+        summary: 'Both involve contested sovereignty and territorial claims, but differ sharply in the role of international law and great-power dynamics.',
+        ibConcepts: ['Sovereignty', 'Human Rights', 'Legitimacy', 'Power'],
+    },
+    {
+        id: 'scs_nk', label: 'South China Sea vs. North Korea Nuclear',
+        caseA: 'South China Sea Dispute', caseB: 'North Korea Nuclear Program',
+        theme: 'Great Power & Regional Security',
+        summary: 'Two flashpoints where great-power competition shapes regional security, but through maritime disputes vs. nuclear proliferation.',
+        ibConcepts: ['Power', 'Security', 'Sovereignty', 'Interdependence'],
+    },
+    {
+        id: 'syria_rohingya', label: 'Syrian R2P vs. Rohingya Crisis',
+        caseA: 'Syrian Civil War & R2P', caseB: 'Rohingya Crisis',
+        theme: 'Humanitarian Intervention & R2P',
+        summary: 'Twin failures of the Responsibility to Protect doctrine — one blocked by great-power vetoes, the other by ASEAN non-interference norms.',
+        ibConcepts: ['Human Rights', 'Sovereignty', 'Legitimacy'],
+    },
+    {
+        id: 'paris_covid', label: 'Paris Climate vs. COVID-19 Response',
+        caseA: 'Paris Climate Agreement', caseB: 'COVID-19 Pandemic Response',
+        theme: 'Global Governance & Collective Action',
+        summary: 'Both require unprecedented multilateral cooperation, but reveal the tension between sovereignty and global public goods.',
+        ibConcepts: ['Interdependence', 'Equality', 'Development'],
+    },
+    {
+        id: 'brexit_tariff', label: 'Brexit vs. Trump Tariff Shock',
+        caseA: 'Brexit & EU Sovereignty', caseB: 'Trump Tariff Shock & Global Trade (2025)',
+        theme: 'Globalization Backlash',
+        summary: 'Both represent populist rejections of globalization — one through democratic secession, the other through unilateral trade barriers.',
+        ibConcepts: ['Sovereignty', 'Interdependence', 'Identity', 'Power'],
+    },
+    {
+        id: 'vzla_arab', label: 'Venezuela vs. Arab Spring',
+        caseA: 'Venezuela Collapse', caseB: 'Arab Spring',
+        theme: 'Legitimacy & Regime Change',
+        summary: 'Popular challenges to authoritarian legitimacy — one following mass protest and revolution, the other through economic collapse and external pressure.',
+        ibConcepts: ['Legitimacy', 'Sovereignty', 'Identity', 'Human Rights'],
+    },
+    {
+        id: 'iran_nk', label: 'Iran Nuclear Deal vs. North Korea',
+        caseA: 'Iran Nuclear Deal (JCPOA)', caseB: 'North Korea Nuclear Program',
+        theme: 'Non-Proliferation Approaches',
+        summary: 'Two opposing approaches to nuclear proliferation — multilateral diplomacy vs. deterrence and sanctions.',
+        ibConcepts: ['Security', 'Power', 'Sovereignty', 'Interdependence'],
+    },
+    {
+        id: 'afghan_sudan', label: 'Afghan War vs. Sudan Civil War',
+        caseA: 'Afghan War & State-Building', caseB: 'Sudan Civil War & Humanitarian Crisis',
+        theme: 'State-Building Failures',
+        summary: 'Both demonstrate the limits of external intervention and state-building — decades of Western investment vs. regional power rivalries.',
+        ibConcepts: ['Legitimacy', 'Sovereignty', 'Development', 'Human Rights'],
+    },
+    {
+        id: 'trade_bri', label: 'US-China Trade War vs. Belt & Road',
+        caseA: 'US-China Trade War', caseB: 'Belt & Road Initiative',
+        theme: 'Economic Power & Influence',
+        summary: 'Two faces of US-China competition — economic coercion through tariffs vs. structural power through infrastructure dependency.',
+        ibConcepts: ['Power', 'Interdependence', 'Development', 'Sovereignty'],
+    },
+    {
+        id: 'gaza_syria', label: 'Gaza Ceasefire vs. Syrian R2P',
+        caseA: 'Gaza Ceasefire & Reconstruction', caseB: 'Syrian Civil War & R2P',
+        theme: 'Peace vs. Protection',
+        summary: 'Both expose tensions between ceasefire diplomacy and protection of civilians, with different roles for the UNSC and regional actors.',
+        ibConcepts: ['Human Rights', 'Sovereignty', 'Legitimacy', 'Peace'],
+    },
+];
+
+const CompareBuilder = () => {
+    const [mode, setMode] = useState('preloaded');
+    const [selectedPair, setSelectedPair] = useState(null);
+    const [searchA, setSearchA] = useState('');
+    const [searchB, setSearchB] = useState('');
+    const [articlesA, setArticlesA] = useState([]);
+    const [articlesB, setArticlesB] = useState([]);
+    const [analysis, setAnalysis] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [expandedSection, setExpandedSection] = useState(new Set(['similarities']));
+
+    const fetchComparison = async (caseAName, caseBName) => {
+        setLoading(true); setError(''); setArticlesA([]); setArticlesB([]); setAnalysis(null);
+        let netlifyOk = false;
+        try {
+            const res = await fetch('/.netlify/functions/compare-research', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ caseA: caseAName, caseB: caseBName })
+            });
+            if (!res.ok) throw new Error(`Server error ${res.status}`);
+            const data = await res.json();
+            setArticlesA(data.articlesA || []);
+            setArticlesB(data.articlesB || []);
+            setAnalysis(data.analysis || null);
+            netlifyOk = true;
+        } catch (e) {
+            // Netlify function unavailable (404 on npm start) — fall back silently to direct Gemini
+            console.log('Netlify function unavailable, using direct Gemini fallback:', e.message);
+        }
+        if (!netlifyOk) {
+            try {
+                const gemRes = await geminiRetryFetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
+                    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `You are an IB Global Politics exam coach. Generate a structured comparative analysis of "${caseAName}" vs. "${caseBName}". IMPORTANT: In every similarity and difference, explicitly name both case studies by name — never write "Both" or "each case" without specifying which cases. For theory lenses, choose ONLY the theories that genuinely illuminate each case from this list: Realism, Liberalism, Constructivism, Marxism, Feminism, Post-colonialism. Include between 2 and 5 theories — only those truly applicable, not all of them. Return JSON:\n{"similarities":["3 key similarities, each explicitly naming both cases"],"differences":["3 key differences, each explicitly naming both cases"],"theoryLenses":[{"theory":"TheoryName","applicationA":"How it applies to ${caseAName} (1-2 sentences)","applicationB":"How it applies to ${caseBName} (1-2 sentences)"}],"ibConcepts":["3-4 IB key concepts connecting both"],"examArgument":"Band 7 comparative thesis statement (2-3 sentences)","perspectiveSummary":"Provide a detailed 4-6 sentence analysis of how different actors, governments, IGOs, NGOs, and media sources frame each case differently. Name specific actors (e.g., 'the US State Department frames...', 'Al Jazeera emphasizes...', 'the UN Human Rights Council argues...'). Explain how these competing narratives shape public understanding and policy responses for both ${caseAName} and ${caseBName}."}` }] }] }) }
+                );
+                const gemData = await gemRes.json();
+                const raw = gemData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+                const jsonMatch = raw.match(/\{[\s\S]*\}/);
+                if (jsonMatch) setAnalysis(JSON.parse(jsonMatch[0]));
+                else setError('Could not parse AI response.');
+            } catch (e2) { setError(`Could not generate comparison: ${e2.message}`); }
+        }
+        setLoading(false);
+    };
+
+    const loadPair = (pair) => {
+        setSelectedPair(pair);
+        setSearchA(pair.caseA);
+        setSearchB(pair.caseB);
+        fetchComparison(pair.caseA, pair.caseB);
+    };
+
+    const searchCustom = () => {
+        if (searchA.trim().length >= 3 && searchB.trim().length >= 3) {
+            setSelectedPair(null);
+            fetchComparison(searchA.trim(), searchB.trim());
+        }
+    };
+
+    const ArticleCard = ({ article, color }) => (
+        <a href={article.url} target="_blank" rel="noopener noreferrer"
+            className="block p-3 rounded-xl border hover:scale-[1.01] transition-all bg-white/5"
+            style={{ borderColor: color + '40' }}>
+            <div className="flex justify-between items-start gap-2">
+                <p className="text-sm font-bold text-gray-200 leading-snug flex-1">{article.title}</p>
+            </div>
+            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{article.snippet}</p>
+            <div className="flex items-center gap-2 mt-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color }}>{article.source}</span>
+                {article.date && <span className="text-[10px] text-gray-600">{article.date}</span>}
+            </div>
+        </a>
+    );
+
+    const sectionColors = {
+        similarities: '#22c55e', differences: '#ef4444',
+        theoryLenses: '#a78bfa', ibConcepts: '#f59e0b', examArgument: '#3b82f6'
+    };
+
+    return (
+        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-between items-center flex-wrap gap-2">
+                <h3 className="text-lg font-bold text-cyan-400">{'\u2696\uFE0F'} Comparative Case Studies</h3>
+                {analysis && (
+                    <button onClick={() => { setAnalysis(null); setArticlesA([]); setArticlesB([]); setError(''); setSelectedPair(null); setSearchA(''); setSearchB(''); }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/5 text-gray-400 hover:bg-white/10 transition-all">
+                        {'\u{1F504}'} New Comparison
+                    </button>
+                )}
+            </div>
+
+            {/* Always-visible search inputs */}
+            <div className="space-y-3">
+                <div className="grid sm:grid-cols-2 gap-3">
+                    <div>
+                        <label className="text-[10px] text-blue-400 uppercase tracking-widest font-bold block mb-1">Case Study A</label>
+                        <input value={searchA} onChange={e => { setSearchA(e.target.value); setSelectedPair(null); }} placeholder="e.g., Russia-Ukraine War"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-cyan-500/50 focus:outline-none" />
+                    </div>
+                    <div>
+                        <label className="text-[10px] text-orange-400 uppercase tracking-widest font-bold block mb-1">Case Study B</label>
+                        <input value={searchB} onChange={e => { setSearchB(e.target.value); setSelectedPair(null); }} placeholder="e.g., Israel-Palestine Conflict"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-cyan-500/50 focus:outline-none" />
+                    </div>
+                </div>
+                <button onClick={searchCustom} disabled={loading || searchA.trim().length < 3 || searchB.trim().length < 3}
+                    className="px-6 py-2.5 rounded-xl font-bold text-sm bg-cyan-600 hover:bg-cyan-500 text-white transition-all disabled:opacity-40">
+                    {loading ? 'Researching...' : '\u{1F50D} Research & Compare'}
+                </button>
+            </div>
+
+            {/* Pre-loaded pairs as quick-fill suggestions */}
+            {!loading && !analysis && (
+                <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">{'\u{1F4CC}'} Or choose a pre-loaded pair</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                        {PRELOADED_PAIRS.map(pair => (
+                            <button key={pair.id} onClick={() => loadPair(pair)}
+                                className={`p-3 rounded-xl border text-left transition-all hover:scale-[1.01] ${selectedPair?.id === pair.id ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-white/10 bg-white/5 hover:border-cyan-500/30'}`}>
+                                <p className="font-bold text-xs text-white">{pair.label}</p>
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-cyan-400">{pair.theme}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {loading && (
+                <div className="p-10 text-center animate-pulse">
+                    <p className="text-cyan-400 font-bold text-lg mb-2">{'\u{1F50D}'} Researching articles...</p>
+                    <p className="text-gray-500 text-xs">Searching multiple sources for perspectives on both case studies and generating comparative analysis.</p>
+                </div>
+            )}
+
+            {error && !analysis && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl"><p className="text-red-400 text-xs">{error}</p></div>}
+
+            {/* Article Display */}
+            {(articlesA.length > 0 || articlesB.length > 0) && (
+                <div className="space-y-4">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{'\u{1F4F0}'} Multi-Perspective Coverage</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <p className="text-xs font-bold text-blue-400 uppercase tracking-widest">{searchA || selectedPair?.caseA}</p>
+                            {articlesA.length > 0 ? articlesA.map((a, i) => (
+                                <ArticleCard key={i} article={a} color="#3b82f6" />
+                            )) : <p className="text-xs text-gray-600 italic">No articles found — AI comparison using knowledge base.</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <p className="text-xs font-bold text-orange-400 uppercase tracking-widest">{searchB || selectedPair?.caseB}</p>
+                            {articlesB.length > 0 ? articlesB.map((a, i) => (
+                                <ArticleCard key={i} article={a} color="#f97316" />
+                            )) : <p className="text-xs text-gray-600 italic">No articles found — AI comparison using knowledge base.</p>}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* AI Comparative Analysis */}
+            {analysis && (
+                <div className="space-y-4 animate-in zoom-in-95 duration-300">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{'\u{1F9E0}'} Comparative Analysis</p>
+
+                    {/* Perspective Insight */}
+                    {analysis.perspectiveSummary && (
+                        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                            <p className="text-[10px] text-amber-400 uppercase tracking-widest font-bold mb-2">{'\u{1F4A1}'} Perspective Insight</p>
+                            <p className="text-xs text-gray-300 leading-relaxed">{analysis.perspectiveSummary}</p>
+                        </div>
+                    )}
+
+                    {/* Analysis accordion */}
+                    {[
+                        { key: 'similarities', label: 'Similarities', icon: '\u{1F91D}', items: analysis.similarities },
+                        { key: 'differences', label: 'Differences', icon: '\u26A1', items: analysis.differences },
+                        { key: 'ibConcepts', label: 'IB Concept Connections', icon: '\u{1F3AF}', items: analysis.ibConcepts },
+                    ].map(section => (
+                        <div key={section.key}>
+                            <button onClick={() => setExpandedSection(prev => { const next = new Set(prev); next.has(section.key) ? next.delete(section.key) : next.add(section.key); return next; })}
+                                className="w-full text-left p-3 rounded-xl border-l-4 flex justify-between items-center transition-all hover:bg-white/5"
+                                style={{ borderLeftColor: sectionColors[section.key], backgroundColor: expandedSection.has(section.key) ? sectionColors[section.key] + '08' : 'transparent' }}>
+                                <span className="font-bold text-sm" style={{ color: sectionColors[section.key] }}>{section.icon} {section.label}</span>
+                                <span className="text-gray-600 text-sm">{expandedSection.has(section.key) ? '\u25B2' : '\u25BC'}</span>
+                            </button>
+                            {expandedSection.has(section.key) && section.items && (
+                                <div className="ml-4 mt-2 space-y-2 animate-in fade-in duration-200">
+                                    {section.items.map((item, i) => (
+                                        <p key={i} className="text-xs text-gray-300 flex items-start gap-2">
+                                            <span style={{ color: sectionColors[section.key] }}>{'\u2022'}</span> {item}
+                                        </p>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+
+                    {/* Theory Lenses */}
+                    <div>
+                        <button onClick={() => setExpandedSection(prev => { const next = new Set(prev); next.has('theoryLenses') ? next.delete('theoryLenses') : next.add('theoryLenses'); return next; })}
+                            className="w-full text-left p-3 rounded-xl border-l-4 flex justify-between items-center transition-all hover:bg-white/5"
+                            style={{ borderLeftColor: '#a78bfa', backgroundColor: expandedSection.has('theoryLenses') ? '#a78bfa08' : 'transparent' }}>
+                            <span className="font-bold text-sm text-purple-400">{'\u{1F52D}'} Theory Lenses</span>
+                            <span className="text-gray-600 text-sm">{expandedSection.has('theoryLenses') ? '\u25B2' : '\u25BC'}</span>
+                        </button>
+                        {expandedSection.has('theoryLenses') && analysis.theoryLenses && (
+                            <div className="mt-2 space-y-3 animate-in fade-in duration-200">
+                                {analysis.theoryLenses.map((lens, i) => (
+                                    <div key={i} className="ml-4 p-3 rounded-xl bg-white/5 border border-white/10">
+                                        <p className="text-xs font-black text-purple-400 uppercase tracking-widest mb-2">{lens.theory}</p>
+                                        <div className="grid sm:grid-cols-2 gap-2">
+                                            <div className="p-2 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                                                <p className="text-[10px] text-blue-400 font-bold mb-1">{searchA || selectedPair?.caseA}</p>
+                                                <p className="text-xs text-gray-300">{lens.applicationA}</p>
+                                            </div>
+                                            <div className="p-2 rounded-lg bg-orange-500/5 border border-orange-500/10">
+                                                <p className="text-[10px] text-orange-400 font-bold mb-1">{searchB || selectedPair?.caseB}</p>
+                                                <p className="text-xs text-gray-300">{lens.applicationB}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Exam Argument */}
+                    {analysis.examArgument && (
+                        <div className="p-4 rounded-xl border-2 border-cyan-500/30 bg-cyan-500/5">
+                            <p className="text-[10px] text-cyan-400 uppercase tracking-widest font-bold mb-2">{'\u{1F3C6}'} Band 7 Thesis</p>
+                            <p className="text-sm text-gray-200 leading-relaxed italic">{'\u201C'}{analysis.examArgument}{'\u201D'}</p>
+                        </div>
+                    )}
+
+
+                    {/* Reset button */}
+                    <button onClick={() => { setAnalysis(null); setArticlesA([]); setArticlesB([]); setError(''); setSelectedPair(null); }}
+                        className="px-4 py-2 rounded-lg font-bold text-sm border border-white/10 text-gray-400 hover:text-white transition-all">
+                        {'\u2190'} Back to Case Pairs
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+
+// ── QuestionBank (shared by Mock Exam Zone) ──────────────────────
+const QuestionBank = () => {
+    const [filter, setFilter] = useState('All');
+    const questions = GLOBAL_QUESTIONS;
+
+    const filtered = filter === 'All' ? questions : questions.filter(q => q.theme === filter);
+
+    return (
+        <div className="space-y-4">
+            <div className="mb-4 p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-[10px] text-emerald-300 italic">
+                Note: Original mock simulation by Project Lead (IB Global Politics).
+            </div>
+            <div className="flex justify-between items-center flex-wrap gap-2">
+                <h3 className="text-lg font-bold text-emerald-400">Paper 2 Question Bank</h3>
+                <div className="flex gap-2 text-[10px]">
+                    {['All', 'Power', 'Human Rights', 'Development', 'Peace'].map(f => (
+                        <button key={f} onClick={() => setFilter(f)} className={`px-2 py-1 rounded border transition-all ${filter === f ? "bg-emerald-500 border-emerald-500 text-white" : "border-white/10 text-gray-400 hover:border-white/30"}`}>{f}</button>
+                    ))}
+                </div>
+            </div>
+            <div className="grid gap-3">
+                {filtered.map((q, i) => (
+                    <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-lg hover:border-emerald-500/50 transition-colors group">
+                        <div className="flex justify-end items-start mb-1">
+                            <span className="text-[10px] bg-white/10 text-gray-400 px-1.5 py-0.5 rounded uppercase">{q.theme}</span>
+                        </div>
+                        <p className="text-gray-200 group-hover:text-white text-sm">"{q.text}"</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+
+// ── Command Term Decoder (shared by Glossary) ──────────────────────
+const CommandTermDecoder = () => {
+    const [view, setView] = useState('grid');
+    const [checkText, setCheckText] = useState('');
+    const [checkResult, setCheckResult] = useState(null);
+    const [checking, setChecking] = useState(false);
+    const [expandedTerm, setExpandedTerm] = useState(null);
+
+    const skillCheck = async () => {
+        if (!checkText.trim() || checkText.trim().length < 20) return;
+        setChecking(true); setCheckResult(null);
+        try {
+            const res = await geminiRetryFetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
+                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `You are an IB Global Politics exam coach. A student wrote the following paragraph:\n\n"${checkText}"\n\nAnalyse which IB command term skill this paragraph actually demonstrates. Pick from: Define, Describe, Explain, Analyse, Compare, Evaluate, Discuss, Examine, Justify, Suggest.\n\nRespond in this EXACT JSON format:\n{"detected_skill":"[term]","confidence":"high/medium/low","explanation":"[1 sentence why]","upgrade_tip":"[1 sentence on how to elevate to the next skill level]"}` }] }] }) }
+            );
+            const data = await res.json();
+            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const jsonMatch = raw.match(/\{[\s\S]*?\}/);
+            if (jsonMatch) setCheckResult(JSON.parse(jsonMatch[0]));
+        } catch (e) { console.error(e); }
+        setChecking(false);
+    };
+
+    const hierarchy = [
+        { term: 'Define / Describe', level: 1, skill: 'Knowledge', color: '#94a3b8' },
+        { term: 'Explain', level: 2, skill: 'Understanding', color: '#60a5fa' },
+        { term: 'Analyse / Compare', level: 3, skill: 'Analysis', color: '#a78bfa' },
+        { term: 'Evaluate / Examine', level: 4, skill: 'Evaluation', color: '#f59e0b' },
+        { term: 'Discuss / To what extent', level: 5, skill: 'Synthesis', color: '#ef4444' },
+    ];
+
+    const COMMAND_TERMS = [
+        { term: 'Define', meaning: 'Give the precise meaning of a word, phrase, concept or physical quantity.', level: 1, color: '#94a3b8' },
+        { term: 'Describe', meaning: 'Give a detailed account or picture of a situation, event, pattern or process.', level: 1, color: '#94a3b8' },
+        { term: 'Explain', meaning: 'Give a detailed account including reasons or causes.', level: 2, color: '#60a5fa' },
+        { term: 'Suggest', meaning: 'Propose a solution, hypothesis or other possible answer.', level: 2, color: '#60a5fa' },
+        { term: 'Analyse', meaning: 'Break down in order to bring out the essential elements or structure.', level: 3, color: '#a78bfa' },
+        { term: 'Compare', meaning: 'Give an account of the similarities and differences between two items.', level: 3, color: '#a78bfa' },
+        { term: 'Compare and Contrast', meaning: 'Give an account of similarities and differences, referring to both throughout.', level: 3, color: '#a78bfa' },
+        { term: 'Contrast', meaning: 'Give an account of the differences between two items.', level: 3, color: '#a78bfa' },
+        { term: 'Distinguish', meaning: 'Make clear the differences between two or more concepts.', level: 3, color: '#a78bfa' },
+        { term: 'Evaluate', meaning: 'Make an appraisal by weighing up the strengths and limitations.', level: 4, color: '#f59e0b' },
+        { term: 'Examine', meaning: 'Consider an argument or concept in depth.', level: 4, color: '#f59e0b' },
+        { term: 'Justify', meaning: 'Give valid reasons or evidence to support an answer or conclusion.', level: 4, color: '#f59e0b' },
+        { term: 'Discuss', meaning: 'Offer a considered and balanced review that includes a range of arguments.', level: 5, color: '#ef4444' },
+        { term: 'To what extent', meaning: 'Consider the merits of the claim/argument; weigh evidence for and against.', level: 5, color: '#ef4444' },
+    ];
+
+    return (
+        <div className="space-y-5">
+            <div className="flex justify-between items-center flex-wrap gap-2">
+                <h3 className="text-lg font-bold text-cyan-400">{'\u{1F4CB}'} IB Command Terms</h3>
+                <div className="flex gap-2">
+                    <button onClick={() => setView('grid')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${view === 'grid' ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Grid</button>
+                    <button onClick={() => setView('ladder')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${view === 'ladder' ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Skill Ladder</button>
+                    <button onClick={() => setView('checker')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${view === 'checker' ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>AI Checker</button>
+                </div>
+            </div>
+
+            {view === 'grid' && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {COMMAND_TERMS.map(t => (
+                        <button key={t.term} onClick={() => setExpandedTerm(expandedTerm === t.term ? null : t.term)}
+                            className="p-3 rounded-xl border text-left transition-all hover:scale-[1.02]"
+                            style={{ borderColor: t.color + '40', backgroundColor: expandedTerm === t.term ? t.color + '15' : 'transparent' }}>
+                            <p className="font-black text-sm" style={{ color: t.color }}>{t.term}</p>
+                            {expandedTerm === t.term && (
+                                <p className="text-xs text-gray-400 mt-1 animate-in fade-in duration-200">{t.meaning}</p>
+                            )}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {view === 'ladder' && (
+                <div className="space-y-2">
+                    {hierarchy.slice().reverse().map((h, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl border transition-all"
+                            style={{ borderColor: h.color + '30', backgroundColor: h.color + '08' }}>
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-lg"
+                                style={{ backgroundColor: h.color + '20', color: h.color }}>
+                                {h.level}
+                            </div>
+                            <div>
+                                <p className="font-bold text-sm" style={{ color: h.color }}>{h.term}</p>
+                                <p className="text-xs text-gray-500">{h.skill}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {view === 'checker' && (
+                <div className="space-y-3">
+                    <p className="text-xs text-gray-400">Paste a paragraph and the AI will identify which command term skill it demonstrates.</p>
+                    <textarea value={checkText} onChange={e => setCheckText(e.target.value)}
+                        placeholder="Paste your paragraph here..."
+                        className="w-full bg-white/5 border border-white/10 rounded-lg p-3 h-28 text-sm text-gray-200 placeholder-gray-600 focus:border-cyan-500/50 focus:outline-none resize-none" />
+                    <button onClick={skillCheck} disabled={checking || checkText.trim().length < 20}
+                        className="px-6 py-2 rounded-xl font-bold text-sm bg-cyan-600 hover:bg-cyan-500 text-white transition-all disabled:opacity-40">
+                        {checking ? 'Analysing...' : '\u{1F50D} Check Skill Level'}
+                    </button>
+                    {checkResult && (
+                        <div className="p-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 animate-in zoom-in-95 duration-300">
+                            <p className="text-sm font-bold text-cyan-400 mb-1">Detected: {checkResult.detected_skill} ({checkResult.confidence} confidence)</p>
+                            <p className="text-xs text-gray-300 mb-2">{checkResult.explanation}</p>
+                            <p className="text-xs text-amber-400"><strong>Upgrade tip:</strong> {checkResult.upgrade_tip}</p>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 const CaseLibrary = () => {
+    const [caseView, setCaseView] = useState('library');
     const [expanded, setExpanded] = useState(null);
     const [selectedTheory, setSelectedTheory] = useState('Realism');
     const [caseQuery, setCaseQuery] = useState('');
@@ -1068,7 +1544,18 @@ const CaseLibrary = () => {
     ];
     return (
         <div className="space-y-4">
-            <h3 className="text-lg font-bold text-emerald-400">Case Library: The Intersection Series</h3>
+            <div className="flex justify-between items-center flex-wrap gap-3">
+                <h3 className="text-lg font-bold text-emerald-400">{caseView === 'library' ? 'Case Library: The Intersection Series' : '🔀 Cross-Case Analysis'}</h3>
+                <div className="flex gap-2">
+                    <button onClick={() => setCaseView('library')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${caseView === 'library' ? 'bg-emerald-600 text-white' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>Case Library</button>
+                    <button onClick={() => setCaseView('crosscase')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${caseView === 'crosscase' ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}>🔀 Cross-Case Analysis</button>
+                </div>
+            </div>
+
+            {caseView === 'crosscase' && <CompareBuilder />}
+
+            {caseView === 'library' && <>
+            <h3 className="text-lg font-bold text-emerald-400" style={{display:'none'}}>Case Library: The Intersection Series</h3>
 
             {/* ── Case Finder Search ───────────────────────────────────────── */}
             <div className="p-4 bg-violet-500/5 border border-violet-500/20 rounded-xl space-y-3">
@@ -1300,46 +1787,14 @@ const CaseLibrary = () => {
                     </div>
                 ))}
             </div>
+            </>}
         </div>
     );
 };
 const WritingStudio = () => {
-    const [subTab, setSubTab] = useState('bank');
+    const [subTab, setSubTab] = useState('thesis');
 
     // --- Sub-Tab components ---
-
-    const QuestionBank = () => {
-        const [filter, setFilter] = useState('All');
-        const questions = GLOBAL_QUESTIONS;
-
-        const filtered = filter === 'All' ? questions : questions.filter(q => q.theme === filter);
-
-        return (
-            <div className="space-y-4">
-                <div className="mb-4 p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-[10px] text-emerald-300 italic">
-                    Note: Original mock simulation by Project Lead (IB Global Politics).
-                </div>
-                <div className="flex justify-between items-center flex-wrap gap-2">
-                    <h3 className="text-lg font-bold text-emerald-400">Paper 2 Question Bank</h3>
-                    <div className="flex gap-2 text-[10px]">
-                        {['All', 'Power', 'Human Rights', 'Development', 'Peace'].map(f => (
-                            <button key={f} onClick={() => setFilter(f)} className={`px-2 py-1 rounded border transition-all ${filter === f ? "bg-emerald-500 border-emerald-500 text-white" : "border-white/10 text-gray-400 hover:border-white/30"}`}>{f}</button>
-                        ))}
-                    </div>
-                </div>
-                <div className="grid gap-3">
-                    {filtered.map((q, i) => (
-                        <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-lg hover:border-emerald-500/50 transition-colors group">
-                            <div className="flex justify-end items-start mb-1">
-                                <span className="text-[10px] bg-white/10 text-gray-400 px-1.5 py-0.5 rounded uppercase">{q.theme}</span>
-                            </div>
-                            <p className="text-gray-200 group-hover:text-white text-sm">"{q.text}"</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    };
 
     const DebateLab = () => {
         const [selectedQ, setSelectedQ] = useState(null);
@@ -2332,109 +2787,6 @@ Return ONLY the JSON with no markdown, no backticks, no commentary.`;
     };
 
 
-    // ── F5: Comparative Analysis Builder ─────────────────────────────────────
-    const CompareBuilder = () => {
-        const [idxA, setIdxA] = useState('');
-        const [idxB, setIdxB] = useState('');
-        const [angle, setAngle] = useState('Power');
-        const [result, setResult] = useState(null);
-
-        const CONCEPT_GROUPS = [
-            { label: 'Core Concepts', color: '#3399ff', items: ['Power', 'Sovereignty', 'Legitimacy', 'Interdependence'] },
-            { label: 'Global Challenges', color: '#00cc77', items: ['Security', 'Development', 'Environment', 'Equality'] },
-            { label: 'Key Concepts', color: '#ff9900', items: ['Human Rights', 'Peace', 'Identity', 'Justice', 'Technology', 'Globalization', 'Conflict', 'Cooperation'] },
-        ];
-
-        const getRelevantInsight = (caseData, a) => {
-            if (caseData.globalChallenges) {
-                for (const [key, val] of Object.entries(caseData.globalChallenges)) {
-                    if (key.toLowerCase().includes(a.split(' ')[0].toLowerCase())) return { text: val.substring(0, 200), source: 'direct' };
-                }
-            }
-            return { text: caseData.fiveWH?.why?.substring(0, 200) || caseData.facts?.[0] || '', source: 'indirect' };
-        };
-
-        const isConceptRelevant = (caseData, conceptAngle) => {
-            const a = conceptAngle.toLowerCase();
-            const all = [...(caseData.ibLinkage?.core || []), ...(caseData.ibLinkage?.challenge || []), ...Object.keys(caseData.globalChallenges || {})].map(c => c.toLowerCase());
-            return all.some(c => c.includes(a.split(' ')[0]) || a.split(' ')[0].includes(c.split(' ')[0].split('(')[0].trim()));
-        };
-
-        const getBestTheory = (caseData, a) => {
-            const theoryMap = { power: 'Realism', sovereignty: 'Realism', security: 'Realism', conflict: 'Realism', development: 'Structuralism', equality: 'Structuralism', environment: 'Liberalism', cooperation: 'Liberalism', interdependence: 'Liberalism', globalization: 'Liberalism', identity: 'Constructivism', legitimacy: 'Constructivism', justice: 'Constructivism', 'human rights': 'Feminism', peace: 'Feminism', technology: 'Liberalism' };
-            const theory = Object.entries(theoryMap).find(([k]) => a.toLowerCase().includes(k))?.[1] || 'Realism';
-            return { theory, text: caseData.theoryInsights?.[theory]?.substring(0, 160) || null };
-        };
-
-        const buildScaffold = (currentAngle) => {
-            const ca = GLOBAL_CASES.find(c => c.name === idxA);
-            const cb = GLOBAL_CASES.find(c => c.name === idxB);
-            if (!ca || !cb) return;
-            const insightA = getRelevantInsight(ca, currentAngle);
-            const insightB = getRelevantInsight(cb, currentAngle);
-            const theoryA = getBestTheory(ca, currentAngle);
-            const relevanceNote = (!isConceptRelevant(ca, currentAngle) || !isConceptRelevant(cb, currentAngle))
-                ? `⚠️ Note: ${!isConceptRelevant(ca, currentAngle) ? ca.name : cb.name} does not directly centre ${currentAngle} — use it as a secondary illustration or choose a more relevant case pair.` : null;
-            setResult({
-                angle: currentAngle, relevanceNote,
-                sentences: [
-                    { label: 'Opening', color: '#00cc77', text: `Both "${ca.name}" and "${cb.name}" reveal the contested nature of ${currentAngle} — the former through the lens of ${ca.theme}, the latter through ${cb.theme}.` },
-                    { label: `Case A — ${ca.name}`, color: '#3399ff', text: `${insightA.text}...${insightA.source === 'indirect' ? ` [Note: make the ${currentAngle} connection explicit.]` : ''}` },
-                    { label: `Case B — ${cb.name}`, color: '#ff9900', text: `${insightB.text}...${insightB.source === 'indirect' ? ` [Note: make the ${currentAngle} connection explicit.]` : ''}` },
-                    { label: `Lens (${theoryA.theory})`, color: '#cc44ff', text: theoryA.text ? `Through a ${theoryA.theory} lens: ${theoryA.text}...` : `Apply a ${theoryA.theory} lens: how does ${currentAngle} interact with ${theoryA.theory.toLowerCase()} assumptions about state behaviour?` },
-                    { label: 'Synthesis', color: '#ff66aa', text: `Ultimately, "${ca.name}" and "${cb.name}" demonstrate that ${currentAngle} is not fixed but a contested arena shaped by power asymmetries, institutional mechanisms, and normative frameworks. A comparative reading therefore [YOUR EVALUATIVE JUDGEMENT].` },
-                ]
-            });
-        };
-
-        const handleAngle = (a) => { setAngle(a); if (idxA && idxB && idxA !== idxB) buildScaffold(a); else setResult(null); };
-
-        return (
-            <div className="space-y-4">
-                <h3 className="text-lg font-bold text-cyan-400">⚖️ Comparative Analysis Builder</h3>
-                <p className="text-xs text-gray-400">Choose two cases + an IB concept. Click any concept to update the scaffold instantly.</p>
-                <div className="grid gap-3">
-                    <select className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-2 text-sm" value={idxA} onChange={e => { setIdxA(e.target.value); setResult(null); }}>
-                        <option value="">— Case A —</option>{GLOBAL_CASES.map((c, i) => <option key={i} value={c.name}>{c.name}</option>)}
-                    </select>
-                    <select className="w-full bg-glopo-dark border border-glopo-border rounded-lg p-2 text-sm" value={idxB} onChange={e => { setIdxB(e.target.value); setResult(null); }}>
-                        <option value="">— Case B —</option>{GLOBAL_CASES.filter(c => c.name !== idxA).map((c, i) => <option key={i} value={c.name}>{c.name}</option>)}
-                    </select>
-                    <div className="space-y-2">
-                        {CONCEPT_GROUPS.map(group => (
-                            <div key={group.label}>
-                                <p className="text-[9px] font-bold uppercase mb-1" style={{ color: group.color }}>{group.label}</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {group.items.map(a => (
-                                        <button key={a} onClick={() => handleAngle(a)}
-                                            className="text-xs px-2.5 py-1 rounded-lg border transition-all"
-                                            style={angle === a ? { background: group.color, borderColor: group.color, color: '#000', fontWeight: 700 } : { borderColor: group.color + '44', color: group.color + 'bb' }}>
-                                            {a}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                <Button onClick={() => buildScaffold(angle)} disabled={!idxA || !idxB || idxA === idxB}>Build Scaffold</Button>
-                {result && (
-                    <div className="space-y-3 animate-in fade-in duration-300">
-                        <p className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest">Comparative Scaffold — {result.angle}</p>
-                        {result.relevanceNote && <div className="p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg"><p className="text-xs text-amber-400">{result.relevanceNote}</p></div>}
-                        {result.sentences.map((s, i) => (
-                            <div key={i} className="p-3 rounded-r-lg border-l-2 text-xs text-gray-300 leading-relaxed" style={{ borderColor: s.color + '80', background: s.color + '08' }}>
-                                <span className="text-[9px] font-black uppercase tracking-widest block mb-1" style={{ color: s.color }}>{s.label}</span>
-                                {s.text}
-                            </div>
-                        ))}
-                        <p className="text-[10px] text-gray-600 italic">Sections marked [YOUR ...] are where your own analysis goes.</p>
-                    </div>
-                )}
-            </div>
-        );
-    };
-
     // ── F9: Thesis Variations ─────────────────────────────────────────────────
     const ThesisVariations = () => {
         const [concept, setConcept] = useState('');
@@ -2665,6 +3017,7 @@ Return ONLY the JSON with no markdown, no backticks, no commentary.`;
         );
     };
 
+
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
@@ -2673,12 +3026,11 @@ Return ONLY the JSON with no markdown, no backticks, no commentary.`;
 
             <div className="flex flex-wrap gap-2 mb-6">
                 {[
-                    { id: 'bank', label: 'Q-Bank', icon: BookOpen },
-                    { id: 'debate', label: 'Debate Lab', icon: MessageSquare },
+                    { id: 'thesis', label: 'Thesis Var.', icon: PenTool },
                     { id: 'intro', label: 'Intro Builder', icon: Zap },
                     { id: 'peel', label: 'PEEL Lab', icon: PenTool },
-                    { id: 'thesis', label: 'Thesis Var.', icon: PenTool },
                     { id: 'policy', label: 'Policy Engine', icon: Shield },
+                    { id: 'debate', label: 'Debate Lab', icon: MessageSquare },
 
                 ].map(b => (
                     <button
@@ -2692,12 +3044,11 @@ Return ONLY the JSON with no markdown, no backticks, no commentary.`;
             </div>
 
             <Card className="border-emerald-500/20">
-                {subTab === 'bank' && <QuestionBank />}
-                {subTab === 'debate' && <DebateLab />}
+                {subTab === 'thesis' && <ThesisVariations />}
                 {subTab === 'intro' && <IntroWizard />}
                 {subTab === 'peel' && <PeelLab />}
-                {subTab === 'thesis' && <ThesisVariations />}
                 {subTab === 'policy' && <PolicyEngine />}
+                {subTab === 'debate' && <DebateLab />}
 
             </Card>
         </div>
@@ -4034,6 +4385,7 @@ One precise, actionable tip that would most significantly raise this response's 
                     { id: 'paper1', label: 'Paper 1 (25 marks)', color: 'blue' },
                     { id: 'paper2', label: 'Paper 2 (30 marks)', color: 'emerald' },
                     { id: 'paper3', label: 'Paper 3 (28 marks)', color: 'red' },
+                    { id: 'qbank', label: '📋 Q-Bank', color: 'amber' },
                     { id: 'custom', label: '✏️ My Class Essay', color: 'purple' }
                 ].map(b => (
                     <button
@@ -4049,10 +4401,11 @@ One precise, actionable tip that would most significantly raise this response's 
                 ))}
             </div>
 
-            <Card className={subTab === 'paper1' ? "border-blue-500/20" : subTab === 'paper2' ? "border-emerald-500/20" : subTab === 'paper3' ? "border-red-500/20" : "border-purple-500/20"}>
+            <Card className={subTab === 'paper1' ? "border-blue-500/20" : subTab === 'paper2' ? "border-emerald-500/20" : subTab === 'paper3' ? "border-red-500/20" : subTab === 'qbank' ? "border-amber-500/20" : "border-purple-500/20"}>
                 {subTab === 'paper1' && <Paper1 />}
                 {subTab === 'paper2' && <Paper2 />}
                 {subTab === 'paper3' && <Paper3 />}
+                {subTab === 'qbank' && <QuestionBank />}
                 {subTab === 'custom' && <CustomQuestionPanel
                     customQuestion={customQuestion} setCustomQuestion={setCustomQuestion}
                     customMarks={customMarks} setCustomMarks={setCustomMarks}
@@ -4179,6 +4532,11 @@ const LoreLexicon = () => {
                     </div>
                 )}
             </div>
+
+            {/* ── Command Term Reference ──────────────────────────────── */}
+            <div className="mt-8 pt-8 border-t border-white/10">
+                <CommandTermDecoder />
+            </div>
         </div>
     );
 };
@@ -4281,21 +4639,45 @@ const FLASHCARD_DEFS = {
     "Technology": "Tools and innovations shaping how states, actors, and individuals interact. A contested arena of power, surveillance, and emancipation."
 };
 
-const THEORY_QUOTES = [
-    { quote: "China's island-building in the South China Sea is a rational response to the anarchic international system — states must maximize power to survive.", answer: "Realism", explanation: "Power maximization in anarchy = core Realist logic. Every state acts to secure its survival." },
-    { quote: "The AU's permanent inclusion in the G20 shows that multilateral institutions can evolve to better reflect the principle of equal participation.", answer: "Liberalism", explanation: "Institutional reform toward greater inclusivity is a hallmark of Liberal thinking about cooperative global governance." },
-    { quote: "Boko Haram's rise reflects the structural underdevelopment of Northern Nigeria — violence is the rational response of a marginalized periphery.", answer: "Structuralism", explanation: "Core-Periphery hierarchy producing structural violence = Structuralist / World Systems analysis." },
-    { quote: "Meta's extraction of user data for profit mirrors 19th-century enclosures — the digital commons is being privatized by transnational capital.", answer: "Marxism", explanation: "Capital accumulation through data extraction, digital enclosures — classic Marxist critique of capitalist expansion." },
-    { quote: "Turkiye's 'strategic autonomy' is not just a policy — it is a performance of a distinct civilizational identity that refuses Western or Eastern labels.", answer: "Constructivism", explanation: "Identity is socially constructed and shapes state interests — this is the core Constructivist argument." },
-    { quote: "The peace negotiations in the Sahel excluded women at every level, perpetuating a masculine security framework that ignored human security entirely.", answer: "Feminism", explanation: "Feminist IR critiques the exclusion of women from decision-making and challenges militarized security frameworks." },
-    { quote: "The BRI's 99-year port lease in Sri Lanka is a 21st-century version of the unequal treaties — debt replacing gunboats as the tool of control.", answer: "Postcolonialism", explanation: "Neo-colonial dependency relationships, unequal treaties, and Global South sovereignty — core Postcolonial concerns." },
-    { quote: "The US IRA subsidies are not really about climate — they are a geopolitical tool to secure American dominance in the next century's energy order.", answer: "Realism", explanation: "Green Mercantilism — using environmental policy as cover for national interest and power competition." },
-    { quote: "Myanmar shows the failure of R2P: without binding institutional enforcement, human rights norms dissolve whenever they conflict with sovereignty.", answer: "Liberalism", explanation: "Liberal institutionalism argues norms and institutions are essential; their failure here is a Liberals' tragedy." },
-    { quote: "COP28's fossil fuel lobby presence demonstrates that climate governance serves the interests of capital, not the planet or the Global South.", answer: "Marxism", explanation: "Class interests and capital accumulation driving 'green' policy inaction — Marxist political economy of climate." },
-    { quote: "The Arctic is not just melting ice — it is a socially constructed strategic arena where states must 'perform' their Arctic identity to gain legitimacy.", answer: "Constructivism", explanation: "China calling itself a 'near-Arctic state' is pure identity construction — interests are created through discourse." },
-    { quote: "The Chibok kidnappings reveal how gender-based violence is weaponized as a deliberate tool to undermine the social fabric of resistant communities.", answer: "Feminism", explanation: "Feminist IR centres gendered violence as a structural feature of armed conflict, not a side effect." },
-    { quote: "Western-designed human rights norms impose a European liberal framework on societies with radically different histories of justice and community.", answer: "Postcolonialism", explanation: "The 'universal' in universal human rights masks Western epistemic hegemony — Postcolonial critique at its core." },
-    { quote: "The G20's debt rules allow wealthy Core nations to subsidize their revival while the Periphery drowns in loan conditions that deepen dependency.", answer: "Structuralism", explanation: "Core-Periphery analysis of international financial architecture — structural inequality reproduced through institutions." },
+const THEORY_DRILL_ITEMS = [
+    // ── BASIC tier: clear, obvious theory signals ──
+    { tier: 'basic', quote: "States exist in anarchy — without a world government, every state must arm itself and rely on self-help to survive.", answer: "Realism", explanation: "Anarchy + self-help + survival = the three pillars of Realist thought." },
+    { tier: 'basic', quote: "The United Nations provides a forum where states can resolve disputes peacefully through dialogue, negotiation, and international law.", answer: "Liberalism", explanation: "Institutions enabling peaceful dispute resolution = core Liberal institutionalism." },
+    { tier: 'basic', quote: "Global capitalism ensures that wealthy nations in the Core extract resources and cheap labour from the Periphery, deepening inequality.", answer: "Structuralism", explanation: "Core-Periphery exploitation and global inequality = Structuralism / World Systems Theory." },
+    { tier: 'basic', quote: "Workers of the world unite — the ruling class uses the state to protect private property and suppress the proletariat.", answer: "Marxism", explanation: "Class struggle, private property, proletariat = foundational Marxist concepts." },
+    { tier: 'basic', quote: "National identity is not natural — it is constructed through shared stories, symbols, and social practices that change over time.", answer: "Constructivism", explanation: "Socially constructed identity is the defining feature of Constructivist thought." },
+    { tier: 'basic', quote: "Women remain excluded from peace negotiations worldwide, and military budgets dwarf spending on maternal healthcare and education.", answer: "Feminism", explanation: "Gender exclusion from power structures + critique of militarized priorities = Feminist IR." },
+    { tier: 'basic', quote: "The legacy of colonialism continues to shape global power — former colonies remain economically dependent on their former rulers.", answer: "Postcolonialism", explanation: "Colonial legacy + continued dependency = core Postcolonial argument." },
+    // ── ADVANCED tier: requires deeper understanding ──
+    { tier: 'advanced', quote: "China's island-building in the South China Sea is a rational response to the anarchic international system — states must maximize power to survive.", answer: "Realism", explanation: "Power maximization in anarchy = core Realist logic. Every state acts to secure its survival." },
+    { tier: 'advanced', quote: "The AU's permanent inclusion in the G20 shows that multilateral institutions can evolve to better reflect the principle of equal participation.", answer: "Liberalism", explanation: "Institutional reform toward greater inclusivity is a hallmark of Liberal thinking about cooperative global governance." },
+    { tier: 'advanced', quote: "Boko Haram's rise reflects the structural underdevelopment of Northern Nigeria — violence is the rational response of a marginalized periphery.", answer: "Structuralism", explanation: "Core-Periphery hierarchy producing structural violence = Structuralist / World Systems analysis." },
+    { tier: 'advanced', quote: "Meta's extraction of user data for profit mirrors 19th-century enclosures — the digital commons is being privatized by transnational capital.", answer: "Marxism", explanation: "Capital accumulation through data extraction, digital enclosures — classic Marxist critique of capitalist expansion." },
+    { tier: 'advanced', quote: "Turkiye's 'strategic autonomy' is not just a policy — it is a performance of a distinct civilizational identity that refuses Western or Eastern labels.", answer: "Constructivism", explanation: "Identity is socially constructed and shapes state interests — this is the core Constructivist argument." },
+    { tier: 'advanced', quote: "The peace negotiations in the Sahel excluded women at every level, perpetuating a masculine security framework that ignored human security entirely.", answer: "Feminism", explanation: "Feminist IR critiques the exclusion of women from decision-making and challenges militarized security frameworks." },
+    { tier: 'advanced', quote: "The BRI's 99-year port lease in Sri Lanka is a 21st-century version of the unequal treaties — debt replacing gunboats as the tool of control.", answer: "Postcolonialism", explanation: "Neo-colonial dependency relationships, unequal treaties, and Global South sovereignty — core Postcolonial concerns." },
+    { tier: 'advanced', quote: "The US IRA subsidies are not really about climate — they are a geopolitical tool to secure American dominance in the next century's energy order.", answer: "Realism", explanation: "Green Mercantilism — using environmental policy as cover for national interest and power competition." },
+    { tier: 'advanced', quote: "Myanmar shows the failure of R2P: without binding institutional enforcement, human rights norms dissolve whenever they conflict with sovereignty.", answer: "Liberalism", explanation: "Liberal institutionalism argues norms and institutions are essential; their failure here is a Liberals' tragedy." },
+    { tier: 'advanced', quote: "COP28's fossil fuel lobby presence demonstrates that climate governance serves the interests of capital, not the planet or the Global South.", answer: "Marxism", explanation: "Class interests and capital accumulation driving 'green' policy inaction — Marxist political economy of climate." },
+    { tier: 'advanced', quote: "The Arctic is not just melting ice — it is a socially constructed strategic arena where states must 'perform' their Arctic identity to gain legitimacy.", answer: "Constructivism", explanation: "China calling itself a 'near-Arctic state' is pure identity construction — interests are created through discourse." },
+    { tier: 'advanced', quote: "The Chibok kidnappings reveal how gender-based violence is weaponized as a deliberate tool to undermine the social fabric of resistant communities.", answer: "Feminism", explanation: "Feminist IR centres gendered violence as a structural feature of armed conflict, not a side effect." },
+    { tier: 'advanced', quote: "Western-designed human rights norms impose a European liberal framework on societies with radically different histories of justice and community.", answer: "Postcolonialism", explanation: "The 'universal' in universal human rights masks Western epistemic hegemony — Postcolonial critique at its core." },
+    { tier: 'advanced', quote: "The G20's debt rules allow wealthy Core nations to subsidize their revival while the Periphery drowns in loan conditions that deepen dependency.", answer: "Structuralism", explanation: "Core-Periphery analysis of international financial architecture — structural inequality reproduced through institutions." },
+    // ── EXAM tier: subtle, multi-layered — requires precise analytical thinking ──
+    { tier: 'exam', quote: "Russia's veto of the Syria resolution demonstrated that the Security Council is ultimately a tool for great powers to protect their geopolitical allies, not to enforce accountability.", answer: "Realism", explanation: "The P5 veto as protection of national interest in an anarchic system — institutional structures serve power, not justice." },
+    { tier: 'exam', quote: "The ICC's prosecution of African leaders while ignoring Western war crimes reveals an institution captured by the very powers it claims to hold accountable.", answer: "Postcolonialism", explanation: "Selective justice revealing Western double standards and neo-colonial power dynamics within international institutions." },
+    { tier: 'exam', quote: "The pandemic showed that states which invested in public health infrastructure and multilateral coordination (like New Zealand) outperformed those that went alone.", answer: "Liberalism", explanation: "Cooperation + institutional investment producing better outcomes = Liberal faith in collective action and public goods." },
+    { tier: 'exam', quote: "Bangladesh's garment workers earn $95/month producing fast fashion for Western consumers — globalization has not lifted all boats, it has deepened the exploitation of cheap labour.", answer: "Structuralism", explanation: "Global value chain exploitation, Core consuming Periphery labour — Structuralist critique of unequal globalisation." },
+    { tier: 'exam', quote: "Amazon's warehouse workers generate billions in shareholder profit while relying on food stamps — the contradiction of capitalism is that it creates immense wealth and immense poverty simultaneously.", answer: "Marxism", explanation: "Surplus value extraction, contradiction between capital and labour — classic Marxist political economy." },
+    { tier: 'exam', quote: "Saudi Arabia's appointment of women to the Shura Council is less about empowerment and more about performing modernity for Western audiences — the patriarchal structure of decision-making remains intact.", answer: "Feminism", explanation: "Performative gender inclusion without structural power shift — Feminist critique of tokenism vs real empowerment." },
+    { tier: 'exam', quote: "NATO's eastward expansion isn't just a military alliance growing — it is reshaping how Eastern European states see themselves, choosing 'European identity' over post-Soviet ties.", answer: "Constructivism", explanation: "Alliance expansion as identity transformation — states changing who they are, not just what they do." },
+    { tier: 'exam', quote: "India's refusal to condemn Russia at the UN is not fence-sitting — it is the rational calculation of a rising power that benefits from maintaining multiple strategic partnerships simultaneously.", answer: "Realism", explanation: "Strategic hedging + rational interest maximisation — India as a realist actor keeping options open." },
+    { tier: 'exam', quote: "The global food crisis is not a production problem — the world produces enough for 10 billion. It is a distribution problem created by commodity speculation and trade rules that favour agribusiness.", answer: "Marxism", explanation: "Capitalist distribution failure + commodity speculation = Marxist analysis of market-created scarcity." },
+    { tier: 'exam', quote: "France's insistence on a permanent UNSC seat while blocking African representation reveals that 'rules-based order' is code for 'rules we wrote and benefit from.'", answer: "Postcolonialism", explanation: "Institutional gatekeeping by former colonial powers — Postcolonial critique of who gets to define 'order.'" },
+    { tier: 'exam', quote: "The concept of 'security' has been deliberately expanded by states to include immigration, terrorism, and cyberspace — each expansion justifies new forms of surveillance and control.", answer: "Constructivism", explanation: "Securitisation theory — expanding the definition of 'threat' through discourse to justify state power (Copenhagen School)." },
+    { tier: 'exam', quote: "In conflict zones from DRC to Myanmar, rape is used as a systematic weapon of war — yet international humanitarian law treats sexual violence as a lesser crime than killing.", answer: "Feminism", explanation: "Gendered hierarchy in international law — Feminist critique of how violence against women is deprioritised." },
+    { tier: 'exam', quote: "China's AIIB offers developing states an alternative to the IMF without the conditionality strings — but the question is whether it replaces Western-led dependency with Chinese-led dependency.", answer: "Structuralism", explanation: "New donor ≠ no dependency — Structuralist question of whether the Core-Periphery pattern merely shifts rather than dissolves." },
+    { tier: 'exam', quote: "The European Green Deal subsidises European industry while imposing carbon border taxes on developing nations still reliant on fossil fuels — it is free trade for the rich and protectionism dressed as environmentalism.", answer: "Marxism", explanation: "Green protectionism serving Core capital interests while constraining Periphery development — Marxist critique of green capitalism." },
 ];
 
 const SOURCE_LAB_ITEMS = [
@@ -4628,78 +5010,152 @@ const FlashcardDrillStation = ({ onKnownChange }) => {
     );
 };
 
-const TheoryLensMatcherStation = ({ onScoreChange }) => {
+const TheoryQuickFire = ({ onScoreChange }) => {
+    const [tier, setTier] = useState(null);
+    const [items, setItems] = useState([]);
     const [idx, setIdx] = useState(0);
     const [selected, setSelected] = useState(null);
     const [revealed, setRevealed] = useState(false);
     const [score, setScore] = useState({ correct: 0, total: 0 });
-
-    const q = THEORY_QUOTES[idx];
+    const [streak, setStreak] = useState(0);
+    const [bestStreak, setBestStreak] = useState(0);
+    const [timer, setTimer] = useState(15);
+    const [timerActive, setTimerActive] = useState(false);
+    const [theoryStats, setTheoryStats] = useState({});
+    const [finished, setFinished] = useState(false);
     const theories = Object.keys(IR_THEORIES);
-
+    const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+    const startTier = (t) => {
+        const pool = THEORY_DRILL_ITEMS.filter(q => q.tier === t);
+        setItems(shuffle(pool)); setTier(t); setIdx(0); setSelected(null); setRevealed(false);
+        setScore({ correct: 0, total: 0 }); setStreak(0); setBestStreak(0); setTheoryStats({}); setFinished(false);
+        setTimer(t === 'exam' ? 12 : t === 'advanced' ? 15 : 20); setTimerActive(true);
+    };
+    useEffect(() => {
+        if (!timerActive || revealed || finished) return;
+        if (timer <= 0) {
+            setRevealed(true); setTimerActive(false); setStreak(0);
+            const q = items[idx];
+            if (q) {
+                const ns = { correct: score.correct, total: score.total + 1 }; setScore(ns); onScoreChange(ns);
+                setTheoryStats(p => { const k = q.answer; const s = p[k] || { correct: 0, total: 0 }; return { ...p, [k]: { correct: s.correct, total: s.total + 1 } }; });
+            }
+            return;
+        }
+        const iv = setInterval(() => setTimer(t => t - 1), 1000);
+        return () => clearInterval(iv);
+    }, [timer, timerActive, revealed, finished, idx, items, score, onScoreChange]);
     const handle = (theory) => {
-        if (revealed) return;
-        setSelected(theory);
-        setRevealed(true);
-        const isCorrect = theory === q.answer;
-        const newScore = { correct: score.correct + (isCorrect ? 1 : 0), total: score.total + 1 };
-        setScore(newScore);
-        onScoreChange(newScore);
+        if (revealed || finished) return;
+        setSelected(theory); setRevealed(true); setTimerActive(false);
+        const q = items[idx]; const isCorrect = theory === q.answer;
+        const ns = { correct: score.correct + (isCorrect ? 1 : 0), total: score.total + 1 }; setScore(ns); onScoreChange(ns);
+        if (isCorrect) { const ns2 = streak + 1; setStreak(ns2); if (ns2 > bestStreak) setBestStreak(ns2); } else { setStreak(0); }
+        setTheoryStats(p => { const k = q.answer; const s = p[k] || { correct: 0, total: 0 }; return { ...p, [k]: { correct: s.correct + (isCorrect ? 1 : 0), total: s.total + 1 } }; });
     };
-
     const next = () => {
-        if (idx < THEORY_QUOTES.length - 1) { setIdx(idx + 1); }
-        else { setIdx(0); }
-        setSelected(null);
-        setRevealed(false);
+        if (idx < items.length - 1) {
+            setIdx(idx + 1); setSelected(null); setRevealed(false);
+            setTimer(tier === 'exam' ? 12 : tier === 'advanced' ? 15 : 20); setTimerActive(true);
+        } else { setFinished(true); setTimerActive(false); }
     };
-
     const accuracy = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
-
-    return (
+    const q = items[idx];
+    const tierCfg = { basic: { label: '\u{1F7E2} Basic', desc: 'Clear theory signals', color: '#22c55e', bg: 'bg-emerald-500/10 border-emerald-500/30' }, advanced: { label: '\u{1F7E1} Advanced', desc: 'Requires deeper analysis', color: '#eab308', bg: 'bg-yellow-500/10 border-yellow-500/30' }, exam: { label: '\u{1F534} IB Exam Level', desc: 'Subtle & multi-layered', color: '#ef4444', bg: 'bg-red-500/10 border-red-500/30' } };
+    if (!tier) return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex justify-between items-center flex-wrap gap-2">
-                <p className="text-xs text-gray-500">Quote {idx + 1} of {THEORY_QUOTES.length}</p>
-                <p className="text-xs font-bold text-blue-400">Accuracy: <span className="text-white">{accuracy}%</span> ({score.correct}/{score.total})</p>
+            <div className="text-center mb-6">
+                <h3 className="text-2xl font-black text-white mb-2">{'\u26A1'} Theory Quick-Fire</h3>
+                <p className="text-gray-400 text-sm">Match arguments to IR theories under time pressure. Pick your difficulty.</p>
             </div>
-
+            <div className="grid gap-4 sm:grid-cols-3">
+                {Object.entries(tierCfg).map(([key, cfg]) => {
+                    const count = THEORY_DRILL_ITEMS.filter(q2 => q2.tier === key).length;
+                    return (<button key={key} onClick={() => startTier(key)} className={`p-6 rounded-2xl border-2 text-left transition-all hover:scale-[1.03] hover:shadow-lg ${cfg.bg}`}>
+                        <p className="text-lg font-black mb-1" style={{ color: cfg.color }}>{cfg.label}</p>
+                        <p className="text-gray-400 text-xs mb-3">{cfg.desc}</p>
+                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">{count} questions {'\u2022'} {key === 'exam' ? '12s' : key === 'advanced' ? '15s' : '20s'} per question</p>
+                    </button>);
+                })}
+            </div>
+        </div>
+    );
+    if (finished) {
+        const grade = accuracy >= 90 ? { label: 'Level 7 Scholar \u{1F3C6}', color: '#fbbf24' } : accuracy >= 70 ? { label: 'Solid Analyst \u{1F4AA}', color: '#22c55e' } : accuracy >= 50 ? { label: 'Getting There \u{1F4C8}', color: '#3b82f6' } : { label: 'Keep Practising \u{1F504}', color: '#ef4444' };
+        return (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="text-center p-8 rounded-2xl border border-white/10 bg-white/5">
+                    <p className="text-3xl font-black mb-1" style={{ color: grade.color }}>{grade.label}</p>
+                    <p className="text-5xl font-black text-white my-4">{accuracy}%</p>
+                    <p className="text-gray-400 text-sm">{score.correct}/{score.total} correct {'\u2022'} Best streak: {bestStreak} {'\u{1F525}'}</p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-2">Tier: {tierCfg[tier].label}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-4">Theory Accuracy Breakdown</p>
+                    <div className="space-y-2">
+                        {theories.map(t => { const s = theoryStats[t]; if (!s) return null; const pct = Math.round((s.correct / s.total) * 100); return (
+                            <div key={t} className="flex items-center gap-3">
+                                <span className="text-xs font-bold w-28 text-gray-300 truncate">{t}</span>
+                                <div className="flex-1 h-4 rounded-full bg-white/5 overflow-hidden"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: IR_THEORIES[t].color }}></div></div>
+                                <span className="text-xs font-bold w-12 text-right" style={{ color: pct >= 70 ? '#34d399' : pct >= 50 ? '#fbbf24' : '#f87171' }}>{pct}%</span>
+                            </div>); })}
+                    </div>
+                </div>
+                <div className="flex gap-3 justify-center">
+                    <button onClick={() => startTier(tier)} className="px-6 py-2.5 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white text-sm transition-all">Retry {tierCfg[tier].label}</button>
+                    <button onClick={() => setTier(null)} className="px-6 py-2.5 rounded-xl font-bold bg-white/10 hover:bg-white/20 text-white text-sm transition-all">Change Tier</button>
+                </div>
+            </div>
+        );
+    }
+    const timerColor = timer <= 3 ? '#ef4444' : timer <= 7 ? '#eab308' : '#22c55e';
+    const timerLimit = tier === 'exam' ? 12 : tier === 'advanced' ? 15 : 20;
+    const timerPct = (timer / timerLimit) * 100;
+    return (
+        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-between items-center flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                    <button onClick={() => setTier(null)} className="text-gray-500 hover:text-white text-xs transition-all">{'\u2190'} Back</button>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ color: tierCfg[tier].color, backgroundColor: tierCfg[tier].color + '20' }}>{tierCfg[tier].label}</span>
+                    <p className="text-xs text-gray-500">Q{idx + 1}/{items.length}</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    {streak >= 2 && <span className="text-sm font-black animate-pulse" style={{ color: '#ff6b35' }}>{'\u{1F525}'} {streak}</span>}
+                    <p className="text-xs font-bold text-blue-400">Accuracy: <span className="text-white">{accuracy}%</span> ({score.correct}/{score.total})</p>
+                </div>
+            </div>
+            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full transition-all duration-1000 ease-linear" style={{ width: `${timerPct}%`, backgroundColor: timerColor }}></div></div>
+            <div className="text-center"><span className="text-2xl font-black tabular-nums" style={{ color: timerColor }}>{timer}s</span></div>
             <div className="p-6 bg-white/5 border border-white/10 rounded-2xl">
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-4">Match this argument to the correct IR theory</p>
                 <p className="text-lg font-medium text-gray-100 leading-relaxed italic">"{q.quote}"</p>
             </div>
-
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                 {theories.map(t => {
-                    const isSelected = selected === t;
-                    const isCorrect = t === q.answer;
+                    const isSelected = selected === t; const isCorrect = t === q.answer;
                     let cls = 'p-3 rounded-xl border-2 font-bold text-sm text-center cursor-pointer transition-all ';
                     if (!revealed) cls += 'border-white/10 text-gray-400 hover:border-blue-500/50 hover:text-white hover:bg-white/5';
                     else if (isCorrect) cls += 'border-emerald-500 bg-emerald-500/20 text-emerald-300 scale-105';
                     else if (isSelected) cls += 'border-red-500 bg-red-500/10 text-red-400';
                     else cls += 'border-white/5 text-gray-600 opacity-40';
-                    return (
-                        <button key={t} onClick={() => handle(t)} className={cls}
-                            style={{ borderLeftColor: revealed && isCorrect ? IR_THEORIES[t].color : undefined }}>
-                            {t}
-                        </button>
-                    );
+                    return (<button key={t} onClick={() => handle(t)} className={cls} style={{ borderLeftColor: revealed && isCorrect ? IR_THEORIES[t].color : undefined }}>{t}</button>);
                 })}
             </div>
-
             {revealed && (
-                <div className={`p-4 rounded-xl border animate-in zoom-in-95 duration-300 ${selected === q.answer ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-red-900/20 border-red-500/30'}`}>
-                    <p className="font-black mb-1 text-sm" style={{ color: selected === q.answer ? '#34d399' : '#f87171' }}>
-                        {selected === q.answer ? '&#10003; Correct!' : `\u2717 The answer is ${q.answer}`}
+                <div className={`p-4 rounded-xl border animate-in zoom-in-95 duration-300 ${selected === q.answer ? 'bg-emerald-900/20 border-emerald-500/30' : timer <= 0 && !selected ? 'bg-amber-900/20 border-amber-500/30' : 'bg-red-900/20 border-red-500/30'}`}>
+                    <p className="font-black mb-1 text-sm" style={{ color: selected === q.answer ? '#34d399' : timer <= 0 && !selected ? '#fbbf24' : '#f87171' }}>
+                        {selected === q.answer ? `\u2713 Correct!${streak >= 3 ? ' \u{1F525}\u{1F525}\u{1F525}' : streak >= 2 ? ' \u{1F525}' : ''}` : timer <= 0 && !selected ? `\u23F0 Time's up! The answer is ${q.answer}` : `\u2717 The answer is ${q.answer}`}
                     </p>
                     <p className="text-gray-300 text-xs leading-relaxed">{q.explanation}</p>
                     <button onClick={next} className="mt-3 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all">
-                        {idx < THEORY_QUOTES.length - 1 ? 'Next Quote \u2192' : 'Restart \u2192'}
+                        {idx < items.length - 1 ? 'Next \u2192' : 'See Results \u2192'}
                     </button>
                 </div>
             )}
         </div>
     );
 };
+
 
 const CaseSpeedRoundStation = ({ onHighScore }) => {
     const SPEED_CASES = [
@@ -4916,9 +5372,28 @@ const SourceLabStation = () => {
     const [srcIdx, setSrcIdx] = useState(0);
     const [responses, setResponses] = useState({ origin: '', purpose: '', value: '', limitation: '' });
     const [submitted, setSubmitted] = useState(false);
+    const [aiScore, setAiScore] = useState(null);
+    const [scoring, setScoring] = useState(false);
 
     const src = SOURCE_LAB_ITEMS[srcIdx];
-    const changeSource = (i) => { setSrcIdx(i); setResponses({ origin: '', purpose: '', value: '', limitation: '' }); setSubmitted(false); };
+    const changeSource = (i) => { setSrcIdx(i); setResponses({ origin: '', purpose: '', value: '', limitation: '' }); setSubmitted(false); setAiScore(null); };
+
+    const getAiScore = async () => {
+        setScoring(true); setAiScore(null);
+        try {
+            const studentAnalysis = `Origin: ${responses.origin}\nPurpose: ${responses.purpose}\nValue: ${responses.value}\nLimitation: ${responses.limitation}`;
+            const modelAnalysis = `Origin: ${src.modelOPVL.origin}\nPurpose: ${src.modelOPVL.purpose}\nValue: ${src.modelOPVL.value}\nLimitation: ${src.modelOPVL.limitation}`;
+            const res = await geminiRetryFetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
+                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `You are an IB Global Politics Paper 1 examiner. A student analysed the source "${src.title}" using OPVL.\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nMODEL ANALYSIS:\n${modelAnalysis}\n\nScore each OPVL element 1-4 (1=basic, 2=developing, 3=proficient, 4=exemplary) by comparing depth and accuracy to the model. Respond in EXACT JSON:\n{"scores":{"origin":2,"purpose":3,"value":2,"limitation":1},"overall_band":"3-4","strengths":["..."],"improvements":["..."],"examiner_tip":"One specific tip to elevate this analysis."}` }] }] }) }
+            );
+            const data = await res.json();
+            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const jsonMatch = raw.match(/\{[\s\S]*?\}/);
+            if (jsonMatch) setAiScore(JSON.parse(jsonMatch[0]));
+        } catch (e) { console.error(e); }
+        setScoring(false);
+    };
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -4979,12 +5454,67 @@ const SourceLabStation = () => {
                                 <p className="text-sm text-gray-300 leading-relaxed">{responses[key] || <span className="italic text-gray-600">No response</span>}</p>
                             </div>
                             <div className="p-4 bg-purple-900/20 border border-purple-500/20 rounded-xl">
-                                <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2">Model {label}</p>
+                                <div className="flex justify-between items-start">
+                                    <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2">Model {label}</p>
+                                    {aiScore?.scores?.[key] && (
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${aiScore.scores[key] >= 3 ? 'bg-emerald-500/20 text-emerald-400' : aiScore.scores[key] >= 2 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                                            {aiScore.scores[key]}/4
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-sm text-gray-300 leading-relaxed">{src.modelOPVL[key]}</p>
                             </div>
                         </div>
                     ))}
-                    <button onClick={() => setSubmitted(false)} className="px-4 py-2 rounded-lg font-bold text-sm border border-white/10 text-gray-400 hover:text-white transition-all">&larr; Edit My Responses</button>
+                    <div className="flex gap-3 flex-wrap">
+                        <button onClick={() => { setSubmitted(false); setAiScore(null); }} className="px-4 py-2 rounded-lg font-bold text-sm border border-white/10 text-gray-400 hover:text-white transition-all">&larr; Edit My Responses</button>
+                        <button onClick={getAiScore} disabled={scoring}
+                            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${scoring ? 'bg-gray-600 text-gray-400' : 'bg-purple-600 hover:bg-purple-500 text-white'}`}>
+                            {scoring ? 'Scoring...' : aiScore ? 'Re-Score' : '\u{1F916} AI Score My Analysis'}
+                        </button>
+                    </div>
+                    {aiScore && (
+                        <div className="p-5 rounded-xl border border-purple-500/30 bg-purple-500/5 animate-in zoom-in-95 duration-300 space-y-3">
+                            <div className="flex items-center gap-3">
+                                <span className="text-3xl font-black" style={{ color: aiScore.overall_band?.startsWith('6') || aiScore.overall_band?.startsWith('7') ? '#22c55e' : aiScore.overall_band?.startsWith('4') || aiScore.overall_band?.startsWith('5') ? '#eab308' : '#ef4444' }}>
+                                    Band {aiScore.overall_band}
+                                </span>
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Paper 1 OPVL Quality</span>
+                            </div>
+                            {/* OPVL Score Bars */}
+                            <div className="grid grid-cols-4 gap-2">
+                                {['origin', 'purpose', 'value', 'limitation'].map(k => {
+                                    const s = aiScore.scores?.[k] || 0;
+                                    const color = s >= 3 ? '#22c55e' : s >= 2 ? '#eab308' : '#ef4444';
+                                    return (
+                                        <div key={k} className="text-center">
+                                            <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">{k.charAt(0).toUpperCase()}</p>
+                                            <div className="h-2 rounded-full bg-white/10 overflow-hidden"><div className="h-full rounded-full transition-all duration-500" style={{ width: `${(s / 4) * 100}%`, backgroundColor: color }}></div></div>
+                                            <p className="text-xs font-bold mt-1" style={{ color }}>{s}/4</p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            {aiScore.strengths && (
+                                <div>
+                                    <p className="text-emerald-400 text-xs font-bold mb-1">{'\u2713'} Strengths</p>
+                                    {aiScore.strengths.map((s, i) => <p key={i} className="text-gray-300 text-xs ml-3">{'\u2022'} {s}</p>)}
+                                </div>
+                            )}
+                            {aiScore.improvements && (
+                                <div>
+                                    <p className="text-amber-400 text-xs font-bold mb-1">{'\u{1F4C8}'} To Improve</p>
+                                    {aiScore.improvements.map((s, i) => <p key={i} className="text-gray-300 text-xs ml-3">{'\u2022'} {s}</p>)}
+                                </div>
+                            )}
+                            {aiScore.examiner_tip && (
+                                <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                                    <p className="text-purple-300 text-xs font-bold mb-1">{'\u{1F4A1}'} Examiner Tip</p>
+                                    <p className="text-gray-300 text-xs italic">{aiScore.examiner_tip}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -4999,7 +5529,7 @@ const OpsRoom = () => {
 
     const stations = [
         { id: 'flashcard', label: '\ud83c\udca3 Flashcard Drill', desc: '23 IB concepts \u2014 flip & rate' },
-        { id: 'theory', label: '\ud83d\udd2c Theory Matcher', desc: 'Match quotes to all 7 IR theories' },
+        { id: 'theory', label: '\u26A1 Theory Quick-Fire', desc: 'Timed drills across 3 difficulty tiers' },
         { id: 'speed', label: '\u26a1 Speed Round', desc: '60-second case study recall' },
         { id: 'source', label: '\ud83d\udcc4 Source Lab', desc: 'Paper 1 OPVL annotation' },
         { id: 'bifurcation', label: '\u2696\ufe0f Bifurcation Drill', desc: 'Support / Challenge sorting' },
@@ -5044,7 +5574,7 @@ const OpsRoom = () => {
 
             <div>
                 {station === 'flashcard' && <FlashcardDrillStation onKnownChange={setFlashcardKnown} />}
-                {station === 'theory' && <TheoryLensMatcherStation onScoreChange={setTheoryScore} />}
+                {station === 'theory' && <TheoryQuickFire onScoreChange={setTheoryScore} />}
                 {station === 'speed' && <CaseSpeedRoundStation onHighScore={setSpeedHighScore} />}
                 {station === 'source' && <SourceLabStation />}
                 {station === 'bifurcation' && <DrillMode />}
