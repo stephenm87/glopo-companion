@@ -89,18 +89,19 @@ CASE B: "${caseB}"
 Recent coverage:
 ${snippetsB || 'No articles found — use your knowledge.'}
 
+IMPORTANT: In every similarity and difference, explicitly name both case studies by name — never write "Both" or "each case" without specifying which cases.
+For theory lenses, choose ONLY the theories that genuinely illuminate each case from this list: Realism, Liberalism, Constructivism, Marxism, Feminism, Post-colonialism. Include between 2 and 5 theories — only those truly applicable, not all of them.
+
 Return JSON:
 {
-  "similarities": ["3 key similarities between the two cases"],
-  "differences": ["3 key differences"],
+  "similarities": ["3 key similarities, each explicitly naming both ${caseA} and ${caseB}"],
+  "differences": ["3 key differences, each explicitly naming both ${caseA} and ${caseB}"],
   "theoryLenses": [
-    {"theory": "Realism", "applicationA": "how it applies to Case A", "applicationB": "how it applies to Case B"},
-    {"theory": "Liberalism", "applicationA": "...", "applicationB": "..."},
-    {"theory": "Constructivism", "applicationA": "...", "applicationB": "..."}
+    {"theory": "TheoryName", "applicationA": "How it applies to ${caseA} (1-2 sentences)", "applicationB": "How it applies to ${caseB} (1-2 sentences)"}
   ],
   "ibConcepts": ["3-4 IB concepts that connect both cases with brief explanation"],
   "examArgument": "A Band 7-level thesis statement comparing both cases (2-3 sentences)",
-  "perspectiveSummary": "Brief summary of how different sources frame each case differently (2-3 sentences)"
+  "perspectiveSummary": "Provide a detailed 4-6 sentence analysis of how different actors, governments, IGOs, NGOs, and media sources frame each case differently. Name specific actors (e.g., 'the US State Department frames...', 'Al Jazeera emphasizes...', 'the UN Human Rights Council argues...'). Explain how these competing narratives shape public understanding and policy responses for both ${caseA} and ${caseB}."
 }`;
 
         const gemRes = await callGeminiWithRetry(
