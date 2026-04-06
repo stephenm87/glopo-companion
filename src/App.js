@@ -3442,9 +3442,6 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
         setImageError(null);
         setImageResult(null);
 
-        // Large files (>1MB) bypass the Netlify function (26s limit) and go direct to Gemini
-        const isLargeFile = file.size > 1 * 1024 * 1024;
-
 
         // Show preview
         const reader = new FileReader();
@@ -3500,6 +3497,10 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                     return data.key;
                 };
 
+                // Always go direct to Gemini API — bypasses the 26s Netlify function ceiling
+                // that was causing "Fetch is aborted" timeouts on vision requests.
+                // Uses gemini-2.5-pro for highest-quality OCR + examiner analysis.
+                const VISION_TIMEOUT_MS = 90000; // 90s — generous for Pro vision
                 const runDirectApi = async (key) => {
                     const body = {
                         contents: [{
@@ -3509,45 +3510,51 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                             ]
                         }]
                     };
-                    const gemRes = await geminiRetryFetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${key}`,
-                        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }
-                    );
-                    const gemData = await gemRes.json();
-                    if (!gemRes.ok) throw new Error(gemData.error?.message || `Gemini API error ${gemRes.status}`);
-                    return gemData.candidates?.[0]?.content?.parts?.[0]?.text || 'No feedback returned.';
+                    // Retry loop with fresh AbortSignal per attempt (so timeout resets on each retry)
+                    const maxRetries = 2;
+                    let lastError;
+                    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                        try {
+                            const controller = new AbortController();
+                            const timeoutId = setTimeout(() => controller.abort(), VISION_TIMEOUT_MS);
+                            const gemRes = await fetch(
+                                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${key}`,
+                                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal }
+                            );
+                            clearTimeout(timeoutId);
+                            if (gemRes.ok) {
+                                const gemData = await gemRes.json();
+                                return gemData.candidates?.[0]?.content?.parts?.[0]?.text || 'No feedback returned.';
+                            }
+                            if ([429, 503].includes(gemRes.status) && attempt < maxRetries) {
+                                const delay = 2000 * Math.pow(2, attempt);
+                                console.log(`[vision-retry] ${gemRes.status} — retrying in ${delay}ms (${attempt + 1}/${maxRetries})`);
+                                await new Promise(r => setTimeout(r, delay));
+                                continue;
+                            }
+                            const gemData = await gemRes.json();
+                            throw new Error(gemData.error?.message || `Gemini API error ${gemRes.status}`);
+                        } catch (e) {
+                            lastError = e;
+                            if (e.name === 'AbortError') throw new Error('Vision analysis timed out. Please try a smaller or clearer image.');
+                            if (attempt === maxRetries) throw e;
+                        }
+                    }
+                    throw lastError;
                 };
 
-                if (isLargeFile || isLocalDev) {
-                    // Large file OR local dev: go direct to Gemini — no 26s Netlify ceiling
-                    const key = await getApiKey();
-                    const result = await runDirectApi(key);
-                    setImageResult(result);
-                } else {
-                    // Small file on production: use Netlify function (Flash, fast)
-                    const response = await fetch('/.netlify/functions/analyze-image-essay', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ imageBase64: base64, mimeType, questionText: q.text, marks: q.marks || 15 }),
-                        signal: AbortSignal.timeout(30000)
-                    });
-                    if (response.ok) {
-                        const data = await response.json();
-                        setImageResult(data.analysis || 'No feedback returned.');
-                    } else {
-                        // Netlify function failed — try direct API
-                        const key = await getApiKey();
-                        const result = await runDirectApi(key);
-                        setImageResult(result);
-                    }
-                }
+                const key = await getApiKey();
+                const result = await runDirectApi(key);
+                setImageResult(result);
 
             } catch (err) {
                 const msg = err.message || '';
                 if (msg.includes('429') || msg.includes('quota') || msg.includes('Resource exhausted')) {
                     setImageError('The AI is currently busy (rate limit). Please wait 30 seconds and try again.');
+                } else if (msg.includes('timed out') || msg.includes('AbortError') || msg.includes('aborted')) {
+                    setImageError('Vision analysis timed out — the image may be too large or complex. Try a smaller/clearer photo and retry.');
                 } else if (msg.startsWith('Failed to analyse') || msg.startsWith('Analysis timed out')) {
-                    setImageError(msg); // already a clean message from the function
+                    setImageError(msg);
                 } else {
                     setImageError('Failed to analyse image: ' + msg);
                 }
@@ -3712,7 +3719,7 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                                         className="w-24 h-24 object-cover rounded-lg border border-amber-500/20 shrink-0"
                                     />
                                     <p className="text-[9px] text-gray-500 leading-relaxed pt-1">
-                                        Gemini is reading your handwriting and applying IB 2026 exam criteria. This may take 10–20 seconds.
+                                        Gemini is reading your handwriting and applying IB 2026 exam criteria. This may take 15–45 seconds.
                                     </p>
                                 </div>
                             )}
