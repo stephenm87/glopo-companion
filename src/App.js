@@ -479,13 +479,13 @@ const Button = ({ children, onClick, variant = "primary", className = "", disabl
 // --- Tab 1: Policy Engine ---
 
 // --- Gemini Retry Helper (client-side) ---
-// Retries on 429 / 503 with exponential backoff (1.5s → 3s → 6s)
-const geminiRetryFetch = async (url, fetchOptions, maxRetries = 3) => {
+// Retries on 429 / 503 with exponential backoff (1s → 2s)
+const geminiRetryFetch = async (url, fetchOptions, maxRetries = 2) => {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         const res = await fetch(url, fetchOptions);
         if (res.ok || ![429, 503].includes(res.status)) return res;
         if (attempt < maxRetries) {
-            const delay = 1500 * Math.pow(2, attempt);
+            const delay = 1000 * Math.pow(2, attempt);
             console.log(`[gemini-retry] ${res.status} — retrying in ${delay}ms (${attempt + 1}/${maxRetries})`);
             await new Promise(r => setTimeout(r, delay));
         } else {
@@ -5396,7 +5396,7 @@ const SourceLabStation = () => {
             );
             const data = await res.json();
             const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            const jsonMatch = raw.match(/\{[\s\S]*?\}/);
+            const jsonMatch = raw.match(/\{[\s\S]*\}/);
             if (jsonMatch) setAiScore(JSON.parse(jsonMatch[0]));
         } catch (e) { console.error(e); }
         setScoring(false);
