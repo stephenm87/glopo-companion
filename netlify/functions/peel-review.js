@@ -36,10 +36,9 @@ Rules:
             generationConfig: { response_mime_type: 'application/json' }
         };
 
-        const res = await callGeminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-            body
-        );
+        const primaryUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
+        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const res = await callGeminiWithRetry(primaryUrl, body, { fallbackUrl });
 
         if (!res.ok) {
             const err = await res.text();
