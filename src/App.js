@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 // Version: 1.0.3 - Restored React hooks import
 import { Shield, PenTool, Zap, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, BookOpen, MessageSquare, FileText, Clock, Search } from 'lucide-react';
 import { paper1Exams, paper2Exams, paper3Exams } from './examBank';
+import { AuthBadge, AuthModal, useAuth } from './AuthModal';
+import { supabase } from './supabase';
 
 // --- Global Data Constants ---
 const GLOSSARY_TERMS = ["Power", "Sovereignty", "Legitimacy", "Interdependence", "Human rights", "Justice", "Liberty", "Equality", "Development", "Sustainability", "Peace", "Conflict", "Violence", "Non-violence", "Globalization", "Inequality", "Borders", "Security", "Environment", "Health", "Poverty", "Identity", "Technology"];
@@ -843,6 +845,28 @@ const PolicyEngine = () => {
     const [issue, setIssue] = useState('');
     const [result, setResult] = useState(null);
 
+    // ── Persist policy inputs ──
+    useEffect(() => {
+        try {
+            const s = JSON.parse(localStorage.getItem('glopo-policy-engine') || '{}');
+            if (s.actor)     setActor(s.actor);
+            if (s.target)    setTarget(s.target);
+            if (s.mechanism) setMechanism(s.mechanism);
+            if (s.issue)     setIssue(s.issue);
+        } catch(e) {}
+    }, []);
+    useEffect(() => {
+        const val = { actor, target, mechanism, issue };
+        localStorage.setItem('glopo-policy-engine', JSON.stringify(val));
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user) return;
+            supabase.from('user_data').upsert(
+                { user_id: user.id, key: 'glopo-policy-engine', value: val },
+                { onConflict: 'user_id,key' }
+            );
+        });
+    }, [actor, target, mechanism, issue]);
+
     const THEORIES = [
         {
             name: 'Realism',
@@ -1109,6 +1133,27 @@ const CompareBuilder = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [expandedSection, setExpandedSection] = useState(new Set(['similarities']));
+
+    // ── Persist last comparison search ──
+    useEffect(() => {
+        try {
+            const s = JSON.parse(localStorage.getItem('glopo-compare-builder') || '{}');
+            if (s.searchA) setSearchA(s.searchA);
+            if (s.searchB) setSearchB(s.searchB);
+        } catch(e) {}
+    }, []);
+    useEffect(() => {
+        if (!searchA && !searchB) return;
+        const val = { searchA, searchB };
+        localStorage.setItem('glopo-compare-builder', JSON.stringify(val));
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user) return;
+            supabase.from('user_data').upsert(
+                { user_id: user.id, key: 'glopo-compare-builder', value: val },
+                { onConflict: 'user_id,key' }
+            );
+        });
+    }, [searchA, searchB]);
 
     const fetchComparison = async (caseAName, caseBName) => {
         setLoading(true); setError(''); setArticlesA([]); setArticlesB([]); setAnalysis(null);
@@ -2030,7 +2075,28 @@ const WritingStudio = () => {
         const [introReviewLoading, setIntroReviewLoading] = useState(false);
         const [studentIntro, setStudentIntro] = useState('');
         const [introReviewError, setIntroReviewError] = useState('');
-        const updateData = (key, val) => setData({ ...data, [key]: val });
+        const updateData = (key, val) => setData(prev => ({ ...prev, [key]: val }));
+
+        // ── Persist intro wizard data ──
+        useEffect(() => {
+            try {
+                const s = JSON.parse(localStorage.getItem('glopo-intro-wizard') || '{}');
+                if (s.data) setData(s.data);
+                if (s.studentIntro) setStudentIntro(s.studentIntro);
+                if (s.generatedIntro) setGeneratedIntro(s.generatedIntro);
+            } catch(e) {}
+        }, []);
+        useEffect(() => {
+            const val = { data, studentIntro, generatedIntro };
+            localStorage.setItem('glopo-intro-wizard', JSON.stringify(val));
+            supabase.auth.getUser().then(({ data: { user } }) => {
+                if (!user) return;
+                supabase.from('user_data').upsert(
+                    { user_id: user.id, key: 'glopo-intro-wizard', value: val },
+                    { onConflict: 'user_id,key' }
+                );
+            });
+        }, [data, studentIntro, generatedIntro]);
 
         const generateIntro = async () => {
             setStep(3);
@@ -3946,16 +4012,38 @@ const MockExamZone = () => {
     const [activeLab, setActiveLab] = useState(null); // { paper, qNum }
     const [analysis, setAnalysis] = useState({}); // { paper-qNum: feedback }
 
-    // Persistence Logic
+    // Persistence Logic — load from localStorage, then try to restore from cloud
     useEffect(() => {
         const saved = localStorage.getItem('glopo-practice-lab');
         if (saved) setUserAnswers(JSON.parse(saved));
+
+        // Pull from Supabase if signed in (overrides localStorage if cloud is populated)
+        supabase.auth.getUser().then(async ({ data: { user } }) => {
+            if (!user) return;
+            const { data } = await supabase
+                .from('user_data')
+                .select('value')
+                .eq('user_id', user.id)
+                .eq('key', 'glopo-practice-lab')
+                .single();
+            if (data?.value && Object.keys(data.value).length > 0) {
+                setUserAnswers(data.value);
+                localStorage.setItem('glopo-practice-lab', JSON.stringify(data.value));
+            }
+        });
     }, []);
 
     useEffect(() => {
-        if (Object.keys(userAnswers).length > 0) {
-            localStorage.setItem('glopo-practice-lab', JSON.stringify(userAnswers));
-        }
+        if (Object.keys(userAnswers).length === 0) return;
+        localStorage.setItem('glopo-practice-lab', JSON.stringify(userAnswers));
+        // Cloud autosave — fire-and-forget
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user) return;
+            supabase.from('user_data').upsert(
+                { user_id: user.id, key: 'glopo-practice-lab', value: userAnswers },
+                { onConflict: 'user_id,key' }
+            );
+        });
     }, [userAnswers]);
 
     const updateAnswer = (key, val) => {
@@ -5594,10 +5682,12 @@ const OpsRoom = () => {
 
 
 export default function App() {
+    const { user, showModal, openModal, closeModal } = useAuth();
     const [activeTab, setActiveTab] = useState('writing');
 
     return (
         <div className="min-h-screen bg-glopo-dark text-gray-100 p-4 md:p-8">
+            {showModal && <AuthModal onClose={closeModal} />}
             <GlossaryProvider />
             <div className="max-w-4xl mx-auto">
                 <header className="mb-12 text-center">
@@ -5617,6 +5707,9 @@ export default function App() {
                         🌐 Launch 2026 Command Center
                         <ChevronRight size={16} />
                     </a>
+                    <div className="mt-4">
+                        <AuthBadge user={user} onSignInClick={openModal} />
+                    </div>
                 </header>
 
                 <nav className="flex gap-2 mb-8 justify-start sm:justify-center overflow-x-auto pb-2 scrollbar-hide sm:flex-wrap">
