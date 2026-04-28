@@ -109,7 +109,7 @@ Return JSON:
 }`;
 
         const gemRes = await callGeminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
             {
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: { response_mime_type: 'application/json' }

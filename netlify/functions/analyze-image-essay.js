@@ -69,7 +69,7 @@ AO1: [Band 1/2/3] | AO2: [Band 1/2/3] | AO3: [Band 1/2/3] | AO4: [Band 1/2/3]`;
         };
 
         const res = await callGeminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
             requestBody
         );
 

@@ -1,7 +1,7 @@
 /**
  * gemini-retry.js — Shared retry wrapper for Gemini API calls.
  * Retries on 429 (rate limit) and 503 (overloaded) with exponential backoff.
- * Supports automatic model fallback (e.g. gemini-2.5-pro → gemini-2.0-flash).
+ * Supports automatic model fallback (e.g. gemini-2.5-pro → gemini-2.5-flash).
  */
 const fetch = (...args) => import('node-fetch').then(m => m.default(...args));
 

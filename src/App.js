@@ -589,7 +589,7 @@ const SolutionResearch = () => {
         else if (mode === 'draft') prompt = `You are an IB Global Politics senior examiner. Generate three tiered policy recommendation paragraphs.\n\nProblem: ${inputs.problem}\nActors: ${inputs.actors}\nMechanism: ${inputs.mechanism}\nRationale: ${inputs.rationale || 'N/A'}\nRisk: ${inputs.risk || 'N/A'}\nMitigation: ${inputs.mitigation || 'N/A'}\n\nReturn JSON: {"band34":{"label":"Band 3–4","description":"desc","text":"80-100 words"},"elevation1":["3-4 moves"],"band56":{"label":"Band 5–6","description":"desc","text":"120-150 words"},"elevation2":["3-4 moves"],"band7":{"label":"Band 7","description":"desc","text":"160-200 words"}}`;
 
         const resp = await geminiRetryFetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
             { method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { response_mime_type: 'application/json' } }) }
         );
@@ -1177,7 +1177,7 @@ const CompareBuilder = () => {
         if (!netlifyOk) {
             try {
                 const gemRes = await geminiRetryFetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
                     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `You are an IB Global Politics exam coach. Generate a structured comparative analysis of "${caseAName}" vs. "${caseBName}". IMPORTANT: In every similarity and difference, explicitly name both case studies by name — never write "Both" or "each case" without specifying which cases. For theory lenses, choose ONLY the theories that genuinely illuminate each case from this list: Realism, Liberalism, Constructivism, Marxism, Feminism, Post-colonialism. Include between 2 and 5 theories — only those truly applicable, not all of them. Return JSON:\n{"similarities":["3 key similarities, each explicitly naming both cases"],"differences":["3 key differences, each explicitly naming both cases"],"theoryLenses":[{"theory":"TheoryName","applicationA":"How it applies to ${caseAName} (1-2 sentences)","applicationB":"How it applies to ${caseBName} (1-2 sentences)"}],"ibConcepts":["3-4 IB key concepts connecting both"],"examArgument":"Band 7 comparative thesis statement (2-3 sentences)","perspectiveSummary":"Provide a detailed 4-6 sentence analysis of how different actors, governments, IGOs, NGOs, and media sources frame each case differently. Name specific actors (e.g., 'the US State Department frames...', 'Al Jazeera emphasizes...', 'the UN Human Rights Council argues...'). Explain how these competing narratives shape public understanding and policy responses for both ${caseAName} and ${caseBName}."}` }] }] }) }
                 );
                 const gemData = await gemRes.json();
@@ -1439,7 +1439,7 @@ const CommandTermDecoder = () => {
         setChecking(true); setCheckResult(null);
         try {
             const res = await geminiRetryFetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
                 { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `You are an IB Global Politics exam coach. A student wrote the following paragraph:\n\n"${checkText}"\n\nAnalyse which IB command term skill this paragraph actually demonstrates. Pick from: Define, Describe, Explain, Analyse, Compare, Evaluate, Discuss, Examine, Justify, Suggest.\n\nRespond in this EXACT JSON format:\n{"detected_skill":"[term]","confidence":"high/medium/low","explanation":"[1 sentence why]","upgrade_tip":"[1 sentence on how to elevate to the next skill level]"}` }] }] }) }
             );
             const data = await res.json();
@@ -5479,7 +5479,7 @@ const SourceLabStation = () => {
             const studentAnalysis = `Origin: ${responses.origin}\nPurpose: ${responses.purpose}\nValue: ${responses.value}\nLimitation: ${responses.limitation}`;
             const modelAnalysis = `Origin: ${src.modelOPVL.origin}\nPurpose: ${src.modelOPVL.purpose}\nValue: ${src.modelOPVL.value}\nLimitation: ${src.modelOPVL.limitation}`;
             const res = await geminiRetryFetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
                 { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `You are an IB Global Politics Paper 1 examiner. A student analysed the source "${src.title}" using OPVL.\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nMODEL ANALYSIS:\n${modelAnalysis}\n\nScore each OPVL element 1-4 (1=basic, 2=developing, 3=proficient, 4=exemplary) by comparing depth and accuracy to the model. Respond in EXACT JSON:\n{"scores":{"origin":2,"purpose":3,"value":2,"limitation":1},"overall_band":"3-4","strengths":["..."],"improvements":["..."],"examiner_tip":"One specific tip to elevate this analysis."}` }] }] }) }
             );
             const data = await res.json();
