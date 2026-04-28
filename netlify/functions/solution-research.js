@@ -1,6 +1,6 @@
 // Solution Research Bot — Gemini-powered step evaluation and research for P3 Q2
 // Supports per-step evaluation, research search, and tiered draft generation.
-const { callGeminiWithRetry } = require('./gemini-retry');
+const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -42,7 +42,7 @@ exports.handler = async (event) => {
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
             {
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { response_mime_type: 'application/json' }
+                generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
             }
         );
 
@@ -52,7 +52,7 @@ exports.handler = async (event) => {
         }
 
         const data = await res.json();
-        const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const raw = extractGeminiText(data, '{}');
         let parsed;
         try { parsed = JSON.parse(raw); } catch { return { statusCode: 500, body: JSON.stringify({ error: 'Failed to parse AI response' }) }; }
 

@@ -1,6 +1,6 @@
 // analyze-essay.js — Deep Critique for Mock Exam Zone
 // Uses native fetch (no SDK) to call Gemini REST API + optional Cloud NL API
-const { callGeminiWithRetry } = require('./gemini-retry');
+const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 
 // Cloud Natural Language API — extract entities + sentiment from essay
 async function analyzeWithNlApi(text, apiKey) {
@@ -93,7 +93,7 @@ Always identify how the 4 core concepts (Power, Sovereignty, Legitimacy, Interde
     }
 
     const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return extractGeminiText(data, '');
 }
 
 exports.handler = async (event) => {

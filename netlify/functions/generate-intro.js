@@ -1,6 +1,6 @@
 // generate-intro.js — Intro Builder Netlify function
 // Uses native fetch (no SDK) to avoid missing package issues on Netlify Functions
-const { callGeminiWithRetry } = require('./gemini-retry');
+const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
@@ -53,7 +53,7 @@ You must adapt your language, framing, and analytical tension to the SPECIFIC co
             throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
         }
         const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const text = extractGeminiText(data, '');
 
         return {
             statusCode: 200,

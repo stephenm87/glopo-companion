@@ -1,6 +1,6 @@
 // Comparative Case Study Research — Serper-powered multi-perspective article finder
 // Searches for 2-3 news/analysis articles per case study from different source types
-const { callGeminiWithRetry } = require('./gemini-retry');
+const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -112,14 +112,14 @@ Return JSON:
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
             {
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { response_mime_type: 'application/json' }
+                generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
             }
         );
 
         let analysis = null;
         if (gemRes.ok) {
             const gemData = await gemRes.json();
-            const raw = gemData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+            const raw = extractGeminiText(gemData, '{}');
             try { analysis = JSON.parse(raw); } catch { analysis = null; }
         }
 

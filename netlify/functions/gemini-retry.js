@@ -63,4 +63,18 @@ async function callGeminiWithRetry(url, body, options = {}) {
     }
 }
 
-module.exports = { callGeminiWithRetry };
+module.exports = { callGeminiWithRetry, extractGeminiText };
+
+/**
+ * Extracts the actual text from a Gemini API response, safely skipping
+ * thinking/thought parts that gemini-2.5-flash/pro models may include.
+ * @param {object} geminiJson - Parsed JSON response from Gemini API
+ * @param {string} [fallback=''] - Default if no text found
+ * @returns {string} The model's text response
+ */
+function extractGeminiText(geminiJson, fallback = '') {
+    const parts = geminiJson?.candidates?.[0]?.content?.parts || [];
+    // Prefer the first non-thought text part; fall back to any text part
+    const part = parts.find(p => p.text && !p.thought) || parts.find(p => p.text);
+    return part?.text || fallback;
+}

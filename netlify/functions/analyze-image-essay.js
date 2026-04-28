@@ -1,6 +1,6 @@
 // analyze-image-essay.js — Essay Vision Analysis via Gemini
 // Uses native fetch (no SDK) to avoid missing package issues on Netlify Functions
-const { callGeminiWithRetry } = require('./gemini-retry');
+const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
@@ -78,7 +78,7 @@ AO1: [Band 1/2/3] | AO2: [Band 1/2/3] | AO3: [Band 1/2/3] | AO4: [Band 1/2/3]`;
             throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
         }
         const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const text = extractGeminiText(data, '');
 
         return {
             statusCode: 200,

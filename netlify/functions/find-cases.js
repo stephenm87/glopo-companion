@@ -1,6 +1,6 @@
 // Case Finder — Gemini-powered IB case study matcher (server-side)
 // Updated: JSON output mode for reliable parsing + 5 new 2025-2026 cases
-const { callGeminiWithRetry } = require('./gemini-retry');
+const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 
 const CASE_POOL = [
     { name: 'South China Sea Dispute', concepts: 'Power, Sovereignty, Security', themes: 'sovereignty power realism maritime security China Philippines military conflict UNCLOS' },
@@ -44,7 +44,7 @@ exports.handler = async (event) => {
 
         const body = {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { response_mime_type: 'application/json' }
+            generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
         };
 
         const res = await callGeminiWithRetry(
@@ -58,7 +58,7 @@ exports.handler = async (event) => {
         }
 
         const data = await res.json();
-        const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+        const raw = extractGeminiText(data, '[]');
         const parsed = JSON.parse(raw); // JSON mode — no regex stripping needed
         const results = Array.isArray(parsed) ? parsed : parsed.results || [];
         const enriched = results.map(r => {
