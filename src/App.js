@@ -81,7 +81,9 @@ const GLOBAL_CASES = [
         theoryInsights: {
             Realism: "The South China Sea is a classic textbook case of Realism. China's 'Nine-Dash Line' and island reclamation represent a rational pursuit of national interest in an anarchic system. For realists, this is not a 'dispute' but a struggle for maritime supremacy and strategic depth. The involvement of the US (FOIA operations) highlights the 'Security Dilemma'—where one state's defensive buildup is seen as offensive by another.",
             Liberalism: "Liberals point to the 2016 Permanent Court of Arbitration ruling as the relevant framework. They argue that the dispute should be resolved through UNCLOS and international law rather than 'might makes right'. For a liberal, the tragedy here is the failure of regional institutions (ASEAN) to create a binding Code of Conduct that constrains the unilateral power of great states.",
-            Structuralism: "A structuralist analysis focuses on how China is now behaving like an established 'Core' power, asserting its right to control its regional 'Periphery'. The dispute isn't just about rocks; it's about who sets the rules for the global maritime commons—rules that were historically designed by Western core powers and are now being challenged by a rising Eastern core."
+            Structuralism: "A structuralist analysis focuses on how China is now behaving like an established 'Core' power, asserting its right to control its regional 'Periphery'. The dispute isn't just about rocks; it's about who sets the rules for the global maritime commons—rules that were historically designed by Western core powers and are now being challenged by a rising Eastern core.",
+            GreenTheory: "Green Theory exposes the ecological costs hidden beneath the sovereignty debate. China's island reclamation has destroyed over 160 sq km of coral reef — one of the most biodiverse marine ecosystems on Earth. The militarisation of these reefs represents the subordination of ecological interdependence to state power, treating shared natural commons as a strategic asset to be exploited rather than protected.",
+            CriticalSecurity: "Critical Security Studies reframes the SCS beyond state-centric naval competition. It asks: whose security matters? While great powers contest shipping lanes, 3.7 million fisherfolk in the Philippines, Vietnam, and Indonesia lose access to traditional fishing grounds. Their food security, livelihood, and daily survival are invisible in a realist framing that prioritises military balances."
         }
     },
     {
@@ -104,7 +106,9 @@ const GLOBAL_CASES = [
         theoryInsights: {
             Structuralism: "India's push for African Union membership in the G20 is a direct attempt to challenge the Core-Periphery hierarchy. From a structuralist view, the G7 represents the 'Core' that has historically dictated terms of development. By positioning itself as a leader of the 'Global South', India is trying to restructure the global governance framework to reduce peripheral dependency.",
             Liberalism: "For liberals, the inclusion of the AU in the G20 demonstrates the evolution of international institutions toward greater inclusivity. It shows that states can reform existing multilateral frameworks from within to improve global legitimacy and manage collective problems like debt and systemic poverty.",
-            Constructivism: "Constructivists would focus on the 'Voice of the Global South' narrative. India is actively constructing a new global identity—a 'civilizational state' that acts as a bridge. This narrative shift changes how states see their interests, moving from binary Cold War-era alignments to a more fluid, multipolar sense of shared identity."
+            Constructivism: "Constructivists would focus on the 'Voice of the Global South' narrative. India is actively constructing a new global identity—a 'civilizational state' that acts as a bridge. This narrative shift changes how states see their interests, moving from binary Cold War-era alignments to a more fluid, multipolar sense of shared identity.",
+            GreenTheory: "Green Theory asks whether G20 reform challenges the growth-centric development model or merely expands who benefits from it. India's presidency pushed for climate finance and renewable energy targets, but also championed fossil-fuel-dependent industrialisation. True ecological justice requires the Global South to leapfrog carbon-intensive development — not replicate the Core's destructive model.",
+            CriticalSecurity: "Critical Security Studies shifts the focus from G20 summit declarations to the lived realities of the 1.2 billion people in extreme poverty across the Global South. It asks: does AU membership at the G20 translate into food security in the Sahel? Debt restructuring into clean water in South Asia? If governance reform doesn't produce human security outcomes, it remains an elite exercise in institutional rearrangement."
         }
     },
     {
@@ -129,7 +133,9 @@ const GLOBAL_CASES = [
             Realism: "In Israel-Palestine, realists see a zero-sum struggle for land and security where state survival is the ultimate goal. The conflict is driven by the 'anarchy' of the regional system where no external power can enforce a two-state solution. Hard power (military force, barriers) is the primary currency, and security for one group is viewed as insecurity for the other.",
             Constructivism: "Constructivism is vital here: the conflict is sustained by deeply embedded, mutually exclusive identities. The narratives of 'Occupier' vs 'Defender' or 'Indigenous' vs 'Settler' are socially constructed and reinforced through education and media. Peace requires a fundamental 'identity shift' that moves beyond the historical narratives of trauma and exclusion.",
             Feminism: "A feminist lens highlights how the conflict is framed almost entirely in patriarchal, militarized terms. It asks: where are the women in the peace process, and how does the focus on 'border security' ignore the human security of families on both sides? Feminists argue that the masculine culture of statehood and military defense perpetuates the cycle of violence.",
-            Postcolonialism: "Postcolonialism frames this as the 'unfinished business' of the 20th-century mandates. It analyzes the power imbalance between a sovereign, recognized state and an occupied population as a continuation of colonial-era hierarchies. The focus is on self-determination and the dismantling of structural inequalities that mirror historical imperial patterns."
+            Postcolonialism: "Postcolonialism frames this as the 'unfinished business' of the 20th-century mandates. It analyzes the power imbalance between a sovereign, recognized state and an occupied population as a continuation of colonial-era hierarchies. The focus is on self-determination and the dismantling of structural inequalities that mirror historical imperial patterns.",
+            GreenTheory: "Green Theory highlights the environmental dimensions of occupation: Gaza's aquifer is 97% undrinkable due to over-extraction and contamination; olive groves — symbols of Palestinian identity and livelihood — are routinely destroyed for settlement expansion. Ecological destruction is not a side effect of the conflict but a tool of territorial control, revealing how environmental justice and political justice are inseparable.",
+            CriticalSecurity: "Critical Security Studies is perhaps the most illuminating lens for Israel-Palestine. Traditional security discourse frames the conflict as a state security problem (terrorism, rockets, borders). CSS asks: security for whom? While Israel's Iron Dome provides state security, 2.3 million Gazans lack clean water, electricity, and freedom of movement — the fundamental components of human security. Security for one group is structurally produced insecurity for the other."
         }
     },
     {
@@ -153,7 +159,9 @@ const GLOBAL_CASES = [
         theoryInsights: {
             Realism: "Realists view the BRI as 'Economic Statecraft' designed to create a Sino-centric order. By building infrastructure in 140+ countries, China is essentially creating a sphere of influence that rivals the traditional US-led system. For realists, the debt-trap narrative is a tool of geopolitical competition, where infrastructure is the new ammunition of power projection.",
             Marxism: "Marxism provides a powerful critique here: the BRI is an example of 'Spatial Fix'—where a state (China) must export excess capital and capacity to maintain profit rates. This isn't charity; it's the expansion of global capital that inevitably leads to the exploitation of labor in recipient states and the enrichment of a transnational elite.",
-            Postcolonialism: "A postcolonial lens flags the 'Hambantota' case as a warning of neo-colonialism. While China doesn't use standard Western military intervention, the 99-year lease on Sri Lankan territory mirrors the 'unequal treaties' of the colonial era. It highlights how states in the Global South are often forced to choose between underdevelopment and dependent development."
+            Postcolonialism: "A postcolonial lens flags the 'Hambantota' case as a warning of neo-colonialism. While China doesn't use standard Western military intervention, the 99-year lease on Sri Lankan territory mirrors the 'unequal treaties' of the colonial era. It highlights how states in the Global South are often forced to choose between underdevelopment and dependent development.",
+            GreenTheory: "Green Theory provides a devastating critique of the BRI's environmental record. Coal-fired power plants funded by BRI in Pakistan and Indonesia lock developing nations into carbon-intensive energy paths for decades. The ecological costs — deforestation for rail corridors, marine ecosystem damage from port construction — are externalised onto communities with no voice in the bilateral loan agreements.",
+            CriticalSecurity: "Critical Security Studies asks: who benefits from BRI infrastructure? While ports and railways may enhance state-level economic security, communities displaced by construction (Gwadar fishermen, Laotian farmers along the China-Laos Railway) experience a net loss of human security — loss of land, livelihood, and communal ties. BRI security is elite security, not people-centred security."
         }
     },
     {
@@ -176,7 +184,9 @@ const GLOBAL_CASES = [
         theoryInsights: {
             Liberalism: "A model case for Liberalism: Green subsidies represent the tension between trade liberalization and environmental collective action. The issue is whether global trade rules (the WTO framework) can evolve to support 'Green Industrial Policy' through institutional cooperation. It highlights how IGOs are essential for managing complex interdependence when domestic interests clash.",
             Realism: "Realists view the EU/US green subsidies (like the IRA) as 'Green Mercantilism'. This isn't primarily about the climate; it's about securing supply chains and dominance in the future energy transition. A realist sees this as a 'stretch' to the trade system where states use environmental justifications to protect their national industries and relative power.",
-            Structuralism: "Strictly structuralist: The WTO's subsidy rules allow the wealthy 'Core' (who have the fiscal space for subsidies) to grow while penalizing the 'Periphery' who lack the capital to compete. This reinforces a global hierarchy where the Global North dictates the terms of the 'Green Transition', potentially locking the Global South into continued dependency."
+            Structuralism: "Strictly structuralist: The WTO's subsidy rules allow the wealthy 'Core' (who have the fiscal space for subsidies) to grow while penalizing the 'Periphery' who lack the capital to compete. This reinforces a global hierarchy where the Global North dictates the terms of the 'Green Transition', potentially locking the Global South into continued dependency.",
+            GreenTheory: "Green Theory is the natural home for this case. It asks the fundamental question: can the ecological crisis be solved within the existing capitalist trade system? Green theorists would argue that subsidies merely shift the locus of exploitation — from fossil fuels to lithium mining, cobalt extraction, and rare earth processing — without challenging the growth paradigm that drives environmental destruction.",
+            CriticalSecurity: "Critical Security Studies reframes the green subsidy debate away from trade technicalities and toward the communities most affected. Who is made insecure by the IRA and CBAM? Workers in Chinese solar panel factories, cobalt miners in the DRC, and Pacific Island nations whose existence depends on the transition's speed. Their security is absent from the WTO dispute resolution framework."
         }
     },
     {
@@ -200,7 +210,9 @@ const GLOBAL_CASES = [
         theoryInsights: {
             Liberalism: "Liberals point to the 'Brussels Effect'—where regional regulations like GDPR become global standards. This demonstrates that institutional rules and legal frameworks can constrain even the most powerful transnational corporations (TNCs). It's a victory for the rule of law over unregulated market power, showing that democratic institutions still hold legitimacy in the digital age.",
             Marxism: "A Marxist analysis is blunt: Meta and the EU are two heads of the same capitalist coin. While they appear at odds, the EU's regulation is a 'protective' move for European capital against American digital dominance. The underlying exploitation of user data (capital accumulation via data extraction) remains unchallenged by either side.",
-            Postcolonialism: "Applying Postcolonialism here is a stretch, but it reveals 'Digital Colonialism'. Western TNCs extract data-wealth from the Global South while the rules of the digital road are set in Brussels or Washington. The lack of indigenous representation in these 'global' tech standards mirrors older imperial structures of information control."
+            Postcolonialism: "Applying Postcolonialism here is a stretch, but it reveals 'Digital Colonialism'. Western TNCs extract data-wealth from the Global South while the rules of the digital road are set in Brussels or Washington. The lack of indigenous representation in these 'global' tech standards mirrors older imperial structures of information control.",
+            GreenTheory: "Green Theory connects Big Tech's data centres to the ecological crisis. Meta's global server farms consume enormous energy and water resources, often located in regions facing water stress. The 'immaterial' digital economy has a deeply material environmental footprint that the GDPR and DSA framework entirely ignores — regulating data flows without addressing the ecological costs of the infrastructure that enables them.",
+            CriticalSecurity: "Critical Security Studies reframes the Meta/EU dispute around individual human security. Algorithmic manipulation, data breaches, and targeted disinformation campaigns don't just threaten 'state security' in the abstract — they undermine the psychological wellbeing, political autonomy, and daily safety of ordinary citizens. CSS asks: can you be 'secure' when an algorithm controls what you see and believe?"
         }
     },
     {
@@ -224,7 +236,9 @@ const GLOBAL_CASES = [
         theoryInsights: {
             Realism: "The Nigerian state's response to Boko Haram is a classic struggle for internal sovereignty and territorial integrity. For realists, the insurgency is a crisis of 'Hard Power' and state capacity. The external military support (US/France) is seen as a strategic necessity to maintain regional stability in an anarchic system where the state must have a monopoly on violence.",
             Feminism: "A feminist lens on Boko Haram is essential, specifically concerning the Chibok/Dapchi kidnappings and the use of gendered violence. It argues that the conflict cannot be understood through state security alone; it must be viewed through 'Human Security' and the specific targeting of women as a tool to destabilize social orders.",
-            Structuralism: "Structuralists point to the systemic marginalization of Northern Nigeria (the 'Periphery') by the Southern economic 'Core'. Boko Haram's rise is not just about ideology, but about the structural underdevelopment and lack of economic opportunities that make radicalization a rational response to systemic exclusion from the national wealth."
+            Structuralism: "Structuralists point to the systemic marginalization of Northern Nigeria (the 'Periphery') by the Southern economic 'Core'. Boko Haram's rise is not just about ideology, but about the structural underdevelopment and lack of economic opportunities that make radicalization a rational response to systemic exclusion from the national wealth.",
+            GreenTheory: "Green Theory connects Boko Haram's insurgency to environmental degradation. Lake Chad has shrunk by 90% since the 1960s, devastating the livelihoods of 30 million people in the basin. This ecological collapse — driven by climate change and unsustainable irrigation — fuels displacement, competition for resources, and recruitment into armed groups. Boko Haram is partly an ecological crisis expressed as political violence.",
+            CriticalSecurity: "Critical Security Studies is essential here. Nigeria's military-first counter-terrorism approach (Operation Lafiya Dole) has produced mass civilian casualties, arbitrary detention, and sexual violence by security forces. CSS asks: when the state's 'security' response creates more human insecurity than the insurgency itself, who is actually being secured? The answer reveals a security architecture designed to protect the state, not its people."
         }
     },
     {
@@ -247,7 +261,9 @@ const GLOBAL_CASES = [
         theoryInsights: {
             Structuralism: "COP28 is a battlefield of structural power. The 'Core' (fossil fuel producers) managed to retain significant influence over the 'Global Stocktake' text. From a structuralist view, the 'Loss and Damage' fund is a minor concession to the Periphery that doesn't actually challenge the global economic hierarchy that caused the climate crisis in the first place.",
             Liberalism: "For liberals, COP28 represents the best hope for collective action. Despite the oil presidency, the agreement to 'transition away' from fossil fuels is a landmark normative success of multilateralism. It proves that even the most difficult global problems can be managed through shared institutional frameworks and dialogue.",
-            Realism: "Realism offers a cynical but necessary view: The UAE's presidency was a rational move to ensure that the energy transition doesn't happen at the expense of their national interest. A realist sees climate negotiations as 'Geopolitics by other means,' where states compete for energy security and economic advantage under the guise of global cooperation."
+            Realism: "Realism offers a cynical but necessary view: The UAE's presidency was a rational move to ensure that the energy transition doesn't happen at the expense of their national interest. A realist sees climate negotiations as 'Geopolitics by other means,' where states compete for energy security and economic advantage under the guise of global cooperation.",
+            GreenTheory: "COP28 is the ultimate test case for Green Theory. The framework asks whether the UNFCCC process can ever deliver ecological justice when it operates within a capitalist growth model. Green theorists note the contradiction: a petrostate hosting climate talks, 2,456 fossil fuel lobbyists in attendance, and an outcome that says 'transition away' rather than 'phase out'. The system is designed to manage the crisis, not solve it.",
+            CriticalSecurity: "Critical Security Studies centres the existential insecurity of Small Island Developing States (SIDS). For Tuvalu, Kiribati, and the Marshall Islands, climate change is not an 'environmental challenge' — it is the erasure of their homeland, culture, and identity. CSS reveals how the COP framework prioritises the economic security of fossil fuel producers over the physical survival of the world's most vulnerable populations."
         }
     },
     {
@@ -271,7 +287,9 @@ const GLOBAL_CASES = [
         theoryInsights: {
             Realism: "The Arctic is a zero-sum frontier for Realism. NATO's 'Arctic Sentry' exercises and Russia's Northern Fleet expansion are rational responses to a new 'High North' security dilemma. Climate change isn't a shared challenge here; it's a competitive opener that allows states to project hard power into previously inaccessible territory.",
             Liberalism: "Liberals focus on the 'Arctic Council' as a fragile but necessary institutional buffer. They argue that Arctic governance should be defined by international law and cooperation on environmental research. For a liberal, the tragedy of the current militarization is that it undermines the 'Arctic Exceptionalism'—the idea that the region was once a zone of low tension.",
-            Constructivism: "Constructivists analyze the 'Arctic Identity' of states like China, who call themselves 'Near-Arctic States' to claim legitimacy in the region. This is about 'Constructing Interests'—the Arctic is not just a place, but a socially defined strategic arena where being an 'Arctic Stakeholder' is a status that must be recognized and performed."
+            Constructivism: "Constructivists analyze the 'Arctic Identity' of states like China, who call themselves 'Near-Arctic States' to claim legitimacy in the region. This is about 'Constructing Interests'—the Arctic is not just a place, but a socially defined strategic arena where being an 'Arctic Stakeholder' is a status that must be recognized and performed.",
+            GreenTheory: "The Arctic is Green Theory's most powerful case study. The same melting ice that signals planetary ecological crisis is treated as an economic opportunity — new shipping routes, oil extraction, and mineral access. Green theorists see the Arctic as the ultimate indictment of growth-based logic: environmental destruction literally creates new markets, proving that capitalism cannot self-correct against ecological collapse.",
+            CriticalSecurity: "Critical Security Studies centres Indigenous Arctic peoples — the Sami, Inuit, and Nenets — whose human security is directly threatened by both climate change and militarisation. Their traditional lands, food sources, and cultural practices are being destroyed by warming and simultaneously occupied by military infrastructure. Neither NATO nor Russia frames Arctic security in terms of Indigenous survival."
         }
     },
     {
@@ -295,7 +313,9 @@ const GLOBAL_CASES = [
         theoryInsights: {
             Realism: "In Myanmar, the military junta (Tatmadaw) views power through a lens of 'Internal Realism'—where the state's survival is synonymous with military control. Any election is merely a tool of 'Coercive Legitimacy' to maintain order in an internal anarchy. Outside actors (ASEAN/China) often prioritize stability over democracy, reflecting a realist acceptance of power-based rule.",
             Liberalism: "Liberalism in Myanmar is currently a project of resistance. The NUG (National Unity Government) uses the language of 'Universal Human Rights' and 'Rule of Law' to seek international recognition. For liberals, the failure of international institutions to intervene represents a crisis for the 'Responsibility to Protect' (R2P) norm.",
-            Structuralism: "A structuralist reading highlights how Myanmar's internal conflict is exacerbated by its role as a resource-rich 'Periphery' for regional 'Core' powers like China. The military junta survives by selling raw materials (gas, timber, jade), ensuring that global economic flows continue even while the local population suffers from structural violence and political exclusion."
+            Structuralism: "A structuralist reading highlights how Myanmar's internal conflict is exacerbated by its role as a resource-rich 'Periphery' for regional 'Core' powers like China. The military junta survives by selling raw materials (gas, timber, jade), ensuring that global economic flows continue even while the local population suffers from structural violence and political exclusion.",
+            GreenTheory: "Green Theory connects Myanmar's conflict to environmental exploitation. The Tatmadaw funds its military operations through illegal logging, jade mining, and fossil fuel extraction — all of which devastate Myanmar's ecosystems. The war economy is also an ecological crisis, as forest cover loss accelerates climate vulnerability for the very communities already displaced by violence.",
+            CriticalSecurity: "Critical Security Studies is essential for understanding Myanmar. The junta's airstrikes on civilian areas, displacement of 2.6 million people, and systematic use of sexual violence represent a complete inversion of security — the state itself is the primary source of insecurity. ASEAN's 'Five-Point Consensus' failure demonstrates how state-centric security frameworks cannot protect populations from their own governments."
         }
     },
     {
@@ -318,7 +338,9 @@ const GLOBAL_CASES = [
         theoryInsights: {
             Realism: "Türkiye is the quintessential 'Realist Middle Power'. By blocking or delaying NATO accession for Finland/Sweden, Erdoğan leveraged his 'Regional Hegemon' status to extract national security concessions. This is about maximizing relative power within a major alliance, proving that even partners act in their own self-interest first.",
             Liberalism: "Liberals find Türkiye's behavior challenging to the idea of 'shared democratic norms' within NATO. It highlights the friction in 'Institutional Liberalism' when one member uses its veto power to pursue narrow domestic goals. However, the eventual compromise shows that the alliance's institutional frameworks are still capable of resolving internal disputes.",
-            Constructivism: "Constructivism explains Türkiye's 'Autonomy' through its unique identity as a bridge between the West, Russia, and the Middle East. This 'Strategic Autonomy' is a constructed identity that allows Türkiye to act as a mediator. Türkiye doesn't see itself as just another NATO member, but as a distinct civilizational actor with interests that aren't tied to any single bloc."
+            Constructivism: "Constructivism explains Türkiye's 'Autonomy' through its unique identity as a bridge between the West, Russia, and the Middle East. This 'Strategic Autonomy' is a constructed identity that allows Türkiye to act as a mediator. Türkiye doesn't see itself as just another NATO member, but as a distinct civilizational actor with interests that aren't tied to any single bloc.",
+            GreenTheory: "Green Theory examines Türkiye's environmental contradictions. While positioning itself as a climate mediator and hosting the Bosporus (a critical ecological corridor), Türkiye continues to expand coal power and mega-infrastructure projects like the Istanbul Canal, which threatens the Sea of Marmara's marine ecosystem. Strategic autonomy prioritises economic development over ecological limits.",
+            CriticalSecurity: "Critical Security Studies reframes Türkiye's 'strategic autonomy' by asking who it secures. While Erdoğan leverages refugee flows (4 million Syrians) as a bargaining chip with the EU, those refugees exist in a state of permanent human insecurity — limited work rights, precarious legal status, and rising xenophobic violence. Türkiye's security is built on the instrumentalisation of vulnerable populations."
         }
     }
 ];
@@ -449,6 +471,30 @@ const IR_THEORIES = {
                 : `While not explicitly about colonizer-colonized relations, evaluating "${c.name}" through this lens reveals enduring hierarchies. `;
             return `${stretch}The "where" (${c.fiveWH?.where}) is often treated as a resource to be managed or a problem to be solved by Global North actors. This reinforces a power imbalance where ${c.fiveWH?.who.split('Secondary')[0].substring(0, 50)} are framed through a Eurocentric perspective that ignores local agency and indigenous knowledge.`;
         }
+    },
+    GreenTheory: {
+        color: '#22c55e',
+        description: 'Examines ecological interdependence, environmental justice, and the limits of growth-based development models.',
+        getInterpretation: (c) => {
+            if (c.theoryInsights?.GreenTheory) return c.theoryInsights.GreenTheory;
+            const isEnvCase = c.theme.toLowerCase().includes('environment') || c.theme.toLowerCase().includes('climate') || c.theme.toLowerCase().includes('sustainability');
+            const stretch = isEnvCase
+                ? `Green Theory is the defining lens for "${c.name}," centering ecological limits as the primary analytical framework. `
+                : `Applying Green Theory to "${c.name}" exposes the ecological costs systematically externalised by ${c.theme.toLowerCase()} debates. `;
+            return `${stretch}From this perspective, ${c.fiveWH?.who.split('.')[0]} operate within a system that treats the environment as an externality. The "how" (${c.fiveWH?.how.substring(0, 70)}...) demonstrates that prevailing governance models prioritise economic growth over planetary boundaries, reinforcing an anthropocentric worldview that Green theorists argue is the root cause of interconnected ecological, social, and political crises.`;
+        }
+    },
+    CriticalSecurity: {
+        color: '#06b6d4',
+        description: 'Challenges state-centric security, focusing on human security, emancipation, and whose security is prioritised.',
+        getInterpretation: (c) => {
+            if (c.theoryInsights?.CriticalSecurity) return c.theoryInsights.CriticalSecurity;
+            const isSecCase = c.theme.toLowerCase().includes('security') || c.theme.toLowerCase().includes('conflict') || c.theme.toLowerCase().includes('peace');
+            const stretch = isSecCase
+                ? `Critical Security Studies directly challenges the traditional framing of "${c.name}" by asking: security for whom? `
+                : `Although "${c.name}" is not typically framed as a security issue, Critical Security Studies redefines security beyond military threats. `;
+            return `${stretch}Rather than accepting the state-centric security narrative of ${c.fiveWH?.who.split('.')[0]}, this lens centres the lived experiences of individuals in ${c.fiveWH?.where}. It asks whether the "how" (${c.fiveWH?.how.substring(0, 70)}...) actually produces human security — freedom from want, freedom from fear — or whether it merely reinforces elite security architectures that leave marginalised populations exposed to structural violence.`;
+        }
     }
 };
 
@@ -550,52 +596,18 @@ const SolutionResearch = () => {
         { id: 'timeline', label: 'Timeline Conflict', desc: 'Consultation processes may delay urgent action.' }
     ];
 
-    // AI call — dual strategy (Netlify function → direct Gemini fallback)
+    // AI call — routes through Netlify serverless function (API key stays server-side)
     const callAI = async (mode, stepNum, extraInputs) => {
         const payload = { mode, step: stepNum, inputs: extraInputs || { text: inputs[FIELDS[stepNum - 1]] } };
-        const isLocalDev = window.location.hostname === 'localhost';
-        // Strategy 1: Netlify function
-        if (!isLocalDev) {
-            try {
-                const res = await fetch('/.netlify/functions/solution-research', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload), signal: AbortSignal.timeout(25000)
-                });
-                if (res.ok) return await res.json();
-            } catch {}
+        const res = await fetch('/.netlify/functions/solution-research', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload), signal: AbortSignal.timeout(25000)
+        });
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `Server error ${res.status}`);
         }
-        // Strategy 2: Direct Gemini
-        let apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-        if (!apiKey) {
-            try {
-                const tkRes = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
-                if (tkRes.ok) { const d = await tkRes.json(); apiKey = d.key; }
-            } catch {}
-        }
-        if (!apiKey) throw new Error('AI not configured');
-
-        const EVAL_PROMPTS = {
-            1: `You are an IB Global Politics exam coach evaluating a problem statement for Paper 3 Q2.\n\nStudent: "${extraInputs?.text || inputs.problem}"\n\nEvaluate for specificity, statistical evidence, clarity of harm.\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"stronger version if score<3"}`,
-            2: `You are an IB Global Politics exam coach evaluating actors.\n\nStudent: "${extraInputs?.text || inputs.actors}"\n\nEvaluate: specific sub-bodies? Named tools? Appropriate?\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"enhanced version"}`,
-            3: `You are an IB Global Politics exam coach evaluating a mechanism.\n\nStudent: "${extraInputs?.text || inputs.mechanism}"\n\nEvaluate: concrete? Verifiable? Follows template?\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"stronger version"}`,
-            4: `You are an IB Global Politics exam coach evaluating rationale.\n\nStudent: "${extraInputs?.text || inputs.rationale}"\n\nEvaluate: precedent? Existing system? Data?\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"enhanced version"}`,
-            5: `You are an IB Global Politics exam coach evaluating a risk.\n\nStudent: "${extraInputs?.text || inputs.risk}"\n\nEvaluate: credible? Specific actor/dynamic? Categorizable?\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"stronger version"}`,
-            6: `You are an IB Global Politics exam coach evaluating mitigation.\n\nStudent: "${extraInputs?.text || inputs.mitigation}"\n\nEvaluate: secondary actor? Specific? Addresses risk?\nReturn JSON: {"score":1-3,"feedback":"paragraph","suggestions":["s1","s2"],"improved":"stronger version"}`
-        };
-
-        let prompt;
-        if (mode === 'evaluate') prompt = EVAL_PROMPTS[stepNum];
-        else if (mode === 'research') prompt = `You are a research assistant for IB Global Politics P3 Q2.\n\nProblem: "${inputs.problem}"\nActors: "${inputs.actors}"\n\nReturn JSON: {"caseContext":"paragraph","searchTerms":["5 terms"],"keyOrganizations":["3-4"],"usefulData":["3-4"],"policyPrecedents":["2-3"]}`;
-        else if (mode === 'draft') prompt = `You are an IB Global Politics senior examiner. Generate three tiered policy recommendation paragraphs.\n\nProblem: ${inputs.problem}\nActors: ${inputs.actors}\nMechanism: ${inputs.mechanism}\nRationale: ${inputs.rationale || 'N/A'}\nRisk: ${inputs.risk || 'N/A'}\nMitigation: ${inputs.mitigation || 'N/A'}\n\nReturn JSON: {"band34":{"label":"Band 3–4","description":"desc","text":"80-100 words"},"elevation1":["3-4 moves"],"band56":{"label":"Band 5–6","description":"desc","text":"120-150 words"},"elevation2":["3-4 moves"],"band7":{"label":"Band 7","description":"desc","text":"160-200 words"}}`;
-
-        const resp = await geminiRetryFetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { response_mime_type: 'application/json' } }) }
-        );
-        if (!resp.ok) throw new Error(`Gemini error ${resp.status}`);
-        const gData = await resp.json();
-        return JSON.parse(gData?.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
+        return await res.json();
     };
 
     const evaluateStep = async (stepNum) => {
@@ -1175,17 +1187,7 @@ const CompareBuilder = () => {
             console.log('Netlify function unavailable, using direct Gemini fallback:', e.message);
         }
         if (!netlifyOk) {
-            try {
-                const gemRes = await geminiRetryFetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
-                    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `You are an IB Global Politics exam coach. Generate a structured comparative analysis of "${caseAName}" vs. "${caseBName}". IMPORTANT: In every similarity and difference, explicitly name both case studies by name — never write "Both" or "each case" without specifying which cases. For theory lenses, choose ONLY the theories that genuinely illuminate each case from this list: Realism, Liberalism, Constructivism, Marxism, Feminism, Post-colonialism. Include between 2 and 5 theories — only those truly applicable, not all of them. Return JSON:\n{"similarities":["3 key similarities, each explicitly naming both cases"],"differences":["3 key differences, each explicitly naming both cases"],"theoryLenses":[{"theory":"TheoryName","applicationA":"How it applies to ${caseAName} (1-2 sentences)","applicationB":"How it applies to ${caseBName} (1-2 sentences)"}],"ibConcepts":["3-4 IB key concepts connecting both"],"examArgument":"Band 7 comparative thesis statement (2-3 sentences)","perspectiveSummary":"Provide a detailed 4-6 sentence analysis of how different actors, governments, IGOs, NGOs, and media sources frame each case differently. Name specific actors (e.g., 'the US State Department frames...', 'Al Jazeera emphasizes...', 'the UN Human Rights Council argues...'). Explain how these competing narratives shape public understanding and policy responses for both ${caseAName} and ${caseBName}."}` }] }] }) }
-                );
-                const gemData = await gemRes.json();
-                const raw = gemData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-                const jsonMatch = raw.match(/\{[\s\S]*\}/);
-                if (jsonMatch) setAnalysis(JSON.parse(jsonMatch[0]));
-                else setError('Could not parse AI response.');
-            } catch (e2) { setError(`Could not generate comparison: ${e2.message}`); }
+            setError('Comparison service unavailable. Please try again in a moment.');
         }
         setLoading(false);
     };
@@ -1438,9 +1440,11 @@ const CommandTermDecoder = () => {
         if (!checkText.trim() || checkText.trim().length < 20) return;
         setChecking(true); setCheckResult(null);
         try {
-            const res = await geminiRetryFetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
-                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `You are an IB Global Politics exam coach. A student wrote the following paragraph:\n\n"${checkText}"\n\nAnalyse which IB command term skill this paragraph actually demonstrates. Pick from: Define, Describe, Explain, Analyse, Compare, Evaluate, Discuss, Examine, Justify, Suggest.\n\nRespond in this EXACT JSON format:\n{"detected_skill":"[term]","confidence":"high/medium/low","explanation":"[1 sentence why]","upgrade_tip":"[1 sentence on how to elevate to the next skill level]"}` }] }] }) }
+            const res = await fetch('/.netlify/functions/grammar-check', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: checkText, mode: 'command-term' }),
+                signal: AbortSignal.timeout(25000)
+            }
             );
             const data = await res.json();
             const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -2134,65 +2138,11 @@ const WritingStudio = () => {
                 console.log("Netlify function unavailable, trying direct API...");
             }
 
-            // Strategy 2: Direct Gemini API call (localhost or production fallback via get-token)
+            // If Netlify function failed, show error
             if (!introText) {
-                let apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-                if (!apiKey) {
-                    try {
-                        const tkRes = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
-                        if (tkRes.ok) { const tkData = await tkRes.json(); apiKey = tkData.key; }
-                    } catch { }
-                }
-                if (!apiKey) {
-                    setIntroLoading(false);
-                    setIntroError("AI not configured. Please contact your teacher.");
-                    return;
-                }
-                try {
-                    const IB_AO_CONTEXT = `IB GLOBAL POLITICS 2026 SYLLABUS CONTEXT:
-- AO1 (Knowledge & Understanding): Student must demonstrate accurate knowledge of named case studies and IB key concepts. Score improves with specific dates, treaty names, statistics, and named actors.
-- AO2 (Application & Analysis): Student must apply a named IR theory (Realism, Liberalism, Constructivism, Feminism, Marxism, Postcolonialism) with analytical connectives ("therefore", "this demonstrates").
-- AO3 (Synthesis & Evaluation): Student must present a counter-argument, synthesise competing perspectives, and reach a substantiated evaluative judgement.
-- AO4 (Use of Key Concepts): Student must use and define IB concepts — 4 Core (Power, Sovereignty, Legitimacy, Interdependence) and Global Challenges (Security, Development, Environment, Equality, Health). Concepts must be used precisely, not decoratively.
-- PAPERS: Paper 2 requires one extended essay (1,200–2,000 words) using two case studies to explore an IB concept. The introduction must anchor the thesis in a specific IB concept and signal the case study scope.`;
-
-                    const prompt = `You are a senior IB Global Politics examiner writing a model introduction for a Band 7 Paper 2 essay.
-
-${IB_AO_CONTEXT}
-
-Student Inputs:
-KEY CONCEPT: ${data.concept}
-STUDENT'S DEFINITION: ${data.definition}
-CASE STUDY A: ${data.caseA}
-CASE STUDY B: ${data.caseB}
-STUDENT'S THESIS: ${data.thesis}
-
-REQUIREMENTS (all must be met for a Band 7 introduction):
-1. Open with a real-world hook SPECIFIC to "${data.concept}" — name a concrete current tension, paradox, or event that reveals why this concept matters now.
-2. Weave in the student's definition naturally — it should read as analysis, not a dictionary entry.
-3. Identify the central analytical tension specific to "${data.concept}" (e.g., for Sovereignty: state authority vs. global governance; for Development: GDP growth vs. human development; for Peace: negative peace vs. positive peace / structural violence). Do NOT default to a generic "globalist vs. statist" framing.
-4. Introduce BOTH case studies with a brief clause explaining why each illuminates "${data.concept}" differently.
-5. Build to the thesis as the essay's governing claim — it should feel earned, not dropped in.
-6. Close with a one-sentence roadmap signalling structure.
-
-OUTPUT: Write ONLY the introduction paragraph (80–120 words, formal academic register). No headers, no bullet points, no meta-commentary.`;
-
-                    const geminiResponse = await geminiRetryFetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-                        {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                        }
-                    );
-
-                    if (geminiResponse.ok) {
-                        const geminiData = await geminiResponse.json();
-                        introText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                    }
-                } catch (error) {
-                    console.error("Direct Gemini API Error:", error);
-                }
+                setIntroLoading(false);
+                setIntroError('Introduction service unavailable. Please try again in a moment.');
+                return;
             }
 
             setIntroLoading(false);
@@ -2218,13 +2168,6 @@ ${studentIntro}
 Return ONLY the JSON. No markdown, no backticks, no commentary.`;
 
                 const isLocalDev = window.location.hostname === 'localhost';
-                let clientKey = process.env.REACT_APP_GEMINI_API_KEY;
-                if (!clientKey && !isLocalDev) {
-                    try {
-                        const tkRes = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
-                        if (tkRes.ok) { const tkData = await tkRes.json(); clientKey = tkData.key; }
-                    } catch { }
-                }
                 let d = null;
 
                 if (!isLocalDev) {
@@ -2237,25 +2180,8 @@ Return ONLY the JSON. No markdown, no backticks, no commentary.`;
                     if (res.ok) d = await res.json();
                 }
 
-                if (!d && clientKey) {
-                    // Local dev OR Netlify function failed: call Gemini directly
-                    const resp = await geminiRetryFetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${clientKey}`,
-                        {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                contents: [{ parts: [{ text: introPrompt }] }],
-                                generationConfig: { response_mime_type: 'application/json' }
-                            })
-                        }
-                    );
-                    if (resp.ok) {
-                        const gData = await resp.json();
-                        const raw = gData?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-                        d = JSON.parse(raw);
-                    } else throw new Error(`Gemini error ${resp.status}`);
-                } else if (!d) {
-                    throw new Error('No API key available locally');
+                if (!d) {
+                    throw new Error('Review service unavailable. Please try again.');
                 }
 
                 if (d?.rewritten || d?.score) {
@@ -2494,44 +2420,8 @@ Return ONLY the JSON. No markdown, no backticks, no commentary.`;
                 console.log('Netlify peel-review unavailable, trying direct API...');
             }
 
-            // Strategy 2: Direct Gemini API call (local or production fallback via get-token)
-            let apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-            if (!apiKey) {
-                try {
-                    const tkRes = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
-                    if (tkRes.ok) { const tkData = await tkRes.json(); apiKey = tkData.key; }
-                } catch { }
-            }
-            if (!apiKey) {
-                setReviewError('AI feedback not available. Please contact your teacher.');
-                setReviewLoading(false); return;
-            }
-            try {
-                const prompt = `You are an IB Global Politics examiner. Review this PEEL paragraph and return ONLY valid JSON with this exact structure:
-{"original":"<the paragraph as written>","improved":"<your improved version>","bandJump":"Band X → Band Y","changes":[{"ao":"AO1|AO2|AO3|AO4","label":"short label","original":"phrase replaced","fix":"explanation of change"}]}
-
-PEEL paragraph to review:
-${reviewPara}
-
-Return ONLY the JSON with no markdown, no backticks, no commentary.`;
-
-                const resp = await geminiRetryFetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-                    {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-                            contents: [{ parts: [{ text: prompt }] }],
-                            generationConfig: { response_mime_type: 'application/json' }
-                        })
-                    }
-                );
-                if (resp.ok) {
-                    const gData = await resp.json();
-                    const raw = gData?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-                    setReviewResult(JSON.parse(raw)); // JSON mode guarantees valid JSON
-                } else { throw new Error(`Gemini error ${resp.status}`); }
-            } catch (e) {
-                setReviewError(`AI feedback requires running via Netlify Dev (npx netlify dev) — direct API calls are geo-restricted on this network. ${e.message}`);
-            }
+            // If Netlify function failed, show error
+            setReviewError('PEEL review service unavailable. Please try again in a moment.');
             setReviewLoading(false);
         };
 
@@ -3549,69 +3439,26 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
 
             setImageLoading(true);
             try {
-                const isLocalDev = window.location.hostname === 'localhost';
-                const localKey = process.env.REACT_APP_GEMINI_API_KEY;
+                // Route through Netlify function (API key stays server-side)
+                const res = await fetch('/.netlify/functions/analyze-image-essay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imageBase64: base64,
+                        mimeType: mimeType,
+                        questionText: q.text,
+                        marks: q.marks || 15
+                    }),
+                    signal: AbortSignal.timeout(90000) // 90s for vision
+                });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || `Server error ${res.status}`);
+                }
+                const data = await res.json();
+                setImageResult(data.analysis || 'No feedback returned.');
 
-                // Helper: get key for direct Gemini call
-                // - localhost: use .env key directly
-                // - production: fetch from /get-token (uses server-side GEMINI_API_KEY, no REACT_APP_ needed)
-                const getApiKey = async () => {
-                    if (isLocalDev && localKey) return localKey;
-                    const res = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
-                    if (!res.ok) throw new Error('Could not retrieve API token.');
-                    const data = await res.json();
-                    return data.key;
-                };
 
-                // Always go direct to Gemini API — bypasses the 26s Netlify function ceiling
-                // that was causing "Fetch is aborted" timeouts on vision requests.
-                // Uses gemini-2.5-pro for highest-quality OCR + examiner analysis.
-                const VISION_TIMEOUT_MS = 90000; // 90s — generous for Pro vision
-                const runDirectApi = async (key) => {
-                    const body = {
-                        contents: [{
-                            parts: [
-                                { text: `You are an IB Global Politics examiner. Analyse this handwritten/printed student essay.\n\nQuestion: ${q.text}\nMarks: ${q.marks || 15}\n\nProvide: transcription, Glow, Grow, Alternative Approaches, Golden Tip, AO band estimates.` },
-                                { inline_data: { mime_type: mimeType, data: base64 } }
-                            ]
-                        }]
-                    };
-                    // Retry loop with fresh AbortSignal per attempt (so timeout resets on each retry)
-                    const maxRetries = 2;
-                    let lastError;
-                    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-                        try {
-                            const controller = new AbortController();
-                            const timeoutId = setTimeout(() => controller.abort(), VISION_TIMEOUT_MS);
-                            const gemRes = await fetch(
-                                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${key}`,
-                                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal }
-                            );
-                            clearTimeout(timeoutId);
-                            if (gemRes.ok) {
-                                const gemData = await gemRes.json();
-                                return gemData.candidates?.[0]?.content?.parts?.[0]?.text || 'No feedback returned.';
-                            }
-                            if ([429, 503].includes(gemRes.status) && attempt < maxRetries) {
-                                const delay = 2000 * Math.pow(2, attempt);
-                                console.log(`[vision-retry] ${gemRes.status} — retrying in ${delay}ms (${attempt + 1}/${maxRetries})`);
-                                await new Promise(r => setTimeout(r, delay));
-                                continue;
-                            }
-                            const gemData = await gemRes.json();
-                            throw new Error(gemData.error?.message || `Gemini API error ${gemRes.status}`);
-                        } catch (e) {
-                            lastError = e;
-                            if (e.name === 'AbortError') throw new Error('Vision analysis timed out. Please try a smaller or clearer image.');
-                            if (attempt === maxRetries) throw e;
-                        }
-                    }
-                    throw lastError;
-                };
-
-                const key = await getApiKey();
-                const result = await runDirectApi(key);
-                setImageResult(result);
 
             } catch (err) {
                 const msg = err.message || '';
@@ -4181,48 +4028,10 @@ One precise, actionable tip that would most significantly raise this response's 
             console.log("Netlify function unavailable or timed out, checking local fallback.");
         }
 
-        // Strategy 2: Direct Gemini API call (local key or production get-token proxy)
+        // If Netlify function failed, show error
         if (!analysisText) {
-            let apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-            if (!apiKey) {
-                try {
-                    const tkRes = await fetch('/.netlify/functions/get-token', { signal: AbortSignal.timeout(5000) });
-                    if (tkRes.ok) { const tkData = await tkRes.json(); apiKey = tkData.key; }
-                } catch { }
-            }
-            console.log("🔑 Gemini API key present:", !!apiKey);
-            if (!apiKey) {
-                setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], deepLoading: false, deepError: "AI not available. Please contact your teacher." } }));
-                return;
-            }
-            try {
-                const geminiResponse = await geminiRetryFetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
-                    {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: prompt }] }]
-                        })
-                    }
-                );
-
-                if (!geminiResponse.ok) {
-                    throw new Error(`Gemini API error: ${geminiResponse.status} ${geminiResponse.statusText}`);
-                }
-
-                const geminiData = await geminiResponse.json();
-                console.log("🤖 Gemini raw response:", JSON.stringify(geminiData).slice(0, 500));
-                analysisText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!analysisText) {
-                    const reason = geminiData?.promptFeedback?.blockReason || geminiData?.candidates?.[0]?.finishReason || "Unknown";
-                    throw new Error(`Gemini returned no text. Reason: ${reason}. Check console for full response.`);
-                }
-            } catch (error) {
-                console.error("Direct Gemini API Error:", error);
-                setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], deepLoading: false, deepError: error.message } }));
-                return;
-            }
+            setAnalysis(prev => ({ ...prev, [key]: { ...prev[key], deepLoading: false, deepError: 'Deep analysis service unavailable. Please try again.' } }));
+            return;
         }
 
         setAnalysis(prev => ({
@@ -5478,14 +5287,14 @@ const SourceLabStation = () => {
         try {
             const studentAnalysis = `Origin: ${responses.origin}\nPurpose: ${responses.purpose}\nValue: ${responses.value}\nLimitation: ${responses.limitation}`;
             const modelAnalysis = `Origin: ${src.modelOPVL.origin}\nPurpose: ${src.modelOPVL.purpose}\nValue: ${src.modelOPVL.value}\nLimitation: ${src.modelOPVL.limitation}`;
-            const res = await geminiRetryFetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`,
-                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `You are an IB Global Politics Paper 1 examiner. A student analysed the source "${src.title}" using OPVL.\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nMODEL ANALYSIS:\n${modelAnalysis}\n\nScore each OPVL element 1-4 (1=basic, 2=developing, 3=proficient, 4=exemplary) by comparing depth and accuracy to the model. Respond in EXACT JSON:\n{"scores":{"origin":2,"purpose":3,"value":2,"limitation":1},"overall_band":"3-4","strengths":["..."],"improvements":["..."],"examiner_tip":"One specific tip to elevate this analysis."}` }] }] }) }
-            );
+            const res = await fetch('/.netlify/functions/grammar-check', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: `Source: "${src.title}"\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nMODEL ANALYSIS:\n${modelAnalysis}`, mode: 'opvl-score' }),
+                signal: AbortSignal.timeout(25000)
+            });
             const data = await res.json();
-            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            const jsonMatch = raw.match(/\{[\s\S]*\}/);
-            if (jsonMatch) setAiScore(JSON.parse(jsonMatch[0]));
+            if (data && !data.error) setAiScore(data);
+            else console.error(data?.error || 'OPVL scoring failed');
         } catch (e) { console.error(e); }
         setScoring(false);
     };
