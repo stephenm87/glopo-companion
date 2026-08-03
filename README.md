@@ -20,7 +20,7 @@ An IB Global Politics study companion web application that provides advanced ess
 ## Setup & Development
 1. `npm install`
 2. Create a `.env` file referencing `docs/ENVIRONMENT.md`.
-3. `npm start` for local development.
+3. `npm (v10.9.x) start` for local development.
 
 ## Documentation
 See the `/docs` directory for architectural context, environment variables, known issues, and AI capabilities.
