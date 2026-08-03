@@ -5,7 +5,7 @@
  */
 const fetch = (...args) => import('node-fetch').then(m => m.default(...args));
 
-const RETRYABLE_STATUSES = [429, 503];
+const RETRYABLE_STATUSES = [404, 429, 503];
 const MAX_RETRIES = 2;
 const INITIAL_DELAY_MS = 1000;
 

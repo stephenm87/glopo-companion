@@ -39,10 +39,10 @@ exports.handler = async (event) => {
         }
 
         const res = await callGeminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
             {
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
+                generationConfig: {  thinkingConfig: { thinkingBudget: 0 } }
             }
         );
 
@@ -54,7 +54,11 @@ exports.handler = async (event) => {
         const data = await res.json();
         const raw = extractGeminiText(data, '{}');
         let parsed;
-        try { parsed = JSON.parse(raw); } catch { return { statusCode: 500, body: JSON.stringify({ error: 'Failed to parse AI response' }) }; }
+        try { parsed = JSON.parse(raw); } catch {
+            const m = raw.match(/```(?:json)?\s*([\s\S]*?)```/) || raw.match(/(\{[\s\S]*\})/);
+            if (m) { try { parsed = JSON.parse(m[1].trim()); } catch { return { statusCode: 500, body: JSON.stringify({ error: 'Failed to parse AI response' }) }; } }
+            else { return { statusCode: 500, body: JSON.stringify({ error: 'Failed to parse AI response' }) }; }
+        }
 
         return {
             statusCode: 200,

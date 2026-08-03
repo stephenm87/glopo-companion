@@ -33,11 +33,11 @@ Rules:
 
         const body = {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
+            generationConfig: {  thinkingConfig: { thinkingBudget: 0 } }
         };
 
-        const primaryUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
-        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const primaryUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
         const res = await callGeminiWithRetry(primaryUrl, body, { fallbackUrl });
 
         if (!res.ok) {
@@ -51,8 +51,14 @@ Rules:
         try {
             parsed = JSON.parse(raw);
         } catch {
-            // JSON mode should always return valid JSON, but handle parse failure
-            return { statusCode: 500, body: JSON.stringify({ error: 'Failed to parse AI response' }) };
+            // Try extracting JSON from markdown code block or bare object
+            const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/) || raw.match(/(\{[\s\S]*\})/);
+            if (jsonMatch) {
+                try { parsed = JSON.parse(jsonMatch[1].trim()); }
+                catch { return { statusCode: 500, body: JSON.stringify({ error: 'Failed to parse AI response' }) }; }
+            } else {
+                return { statusCode: 500, body: JSON.stringify({ error: 'Failed to parse AI response' }) };
+            }
         }
 
         return {

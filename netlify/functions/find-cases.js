@@ -44,11 +44,11 @@ exports.handler = async (event) => {
 
         const body = {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
+            generationConfig: {  thinkingConfig: { thinkingBudget: 0 } }
         };
 
         const res = await callGeminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
             body
         );
 
@@ -59,7 +59,15 @@ exports.handler = async (event) => {
 
         const data = await res.json();
         const raw = extractGeminiText(data, '[]');
-        const parsed = JSON.parse(raw); // JSON mode — no regex stripping needed
+        let parsed;
+        try {
+            parsed = JSON.parse(raw);
+        } catch {
+            // gemini-3.5-flash may return prose — extract JSON array or object
+            const m = raw.match(/```(?:json)?\s*([\s\S]*?)```/) || raw.match(/(\[[\s\S]*\])/) || raw.match(/(\{[\s\S]*\})/);
+            if (m) { try { parsed = JSON.parse(m[1].trim()); } catch { parsed = []; } }
+            else { parsed = []; }
+        }
         const results = Array.isArray(parsed) ? parsed : parsed.results || [];
         const enriched = results.map(r => {
             const match = CASE_POOL.find(c => c.name === r.name);
