@@ -1,6 +1,14 @@
 // Case Finder — Gemini-powered IB case study matcher (server-side)
 // Updated: JSON output mode for reliable parsing + 5 new 2025-2026 cases
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { z } = require('zod');
+
+const findCasesSchema = z.array(z.object({
+  rank: z.number(),
+  name: z.string(),
+  relevance: z.string(),
+  angle: z.string()
+}));
 
 const CASE_POOL = [
     { name: 'South China Sea Dispute', concepts: 'Power, Sovereignty, Security', themes: 'sovereignty power realism maritime security China Philippines military conflict UNCLOS' },
@@ -44,7 +52,23 @@ exports.handler = async (event) => {
 
         const body = {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
+            generationConfig: { 
+                responseMimeType: 'application/json', 
+                thinkingConfig: { thinkingBudget: 0 },
+                responseSchema: {
+                    type: 'ARRAY',
+                    items: {
+                        type: 'OBJECT',
+                        properties: {
+                            rank: { type: 'INTEGER' },
+                            name: { type: 'STRING' },
+                            relevance: { type: 'STRING' },
+                            angle: { type: 'STRING' }
+                        },
+                        required: ['rank', 'name', 'relevance', 'angle']
+                    }
+                }
+            }
         };
 
         const res = await callGeminiWithRetry(apiKey, body);
@@ -55,8 +79,15 @@ exports.handler = async (event) => {
 
         const data = res.data;
         const raw = extractGeminiText(data, '[]');
-        const parsed = JSON.parse(raw); // JSON mode — no regex stripping needed
-        const results = Array.isArray(parsed) ? parsed : parsed.results || [];
+        let parsed;
+        try {
+            parsed = JSON.parse(raw);
+            const resultsData = Array.isArray(parsed) ? parsed : parsed.results || [];
+            parsed = findCasesSchema.parse(resultsData);
+        } catch (err) {
+            return { statusCode: 500, body: JSON.stringify({ error: 'Validation error: ' + err.message }) };
+        }
+        const results = parsed;
         const enriched = results.map(r => {
             const match = CASE_POOL.find(c => c.name === r.name);
             return { ...r, concepts: match?.concepts || '' };
