@@ -1,6 +1,20 @@
 // Comparative Case Study Research — Serper-powered multi-perspective article finder
 // Searches for 2-3 news/analysis articles per case study from different source types
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { z } = require('zod');
+
+const compareSchema = z.object({
+  similarities: z.array(z.string()),
+  differences: z.array(z.string()),
+  theoryLenses: z.array(z.object({
+    theory: z.string(),
+    applicationA: z.string(),
+    applicationB: z.string()
+  })),
+  ibConcepts: z.array(z.string()),
+  examArgument: z.string(),
+  perspectiveSummary: z.string()
+});
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -108,19 +122,47 @@ Return JSON:
   "perspectiveSummary": "Provide a detailed 4-6 sentence analysis of how different actors, governments, IGOs, NGOs, and media sources frame each case differently. Name specific actors (e.g., 'the US State Department frames...', 'Al Jazeera emphasizes...', 'the UN Human Rights Council argues...'). Explain how these competing narratives shape public understanding and policy responses for both ${caseA} and ${caseB}."
 }`;
 
-        const gemRes = await callGeminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-            {
+        const body = {
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
-            }
-        );
+                generationConfig: { 
+                    responseMimeType: 'application/json', 
+                    thinkingConfig: { thinkingBudget: 0 },
+                    responseSchema: {
+                        type: 'OBJECT',
+                        properties: {
+                            similarities: { type: 'ARRAY', items: { type: 'STRING' } },
+                            differences: { type: 'ARRAY', items: { type: 'STRING' } },
+                            theoryLenses: {
+                                type: 'ARRAY',
+                                items: {
+                                    type: 'OBJECT',
+                                    properties: {
+                                        theory: { type: 'STRING' },
+                                        applicationA: { type: 'STRING' },
+                                        applicationB: { type: 'STRING' }
+                                    },
+                                    required: ['theory', 'applicationA', 'applicationB']
+                                }
+                            },
+                            ibConcepts: { type: 'ARRAY', items: { type: 'STRING' } },
+                            examArgument: { type: 'STRING' },
+                            perspectiveSummary: { type: 'STRING' }
+                        },
+                        required: ['similarities', 'differences', 'theoryLenses', 'ibConcepts', 'examArgument', 'perspectiveSummary']
+                    }
+                }
+            };
+        const gemRes = await callGeminiWithRetry(geminiKey, body);
 
         let analysis = null;
         if (gemRes.ok) {
-            
             const raw = extractGeminiText(gemRes.data, '{}');
-            try { analysis = JSON.parse(raw); } catch { analysis = null; }
+            try { 
+                const parsed = JSON.parse(raw); 
+                analysis = compareSchema.parse(parsed);
+            } catch (err) { 
+                return { statusCode: 500, body: JSON.stringify({ error: 'Validation error: ' + err.message }) };
+            }
         }
 
         return {

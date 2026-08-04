@@ -1,6 +1,7 @@
 // analyze-image-essay.js — Essay Vision Analysis via Gemini
 // Uses native fetch (no SDK) to avoid missing package issues on Netlify Functions
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { z } = require('zod');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
@@ -39,46 +40,57 @@ MARKS AVAILABLE: ${marks || 15}
 
 ${IB_RUBRIC}
 
-REQUIRED OUTPUT FORMAT:
+REQUIRED OUTPUT FORMAT (JSON):
+Return a JSON object with these EXACT string keys:
+"transcription": [Transcribe the student's written response as accurately as possible.]
+"glow": [2-3 specific strengths citing AO bands]
+"grow": [2-3 actionable improvements with examples of what better looks like]
+"alternativeApproaches": [2 alternative theoretical lenses or case studies for this question]
+"goldenTip": [One precise, actionable tip most likely to raise the mark band]
+"aoEstimate": [AO1: Band X | AO2: Band X | AO3: Band X | AO4: Band X] | AO2: [Band 1/2/3] | AO3: [Band 1/2/3] | AO4: [Band 1/2/3]`;
 
-## 📝 What I Read (Transcription)
-[Transcribe the student's written response as accurately as possible. Note any unclear handwriting with [unclear].]
-
-## 🟢 GLOW — Strengths
-[2-3 specific strengths citing AO bands]
-
-## 🔴 GROW — Improvements
-[2-3 actionable improvements with examples of what better looks like]
-
-## 🔀 Alternative Approaches
-[2 alternative theoretical lenses or case studies for this question]
-
-## ⭐ Examiner's Golden Tip
-[One precise, actionable tip most likely to raise the mark band]
-
-## 📊 AO Estimate
-AO1: [Band 1/2/3] | AO2: [Band 1/2/3] | AO3: [Band 1/2/3] | AO4: [Band 1/2/3]`;
-
-        const requestBody = {
+        const body = {
+        generationConfig: {
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingBudget: 0 },
+            responseSchema: {
+                type: 'OBJECT',
+                properties: {
+                    transcription: { type: 'STRING' },
+                    glow: { type: 'STRING' },
+                    grow: { type: 'STRING' },
+                    alternativeApproaches: { type: 'STRING' },
+                    goldenTip: { type: 'STRING' },
+                    aoEstimate: { type: 'STRING' }
+                },
+                required: ['transcription', 'glow', 'grow', 'alternativeApproaches', 'goldenTip', 'aoEstimate']
+            }
+        },
+        
             contents: [{
                 parts: [
                     { text: prompt },
                     { inline_data: { mime_type: mimeType, data: imageBase64 } }
                 ]
             }]
-        };
+        
+    };
 
-        const res = await callGeminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-            requestBody
-        );
+    const res = await callGeminiWithRetry(apiKey, body);
 
-        if (!res.ok) {
-            
-            throw new Error(`Gemini API error ${res.status}: ${res.error}`);
-        }
-        const data = res.data;
-        const text = extractGeminiText(data, '');
+    if (!res.ok) {
+        throw new Error(`Gemini API error ${res.status}: ${res.error}`);
+    }
+
+    const raw = extractGeminiText(res.data, '{}');
+    let text = '';
+    try {
+        const parsed = JSON.parse(raw);
+        text = `## 📝 What I Read (Transcription)\n${parsed.transcription}\n\n## 🟢 GLOW — Strengths\n${parsed.glow}\n\n## 🔴 GROW — Improvements\n${parsed.grow}\n\n## 🔀 Alternative Approaches\n${parsed.alternativeApproaches}\n\n## ⭐ Examiner's Golden Tip\n${parsed.goldenTip}\n\n## 📊 AO Estimate\n${parsed.aoEstimate}`;
+    } catch (err) {
+        throw new Error('Validation error: ' + err.message);
+    }
+
 
         return {
             statusCode: 200,

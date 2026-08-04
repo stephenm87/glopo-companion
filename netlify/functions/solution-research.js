@@ -1,6 +1,30 @@
 // Solution Research Bot — Gemini-powered step evaluation and research for P3 Q2
 // Supports per-step evaluation, research search, and tiered draft generation.
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { z } = require('zod');
+
+const evalSchema = z.object({
+  score: z.number(),
+  feedback: z.string(),
+  suggestions: z.array(z.string()),
+  improved: z.string()
+});
+
+const researchSchema = z.object({
+  caseContext: z.string(),
+  searchTerms: z.array(z.string()),
+  keyOrganizations: z.array(z.string()),
+  usefulData: z.array(z.string()),
+  policyPrecedents: z.array(z.string())
+});
+
+const draftSchema = z.object({
+  band34: z.object({ label: z.string(), description: z.string(), text: z.string() }),
+  elevation1: z.array(z.string()),
+  band56: z.object({ label: z.string(), description: z.string(), text: z.string() }),
+  elevation2: z.array(z.string()),
+  band7: z.object({ label: z.string(), description: z.string(), text: z.string() })
+});
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -38,13 +62,53 @@ exports.handler = async (event) => {
             return { statusCode: 400, body: JSON.stringify({ error: 'Invalid mode. Use: evaluate, research, or draft' }) };
         }
 
-        const res = await callGeminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-            {
+        let schemaDefinition = null;
+        if (mode === 'evaluate') {
+            schemaDefinition = {
+                type: 'OBJECT',
+                properties: {
+                    score: { type: 'INTEGER' },
+                    feedback: { type: 'STRING' },
+                    suggestions: { type: 'ARRAY', items: { type: 'STRING' } },
+                    improved: { type: 'STRING' }
+                },
+                required: ['score', 'feedback', 'suggestions', 'improved']
+            };
+        } else if (mode === 'research') {
+            schemaDefinition = {
+                type: 'OBJECT',
+                properties: {
+                    caseContext: { type: 'STRING' },
+                    searchTerms: { type: 'ARRAY', items: { type: 'STRING' } },
+                    keyOrganizations: { type: 'ARRAY', items: { type: 'STRING' } },
+                    usefulData: { type: 'ARRAY', items: { type: 'STRING' } },
+                    policyPrecedents: { type: 'ARRAY', items: { type: 'STRING' } }
+                },
+                required: ['caseContext', 'searchTerms', 'keyOrganizations', 'usefulData', 'policyPrecedents']
+            };
+        } else if (mode === 'draft') {
+            schemaDefinition = {
+                type: 'OBJECT',
+                properties: {
+                    band34: { type: 'OBJECT', properties: { label: { type: 'STRING' }, description: { type: 'STRING' }, text: { type: 'STRING' } }, required: ['label', 'description', 'text'] },
+                    elevation1: { type: 'ARRAY', items: { type: 'STRING' } },
+                    band56: { type: 'OBJECT', properties: { label: { type: 'STRING' }, description: { type: 'STRING' }, text: { type: 'STRING' } }, required: ['label', 'description', 'text'] },
+                    elevation2: { type: 'ARRAY', items: { type: 'STRING' } },
+                    band7: { type: 'OBJECT', properties: { label: { type: 'STRING' }, description: { type: 'STRING' }, text: { type: 'STRING' } }, required: ['label', 'description', 'text'] }
+                },
+                required: ['band34', 'elevation1', 'band56', 'elevation2', 'band7']
+            };
+        }
+
+        const body = {
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
-            }
-        );
+                generationConfig: { 
+                    responseMimeType: 'application/json', 
+                    thinkingConfig: { thinkingBudget: 0 },
+                    responseSchema: schemaDefinition
+                }
+            };
+        const res = await callGeminiWithRetry(apiKey, body);
 
         if (!res.ok) {
             return { statusCode: 500, body: JSON.stringify({ error: `Gemini error ${res.status}: ${res.error}` }) };
@@ -53,7 +117,14 @@ exports.handler = async (event) => {
         const data = res.data;
         const raw = extractGeminiText(data, '{}');
         let parsed;
-        try { parsed = JSON.parse(raw); } catch { return { statusCode: 500, body: JSON.stringify({ error: 'Failed to parse AI response' }) }; }
+        try { 
+            const temp = JSON.parse(raw);
+            if (mode === 'evaluate') parsed = evalSchema.parse(temp);
+            else if (mode === 'research') parsed = researchSchema.parse(temp);
+            else if (mode === 'draft') parsed = draftSchema.parse(temp);
+        } catch (err) { 
+            return { statusCode: 500, body: JSON.stringify({ error: 'Validation error: ' + err.message }) };
+        }
 
         return {
             statusCode: 200,

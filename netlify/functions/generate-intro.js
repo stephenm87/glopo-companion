@@ -1,6 +1,7 @@
 // generate-intro.js — Intro Builder Netlify function
 // Uses native fetch (no SDK) to avoid missing package issues on Netlify Functions
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { z } = require('zod');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
@@ -34,6 +35,16 @@ REQUIREMENTS:
 OUTPUT: Write ONLY the introduction paragraph in quotation marks. No headers, no bullet points, no meta-commentary. Keep it between 80-120 words. Write in a formal academic register appropriate for an IB examination.`;
 
         const body = {
+        generationConfig: {
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingBudget: 0 },
+            responseSchema: {
+                type: 'OBJECT',
+                properties: { intro: { type: 'STRING' } },
+                required: ['intro']
+            }
+        },
+        
             system_instruction: {
                 parts: [{
                     text: `You are an IB Global Politics essay writing coach for the 2026 syllabus. 
@@ -43,15 +54,24 @@ You must adapt your language, framing, and analytical tension to the SPECIFIC co
                 }]
             },
             contents: [{ parts: [{ text: prompt }] }]
-        };
+        
+    };
 
-        const res = await callGeminiWithRetry(apiKey, body);
-        if (!res.ok) {
-            
-            throw new Error(`Gemini API error ${res.status}: ${res.error}`);
-        }
-        const data = res.data;
-        const text = extractGeminiText(data, '');
+    const res = await callGeminiWithRetry(apiKey, body);
+
+    if (!res.ok) {
+        throw new Error(`Gemini API error ${res.status}: ${res.error}`);
+    }
+
+    const raw = extractGeminiText(res.data, '{}');
+    let text = '';
+    try {
+        const parsed = JSON.parse(raw);
+        text = parsed.intro;
+    } catch (err) {
+        throw new Error('Validation error: ' + err.message);
+    }
+
 
         return {
             statusCode: 200,

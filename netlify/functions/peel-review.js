@@ -1,6 +1,18 @@
 // PEEL / Intro Paragraph Review — returns structured JSON feedback (server-side Gemini)
 // Supports a customPrompt for non-PEEL review modes (e.g. intro review)
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { z } = require('zod');
+
+const peelSchema = z.object({
+  improved: z.string(),
+  bandJump: z.string(),
+  changes: z.array(z.object({
+    ao: z.string(),
+    label: z.string(),
+    original: z.string(),
+    fix: z.string()
+  }))
+});
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -33,7 +45,31 @@ Rules:
 
         const body = {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
+            generationConfig: { 
+                responseMimeType: 'application/json', 
+                thinkingConfig: { thinkingBudget: 0 },
+                responseSchema: {
+                    type: 'OBJECT',
+                    properties: {
+                        improved: { type: 'STRING' },
+                        bandJump: { type: 'STRING' },
+                        changes: {
+                            type: 'ARRAY',
+                            items: {
+                                type: 'OBJECT',
+                                properties: {
+                                    ao: { type: 'STRING' },
+                                    label: { type: 'STRING' },
+                                    original: { type: 'STRING' },
+                                    fix: { type: 'STRING' }
+                                },
+                                required: ['ao', 'label', 'original', 'fix']
+                            }
+                        }
+                    },
+                    required: ['improved', 'bandJump', 'changes']
+                }
+            }
         };
 
         const res = await callGeminiWithRetry(apiKey, body);
@@ -46,10 +82,10 @@ Rules:
         const raw = extractGeminiText(data, '{}');
         let parsed;
         try {
-            parsed = JSON.parse(raw);
-        } catch {
-            // JSON mode should always return valid JSON, but handle parse failure
-            return { statusCode: 500, body: JSON.stringify({ error: 'Failed to parse AI response' }) };
+            const temp = JSON.parse(raw);
+            parsed = peelSchema.parse(temp);
+        } catch (err) {
+            return { statusCode: 500, body: JSON.stringify({ error: 'Validation error: ' + err.message }) };
         }
 
         return {
