@@ -2,6 +2,7 @@
 // Uses native fetch (no SDK) to avoid missing package issues on Netlify Functions
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
+const { formatValidationError } = require('./validation-helper');
 
 const inputSchema = z.object({
   concept: z.string().min(2).max(100),
@@ -21,17 +22,7 @@ exports.handler = async (event) => {
         try {
             parsedInput = inputSchema.parse(JSON.parse(event.body));
         } catch (err) {
-            return {
-                statusCode: 400,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    error: {
-                        code: 'VALIDATION_ERROR',
-                        message: err.errors?.[0]?.message || err.message,
-                        field: err.errors?.[0]?.path?.[0] || 'body'
-                    }
-                })
-            };
+            return formatValidationError(err);
         }
         const { concept, definition, caseA, caseB, thesis } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;

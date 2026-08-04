@@ -3,6 +3,7 @@
 // Uses the same GEMINI_API_KEY already configured for all other functions.
 const { callGeminiWithRetry } = require('./gemini-retry');
 const { z } = require('zod');
+const { formatValidationError } = require('./validation-helper');
 
 const inputSchema = z.object({
   query: z.string().min(3).max(500),
@@ -65,17 +66,7 @@ exports.handler = async (event) => {
         try {
             parsedInput = inputSchema.parse(JSON.parse(event.body));
         } catch (err) {
-            return {
-                statusCode: 400,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    error: {
-                        code: 'VALIDATION_ERROR',
-                        message: err.errors?.[0]?.message || err.message,
-                        field: err.errors?.[0]?.path?.[0] || 'body'
-                    }
-                })
-            };
+            return formatValidationError(err);
         }
         const { query, topK = 3 } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;

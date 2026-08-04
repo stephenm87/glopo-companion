@@ -2,6 +2,7 @@
 // Searches for 2-3 news/analysis articles per case study from different source types
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
+const { formatValidationError } = require('./validation-helper');
 
 const inputSchema = z.object({
   caseA: z.string().min(2).max(100),
@@ -29,17 +30,7 @@ exports.handler = async (event) => {
         try {
             parsedInput = inputSchema.parse(JSON.parse(event.body));
         } catch (err) {
-            return {
-                statusCode: 400,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    error: {
-                        code: 'VALIDATION_ERROR',
-                        message: err.errors?.[0]?.message || err.message,
-                        field: err.errors?.[0]?.path?.[0] || 'body'
-                    }
-                })
-            };
+            return formatValidationError(err);
         }
         const { caseA, caseB } = parsedInput;
         const serperKey = process.env.SERPER_API_KEY;

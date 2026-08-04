@@ -2,10 +2,11 @@
 // Uses native fetch (no SDK) to avoid missing package issues on Netlify Functions
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
+const { formatValidationError } = require('./validation-helper');
 
 const inputSchema = z.object({
-  imageBase64: z.string().min(1),
-  mimeType: z.string().min(1),
+  imageBase64: z.string().min(10).max(14000000),
+  mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
   questionText: z.string().max(500).optional().default(''),
   marks: z.number().min(1).max(25).optional().default(15)
 });
@@ -20,17 +21,7 @@ exports.handler = async (event) => {
         try {
             parsedInput = inputSchema.parse(JSON.parse(event.body));
         } catch (err) {
-            return {
-                statusCode: 400,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    error: {
-                        code: 'VALIDATION_ERROR',
-                        message: err.errors?.[0]?.message || err.message,
-                        field: err.errors?.[0]?.path?.[0] || 'body'
-                    }
-                })
-            };
+            return formatValidationError(err);
         }
         const { imageBase64, mimeType, questionText, marks } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
