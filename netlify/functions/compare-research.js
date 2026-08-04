@@ -118,8 +118,8 @@ Return JSON:
 
         let analysis = null;
         if (gemRes.ok) {
-            const gemData = await gemRes.json();
-            const raw = extractGeminiText(gemData, '{}');
+            
+            const raw = extractGeminiText(gemRes.data, '{}');
             try { analysis = JSON.parse(raw); } catch { analysis = null; }
         }
 

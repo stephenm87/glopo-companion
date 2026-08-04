@@ -36,16 +36,13 @@ Rules:
             generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
         };
 
-        const primaryUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
-        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        const res = await callGeminiWithRetry(primaryUrl, body, { fallbackUrl });
+        const res = await callGeminiWithRetry(apiKey, body);
 
         if (!res.ok) {
-            const err = await res.text();
-            return { statusCode: 500, body: JSON.stringify({ error: `Gemini error ${res.status}: ${err.substring(0, 200)}` }) };
+            return { statusCode: 500, body: JSON.stringify({ error: `Gemini error ${res.status}: ${res.error}` }) };
         }
 
-        const data = await res.json();
+        const data = res.data;
         const raw = extractGeminiText(data, '{}');
         let parsed;
         try {

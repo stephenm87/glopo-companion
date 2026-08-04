@@ -47,11 +47,10 @@ exports.handler = async (event) => {
         );
 
         if (!res.ok) {
-            const err = await res.text();
-            return { statusCode: 500, body: JSON.stringify({ error: `Gemini error ${res.status}: ${err.substring(0, 200)}` }) };
+            return { statusCode: 500, body: JSON.stringify({ error: `Gemini error ${res.status}: ${res.error}` }) };
         }
 
-        const data = await res.json();
+        const data = res.data;
         const raw = extractGeminiText(data, '{}');
         let parsed;
         try { parsed = JSON.parse(raw); } catch { return { statusCode: 500, body: JSON.stringify({ error: 'Failed to parse AI response' }) }; }

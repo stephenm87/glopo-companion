@@ -45,14 +45,12 @@ You must adapt your language, framing, and analytical tension to the SPECIFIC co
             contents: [{ parts: [{ text: prompt }] }]
         };
 
-        const primaryUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
-        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        const res = await callGeminiWithRetry(primaryUrl, body, { fallbackUrl });
+        const res = await callGeminiWithRetry(apiKey, body);
         if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
+            
+            throw new Error(`Gemini API error ${res.status}: ${res.error}`);
         }
-        const data = await res.json();
+        const data = res.data;
         const text = extractGeminiText(data, '');
 
         return {

@@ -47,17 +47,13 @@ exports.handler = async (event) => {
             generationConfig: { response_mime_type: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
         };
 
-        const res = await callGeminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-            body
-        );
+        const res = await callGeminiWithRetry(apiKey, body);
 
         if (!res.ok) {
-            const err = await res.text();
-            return { statusCode: 500, body: JSON.stringify({ error: `Gemini error ${res.status}: ${err.substring(0, 200)}` }) };
+            return { statusCode: 500, body: JSON.stringify({ error: `Gemini error ${res.status}: ${res.error}` }) };
         }
 
-        const data = await res.json();
+        const data = res.data;
         const raw = extractGeminiText(data, '[]');
         const parsed = JSON.parse(raw); // JSON mode — no regex stripping needed
         const results = Array.isArray(parsed) ? parsed : parsed.results || [];
