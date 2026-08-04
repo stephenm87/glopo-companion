@@ -1,80 +1,140 @@
 /**
  * gemini-retry.js — Shared retry wrapper for Gemini API calls.
- * Retries on 429 (rate limit) and 503 (overloaded) with exponential backoff.
- * Supports automatic model fallback (e.g. gemini-2.5-pro → gemini-2.5-flash).
+ * Implements exponential backoff, jitter, timeout, and distinct HTTP status classification.
  */
 const fetch = (...args) => import('node-fetch').then(m => m.default(...args));
 
-const RETRYABLE_STATUSES = [429, 503];
-const MAX_RETRIES = 2;
+// Centralized model selection
+const PRIMARY_MODEL = process.env.GEMINI_PRIMARY_MODEL || 'gemini-3.5-flash';
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash';
+
+if (PRIMARY_MODEL === FALLBACK_MODEL) {
+    console.warn(`[gemini-retry] WARNING: PRIMARY_MODEL and FALLBACK_MODEL are both ${PRIMARY_MODEL}. Fallback behavior will point to the same model.`);
+}
+
+const TRANSIENT_STATUSES = [429, 500, 502, 503, 504];
+const MAX_RETRIES = 3;
 const INITIAL_DELAY_MS = 1000;
+const MAX_DELAY_MS = 10000;
+const REQUEST_TIMEOUT_MS = 15000;
 
 /**
- * Calls a Gemini API endpoint with automatic retry on 429/503.
- * If all retries fail and a fallbackUrl is provided, retries once with the fallback model.
- * @param {string} url - Full Gemini API URL (including ?key=...)
- * @param {object} body - Request body to JSON.stringify
- * @param {object} [options] - Optional overrides: { maxRetries, headers, fallbackUrl }
- * @returns {Promise<Response>} - The successful fetch Response
+ * Builds the Gemini API URL for a specific model.
  */
-async function callGeminiWithRetry(url, body, options = {}) {
+function buildGeminiUrl(modelName, apiKey) {
+    return `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+}
+
+/**
+ * Executes a fetch with a timeout.
+ */
+async function fetchWithTimeout(url, options, timeoutMs) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        if (error.name === 'AbortError' || error.type === 'aborted') {
+            throw new Error(`Request timed out after ${timeoutMs}ms`);
+        }
+        throw error;
+    }
+}
+
+/**
+ * Calls Gemini API with robust retry behavior.
+ * @param {string} apiKey - The Gemini API Key
+ * @param {object} body - Request body to JSON.stringify
+ * @param {object} [options] - Optional overrides: { maxRetries, headers, timeout }
+ * @returns {Promise<{ ok: boolean, status: number, data?: any, error?: any }>}
+ */
+async function callGeminiWithRetry(apiKey, body, options = {}) {
     const maxRetries = options.maxRetries ?? MAX_RETRIES;
     const headers = options.headers ?? { 'Content-Type': 'application/json' };
-    const fallbackUrl = options.fallbackUrl ?? null;
+    const timeout = options.timeout ?? REQUEST_TIMEOUT_MS;
     const bodyStr = typeof body === 'string' ? body : JSON.stringify(body);
+    
+    let currentModel = PRIMARY_MODEL;
+    let url = buildGeminiUrl(currentModel, apiKey);
+    let attempt = 0;
 
-    // --- Primary model attempts ---
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers,
-            body: bodyStr
-        });
+    while (attempt <= maxRetries) {
+        try {
+            const res = await fetchWithTimeout(url, {
+                method: 'POST',
+                headers,
+                body: bodyStr
+            }, timeout);
 
-        if (res.ok || !RETRYABLE_STATUSES.includes(res.status)) {
-            return res;
-        }
-
-        // Retryable error
-        if (attempt < maxRetries) {
-            const delay = INITIAL_DELAY_MS * Math.pow(2, attempt); // 1s → 2s
-            console.log(`[gemini-retry] ${res.status} on attempt ${attempt + 1}/${maxRetries + 1}, retrying in ${delay}ms...`);
-            await new Promise(r => setTimeout(r, delay));
-        } else {
-            // Exhausted retries on primary model
-            if (fallbackUrl) {
-                console.log(`[gemini-retry] Primary model exhausted (${res.status} after ${maxRetries + 1} attempts). Falling back to flash model...`);
-                // Single attempt on fallback model
-                const fallbackRes = await fetch(fallbackUrl, {
-                    method: 'POST',
-                    headers,
-                    body: bodyStr
-                });
-                if (fallbackRes.ok || !RETRYABLE_STATUSES.includes(fallbackRes.status)) {
-                    console.log(`[gemini-retry] Fallback model returned ${fallbackRes.status}.`);
-                    return fallbackRes;
-                }
-                console.log(`[gemini-retry] Fallback model also failed (${fallbackRes.status}). Giving up.`);
-                return fallbackRes;
+            if (res.ok) {
+                const data = await res.json();
+                return { ok: true, status: res.status, data };
             }
-            console.log(`[gemini-retry] ${res.status} after ${maxRetries + 1} attempts, giving up.`);
-            return res;
+
+            if (res.status === 400) {
+                const errData = await res.text();
+                return { ok: false, status: res.status, error: 'Bad Request: ' + errData };
+            }
+
+            if (res.status === 401 || res.status === 403) {
+                return { ok: false, status: res.status, error: 'Authentication or Authorization failure.' };
+            }
+
+            if (res.status === 404) {
+                if (currentModel === PRIMARY_MODEL && PRIMARY_MODEL !== FALLBACK_MODEL) {
+                    console.log(`[gemini-retry] 404 for ${PRIMARY_MODEL}, falling back to ${FALLBACK_MODEL}`);
+                    currentModel = FALLBACK_MODEL;
+                    url = buildGeminiUrl(currentModel, apiKey);
+                    attempt++;
+                    continue; 
+                }
+                return { ok: false, status: res.status, error: `Model ${currentModel} not found.` };
+            }
+
+            if (TRANSIENT_STATUSES.includes(res.status)) {
+                let delay = INITIAL_DELAY_MS * Math.pow(2, attempt);
+                const retryAfter = res.headers.get('Retry-After');
+                if (retryAfter) {
+                    const parsed = parseInt(retryAfter, 10);
+                    if (!isNaN(parsed)) delay = parsed * 1000;
+                }
+                
+                delay = Math.min(delay, MAX_DELAY_MS);
+                delay = delay + (Math.random() * 500);
+
+                if (attempt < maxRetries) {
+                    console.log(`[gemini-retry] ${res.status} on attempt ${attempt + 1}, retrying in ${Math.round(delay)}ms...`);
+                    await new Promise(r => setTimeout(r, delay));
+                    attempt++;
+                    continue;
+                } else {
+                    return { ok: false, status: res.status, error: `Exhausted retries. Last status: ${res.status}` };
+                }
+            }
+
+            return { ok: false, status: res.status, error: `Unexpected status: ${res.status}` };
+
+        } catch (error) {
+            if (attempt < maxRetries) {
+                const delay = Math.min(INITIAL_DELAY_MS * Math.pow(2, attempt) + Math.random() * 500, MAX_DELAY_MS);
+                console.log(`[gemini-retry] Network/Timeout error (${error.message}), retrying in ${Math.round(delay)}ms...`);
+                await new Promise(r => setTimeout(r, delay));
+                attempt++;
+                continue;
+            } else {
+                return { ok: false, status: 0, error: `Network error or timeout: ${error.message}` };
+            }
         }
     }
 }
 
-module.exports = { callGeminiWithRetry, extractGeminiText };
-
-/**
- * Extracts the actual text from a Gemini API response, safely skipping
- * thinking/thought parts that gemini-2.5-flash/pro models may include.
- * @param {object} geminiJson - Parsed JSON response from Gemini API
- * @param {string} [fallback=''] - Default if no text found
- * @returns {string} The model's text response
- */
 function extractGeminiText(geminiJson, fallback = '') {
     const parts = geminiJson?.candidates?.[0]?.content?.parts || [];
-    // Prefer the first non-thought text part; fall back to any text part
     const part = parts.find(p => p.text && !p.thought) || parts.find(p => p.text);
     return part?.text || fallback;
 }
+
+module.exports = { callGeminiWithRetry, extractGeminiText, PRIMARY_MODEL, FALLBACK_MODEL };
