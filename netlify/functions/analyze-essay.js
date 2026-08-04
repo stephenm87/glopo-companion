@@ -1,6 +1,14 @@
 // analyze-essay.js — Deep Critique for Mock Exam Zone
 // Uses native fetch (no SDK) to call Gemini REST API + optional Cloud NL API
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { z } = require('zod');
+
+const analysisSchema = z.object({
+  glow: z.string(),
+  grow: z.string(),
+  alternativePerspectives: z.string(),
+  synthesisGuidance: z.string()
+});
 
 // Cloud Natural Language API — extract entities + sentiment from essay
 async function analyzeWithNlApi(text, apiKey) {
@@ -80,18 +88,38 @@ Always identify how the 4 core concepts (Power, Sovereignty, Legitimacy, Interde
             }]
         },
         contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingBudget: 0 },
+            responseSchema: {
+                type: 'OBJECT',
+                properties: {
+                    glow: { type: 'STRING' },
+                    grow: { type: 'STRING' },
+                    alternativePerspectives: { type: 'STRING' },
+                    synthesisGuidance: { type: 'STRING' }
+                },
+                required: ['glow', 'grow', 'alternativePerspectives', 'synthesisGuidance']
+            }
+        },
         tools: [{ google_search: {} }]
     };
 
     const res = await callGeminiWithRetry(apiKey, body);
 
     if (!res.ok) {
-        
+
         throw new Error(`Gemini API error ${res.status}: ${res.error}`);
     }
 
-    const data = res.data;
-    return extractGeminiText(data, '');
+    const raw = extractGeminiText(res.data, '{}');
+    try {
+        const parsed = JSON.parse(raw);
+        const validated = analysisSchema.parse(parsed);
+        return `## Glow\n${validated.glow}\n\n## Grow\n${validated.grow}\n\n## Alternative Perspectives\n${validated.alternativePerspectives}\n\n## Synthesis Guidance\n${validated.synthesisGuidance}`;
+    } catch (err) {
+        throw new Error('Validation error: ' + err.message);
+    }
 }
 
 exports.handler = async (event) => {
@@ -117,18 +145,11 @@ ${essayText}
 
 Please provide a rigorous assessment.
 
-REQUIRED SECTIONS:
-## Glow
-[Key strengths in knowledge, analysis, and evaluation.]
-
-## Grow
-[Specific actionable areas for improvement based on the 2026 IB Rubric.]
-
-## Alternative Perspectives
-[Crucially, provide 2-3 'alternative ways' of responding to this specific prompt. Suggest different theoretical lenses (e.g., "A feminist Critique would focus on...") or different case studies that would offer a counter-argument to the student's current position. Keep this unbiased and constructive.]
-
-## Synthesis Guidance
-[A one-sentence 'golden tip' on how to bridge these perspectives for a higher mark band.]
+Return a JSON object with these EXACT string keys:
+"glow": [Key strengths in knowledge, analysis, and evaluation.]
+"grow": [Specific actionable areas for improvement based on the 2026 IB Rubric.]
+"alternativePerspectives": [Crucially, provide 2-3 'alternative ways' of responding to this specific prompt. Suggest different theoretical lenses or different case studies that would offer a counter-argument to the student's current position.]
+"synthesisGuidance": [A one-sentence 'golden tip' on how to bridge these perspectives for a higher mark band.]
 `;
 
         // Run Gemini + NL API in parallel

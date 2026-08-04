@@ -122,9 +122,7 @@ Return JSON:
   "perspectiveSummary": "Provide a detailed 4-6 sentence analysis of how different actors, governments, IGOs, NGOs, and media sources frame each case differently. Name specific actors (e.g., 'the US State Department frames...', 'Al Jazeera emphasizes...', 'the UN Human Rights Council argues...'). Explain how these competing narratives shape public understanding and policy responses for both ${caseA} and ${caseB}."
 }`;
 
-        const gemRes = await callGeminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiKey}`,
-            {
+        const body = {
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: { 
                     responseMimeType: 'application/json', 
@@ -153,8 +151,8 @@ Return JSON:
                         required: ['similarities', 'differences', 'theoryLenses', 'ibConcepts', 'examArgument', 'perspectiveSummary']
                     }
                 }
-            }
-        );
+            };
+        const gemRes = await callGeminiWithRetry(geminiKey, body);
 
         let analysis = null;
         if (gemRes.ok) {

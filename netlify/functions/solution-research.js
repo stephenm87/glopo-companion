@@ -100,17 +100,15 @@ exports.handler = async (event) => {
             };
         }
 
-        const res = await callGeminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
-            {
+        const body = {
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: { 
                     responseMimeType: 'application/json', 
                     thinkingConfig: { thinkingBudget: 0 },
                     responseSchema: schemaDefinition
                 }
-            }
-        );
+            };
+        const res = await callGeminiWithRetry(apiKey, body);
 
         if (!res.ok) {
             return { statusCode: 500, body: JSON.stringify({ error: `Gemini error ${res.status}: ${res.error}` }) };
