@@ -57,7 +57,7 @@ async function callGeminiWithRetry(apiKey, body, options = {}) {
     const bodyStr = typeof body === 'string' ? body : JSON.stringify(body);
     
     let currentModel = PRIMARY_MODEL;
-    let url = buildGeminiUrl(currentModel, apiKey);
+    let url = options.url || buildGeminiUrl(currentModel, apiKey);
     let attempt = 0;
 
     while (attempt <= maxRetries) {
@@ -83,7 +83,7 @@ async function callGeminiWithRetry(apiKey, body, options = {}) {
             }
 
             if (res.status === 404) {
-                if (currentModel === PRIMARY_MODEL && PRIMARY_MODEL !== FALLBACK_MODEL) {
+                if (!options.url && currentModel === PRIMARY_MODEL && PRIMARY_MODEL !== FALLBACK_MODEL) {
                     console.log(`[gemini-retry] 404 for ${PRIMARY_MODEL}, falling back to ${FALLBACK_MODEL}`);
                     currentModel = FALLBACK_MODEL;
                     url = buildGeminiUrl(currentModel, apiKey);

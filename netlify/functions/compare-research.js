@@ -32,7 +32,7 @@ exports.handler = async (event) => {
                             body: JSON.stringify({ q, num: 3, gl: 'us', hl: 'en' })
                         });
                         if (res.ok) {
-                            const data = await res.json();
+                            const data = res.data;
                             const articles = (data.news || []).map(a => ({
                                 title: a.title,
                                 url: a.link,

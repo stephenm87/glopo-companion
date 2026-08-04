@@ -35,19 +35,17 @@ function cosineSimilarity(a, b) {
 }
 
 async function getEmbedding(text, apiKey) {
-    const res = await callGeminiWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`,
-        {
+    const res = await callGeminiWithRetry(apiKey, {
             model: 'models/text-embedding-004',
             content: { parts: [{ text }] },
             taskType: 'SEMANTIC_SIMILARITY'
-        }
+        },
+        { url: `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}` }
     );
     if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Gemini embedding error ${res.status}: ${err}`);
+        throw new Error(`Gemini API error ${res.status}: ${res.error}`);
     }
-    const data = await res.json();
+    const data = res.data;
     return data.embedding.values;
 }
 

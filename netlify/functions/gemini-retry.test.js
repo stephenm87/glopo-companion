@@ -50,7 +50,7 @@ describe('gemini-retry', () => {
         expect(global.fetch).toHaveBeenCalledTimes(2);
     });
 
-    test('404 falls back to FALLBACK_MODEL ONCE', async () => {
+        test('404 falls back to FALLBACK_MODEL ONCE', async () => {
         global.fetch.mockResolvedValueOnce({
             ok: false,
             status: 404
@@ -66,5 +66,18 @@ describe('gemini-retry', () => {
         
         expect(global.fetch.mock.calls[0][0]).toContain(PRIMARY_MODEL);
         expect(global.fetch.mock.calls[1][0]).toContain(FALLBACK_MODEL);
+    });
+
+    test('options.url overrides model url generation and prevents 404 fallback', async () => {
+        global.fetch.mockResolvedValueOnce({
+            ok: false,
+            status: 404
+        });
+
+        const res = await callGeminiWithRetry('test-key', { prompt: 'test' }, { url: 'https://custom-url.com' });
+        expect(res.ok).toBe(false);
+        expect(res.status).toBe(404);
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(global.fetch.mock.calls[0][0]).toBe('https://custom-url.com');
     });
 });

@@ -77,7 +77,7 @@ AO1: [Band 1/2/3] | AO2: [Band 1/2/3] | AO3: [Band 1/2/3] | AO4: [Band 1/2/3]`;
             const errText = await res.text();
             throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
         }
-        const data = await res.json();
+        const data = res.data;
         const text = extractGeminiText(data, '');
 
         return {
