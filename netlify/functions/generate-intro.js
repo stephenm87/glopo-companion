@@ -3,13 +3,37 @@
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
 
+const inputSchema = z.object({
+  concept: z.string().min(2).max(100),
+  definition: z.string().min(5).max(500),
+  caseA: z.string().min(2).max(100),
+  caseB: z.string().min(2).max(100),
+  thesis: z.string().min(5).max(500)
+});
+
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
     try {
-        const { concept, definition, caseA, caseB, thesis } = JSON.parse(event.body);
+        let parsedInput;
+        try {
+            parsedInput = inputSchema.parse(JSON.parse(event.body));
+        } catch (err) {
+            return {
+                statusCode: 400,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: err.errors?.[0]?.message || err.message,
+                        field: err.errors?.[0]?.path?.[0] || 'body'
+                    }
+                })
+            };
+        }
+        const { concept, definition, caseA, caseB, thesis } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
 
         if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {

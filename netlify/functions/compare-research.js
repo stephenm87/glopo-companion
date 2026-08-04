@@ -3,6 +3,11 @@
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
 
+const inputSchema = z.object({
+  caseA: z.string().min(2).max(100),
+  caseB: z.string().min(2).max(100)
+});
+
 const compareSchema = z.object({
   similarities: z.array(z.string()),
   differences: z.array(z.string()),
@@ -20,7 +25,23 @@ exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
     try {
-        const { caseA, caseB } = JSON.parse(event.body);
+        let parsedInput;
+        try {
+            parsedInput = inputSchema.parse(JSON.parse(event.body));
+        } catch (err) {
+            return {
+                statusCode: 400,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: err.errors?.[0]?.message || err.message,
+                        field: err.errors?.[0]?.path?.[0] || 'body'
+                    }
+                })
+            };
+        }
+        const { caseA, caseB } = parsedInput;
         const serperKey = process.env.SERPER_API_KEY;
         const geminiKey = process.env.GEMINI_API_KEY;
         if (!geminiKey) return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured' }) };

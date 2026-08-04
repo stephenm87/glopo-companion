@@ -3,6 +3,10 @@
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
 
+const inputSchema = z.object({
+  query: z.string().min(5).max(1000)
+});
+
 const findCasesSchema = z.array(z.object({
   rank: z.number(),
   name: z.string(),
@@ -40,7 +44,23 @@ exports.handler = async (event) => {
     }
 
     try {
-        const { query } = JSON.parse(event.body);
+        let parsedInput;
+        try {
+            parsedInput = inputSchema.parse(JSON.parse(event.body));
+        } catch (err) {
+            return {
+                statusCode: 400,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: err.errors?.[0]?.message || err.message,
+                        field: err.errors?.[0]?.path?.[0] || 'body'
+                    }
+                })
+            };
+        }
+        const { query } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
 
         if (!apiKey) {

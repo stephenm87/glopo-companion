@@ -3,6 +3,11 @@
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
 
+const inputSchema = z.object({
+  paragraph: z.string().min(10).max(3000),
+  customPrompt: z.string().max(1000).optional()
+});
+
 const peelSchema = z.object({
   improved: z.string(),
   bandJump: z.string(),
@@ -18,7 +23,23 @@ exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
     try {
-        const { paragraph, customPrompt } = JSON.parse(event.body);
+        let parsedInput;
+        try {
+            parsedInput = inputSchema.parse(JSON.parse(event.body));
+        } catch (err) {
+            return {
+                statusCode: 400,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: err.errors?.[0]?.message || err.message,
+                        field: err.errors?.[0]?.path?.[0] || 'body'
+                    }
+                })
+            };
+        }
+        const { paragraph, customPrompt } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured on server' }) };
 
