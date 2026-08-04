@@ -2,7 +2,6 @@
  * gemini-retry.js — Shared retry wrapper for Gemini API calls.
  * Implements exponential backoff, jitter, timeout, and distinct HTTP status classification.
  */
-const fetch = (...args) => import('node-fetch').then(m => m.default(...args));
 
 // Centralized model selection
 const PRIMARY_MODEL = process.env.GEMINI_PRIMARY_MODEL || 'gemini-3.5-flash';
