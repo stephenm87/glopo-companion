@@ -1,5 +1,5 @@
 // Semantic Case Study Search — Gemini Embeddings API
-// Replaces Vertex AI textembedding-gecko with gemini text-embedding-004
+// Replaces Vertex AI textembedding-gecko with gemini gemini-embedding-2
 // Uses the same GEMINI_API_KEY already configured for all other functions.
 const { callGeminiWithRetry } = require('./gemini-retry');
 
@@ -36,11 +36,11 @@ function cosineSimilarity(a, b) {
 
 async function getEmbedding(text, apiKey) {
     const res = await callGeminiWithRetry(apiKey, {
-            model: 'models/text-embedding-004',
+            model: 'models/gemini-embedding-2',
             content: { parts: [{ text }] },
             taskType: 'SEMANTIC_SIMILARITY'
         },
-        { url: `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}` }
+        { url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${apiKey}` }
     );
     if (!res.ok) {
         throw new Error(`Gemini API error ${res.status}: ${res.error}`);

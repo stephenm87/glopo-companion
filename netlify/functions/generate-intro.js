@@ -47,8 +47,8 @@ You must adapt your language, framing, and analytical tension to the SPECIFIC co
 
         const res = await callGeminiWithRetry(apiKey, body);
         if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 200)}`);
+            
+            throw new Error(`Gemini API error ${res.status}: ${res.error}`);
         }
         const data = res.data;
         const text = extractGeminiText(data, '');
