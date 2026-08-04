@@ -2,6 +2,11 @@
 // Updated: JSON output mode for reliable parsing + 5 new 2025-2026 cases
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
+const { formatValidationError } = require('./validation-helper');
+
+const inputSchema = z.object({
+  query: z.string().min(5).max(1000)
+});
 
 const findCasesSchema = z.array(z.object({
   rank: z.number(),
@@ -40,7 +45,13 @@ exports.handler = async (event) => {
     }
 
     try {
-        const { query } = JSON.parse(event.body);
+        let parsedInput;
+        try {
+            parsedInput = inputSchema.parse(JSON.parse(event.body));
+        } catch (err) {
+            return formatValidationError(err);
+        }
+        const { query } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
 
         if (!apiKey) {

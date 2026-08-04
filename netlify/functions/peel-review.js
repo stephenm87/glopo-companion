@@ -2,6 +2,12 @@
 // Supports a customPrompt for non-PEEL review modes (e.g. intro review)
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
+const { formatValidationError } = require('./validation-helper');
+
+const inputSchema = z.object({
+  paragraph: z.string().min(10).max(3000),
+  customPrompt: z.string().max(1000).optional()
+});
 
 const peelSchema = z.object({
   improved: z.string(),
@@ -18,7 +24,13 @@ exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
     try {
-        const { paragraph, customPrompt } = JSON.parse(event.body);
+        let parsedInput;
+        try {
+            parsedInput = inputSchema.parse(JSON.parse(event.body));
+        } catch (err) {
+            return formatValidationError(err);
+        }
+        const { paragraph, customPrompt } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured on server' }) };
 

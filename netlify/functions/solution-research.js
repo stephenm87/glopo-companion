@@ -2,6 +2,13 @@
 // Supports per-step evaluation, research search, and tiered draft generation.
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
+const { formatValidationError } = require('./validation-helper');
+
+const inputSchema = z.object({
+  mode: z.enum(['evaluate', 'research', 'draft']),
+  step: z.number().min(1).max(6).optional(),
+  inputs: z.record(z.string(), z.any())
+});
 
 const evalSchema = z.object({
   score: z.number(),
@@ -30,7 +37,13 @@ exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
     try {
-        const { mode, step, inputs } = JSON.parse(event.body);
+        let parsedInput;
+        try {
+            parsedInput = inputSchema.parse(JSON.parse(event.body));
+        } catch (err) {
+            return formatValidationError(err);
+        }
+        const { mode, step, inputs } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured' }) };
 

@@ -2,6 +2,13 @@
 // Replaces Vertex AI textembedding-gecko with gemini gemini-embedding-2
 // Uses the same GEMINI_API_KEY already configured for all other functions.
 const { callGeminiWithRetry } = require('./gemini-retry');
+const { z } = require('zod');
+const { formatValidationError } = require('./validation-helper');
+
+const inputSchema = z.object({
+  query: z.string().min(3).max(500),
+  topK: z.number().min(1).max(20).optional().default(3)
+});
 
 const CASE_SUMMARIES = [
     { name: "South China Sea Dispute", summary: "China territorial claims nine-dash line sovereignty power realism maritime security Philippines UNCLOS freedom of navigation military conflict" },
@@ -55,7 +62,13 @@ exports.handler = async (event) => {
     }
 
     try {
-        const { query, topK = 3 } = JSON.parse(event.body);
+        let parsedInput;
+        try {
+            parsedInput = inputSchema.parse(JSON.parse(event.body));
+        } catch (err) {
+            return formatValidationError(err);
+        }
+        const { query, topK = 3 } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
 
         if (!apiKey) {

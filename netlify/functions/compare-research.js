@@ -2,6 +2,12 @@
 // Searches for 2-3 news/analysis articles per case study from different source types
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
+const { formatValidationError } = require('./validation-helper');
+
+const inputSchema = z.object({
+  caseA: z.string().min(2).max(100),
+  caseB: z.string().min(2).max(100)
+});
 
 const compareSchema = z.object({
   similarities: z.array(z.string()),
@@ -20,7 +26,13 @@ exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
     try {
-        const { caseA, caseB } = JSON.parse(event.body);
+        let parsedInput;
+        try {
+            parsedInput = inputSchema.parse(JSON.parse(event.body));
+        } catch (err) {
+            return formatValidationError(err);
+        }
+        const { caseA, caseB } = parsedInput;
         const serperKey = process.env.SERPER_API_KEY;
         const geminiKey = process.env.GEMINI_API_KEY;
         if (!geminiKey) return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured' }) };
