@@ -1,4 +1,4 @@
-const { callGeminiWithRetry, PRIMARY_MODEL, FALLBACK_MODEL } = require('./gemini-retry');
+const { callGeminiWithRetry, PRIMARY_MODEL, FALLBACK_MODEL } = require('../gemini-retry');
 
 global.fetch = jest.fn();
 
