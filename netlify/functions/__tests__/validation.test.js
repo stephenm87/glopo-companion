@@ -68,14 +68,30 @@ describe('estimateBase64Bytes', () => {
 });
 
 describe('isValidBase64', () => {
-    it('accepts valid base64', () => {
+    it('accepts valid padded base64', () => {
         expect(isValidBase64('SGVsbG8gV29ybGQ=')).toBe(true);
     });
     it('rejects invalid characters', () => {
-        expect(isValidBase64('!!!invalid!!!')).toBe(false);
+        expect(isValidBase64('SGVsbG8gV29ybGQ=!!!')).toBe(false);
     });
-    it('rejects embedded braces', () => {
-        expect(isValidBase64('abc{def}')).toBe(false);
+    it('rejects invalid length', () => {
+        expect(isValidBase64('SGVsb')).toBe(false);
+    });
+    it('rejects misplaced padding', () => {
+        expect(isValidBase64('SGVsb=G8gV29ybGQ')).toBe(false);
+    });
+    it('rejects excessive padding', () => {
+        expect(isValidBase64('SGVsbG8gV29ybGQ===')).toBe(false);
+    });
+    it('rejects truncated base64', () => {
+        // "SGVsbG8gV29ybGQ" is 15 chars (not multiple of 4)
+        expect(isValidBase64('SGVsbG8gV29ybGQ')).toBe(false);
+    });
+    it('accepts valid image-like binary content', () => {
+        expect(isValidBase64(Buffer.from([0xFF, 0xD8, 0xFF, 0xE0]).toString('base64'))).toBe(true);
+    });
+    it('accepts valid PDF-like binary content', () => {
+        expect(isValidBase64(Buffer.from('%PDF-1.4').toString('base64'))).toBe(true);
     });
 });
 
@@ -156,8 +172,8 @@ describe('Image validation (analyze-image-essay)', () => {
         verifyError(res, 'imageBase64');
     });
 
-    it('accepts up to max bytes decoded', async () => {
-        const exactly4MB = makeBase64(MAX_DECODED_BYTES - 100);
+    it('accepts exactly MAX_DECODED_BYTES - 1', async () => {
+        const payload = Buffer.alloc(MAX_DECODED_BYTES - 1).toString('base64');
         callGeminiWithRetry.mockResolvedValue({
             ok: true, status: 200,
             data: { candidates: [{ content: { parts: [{ text: JSON.stringify({
@@ -165,13 +181,26 @@ describe('Image validation (analyze-image-essay)', () => {
                 alternativeApproaches: 'A', goldenTip: 'GT', aoEstimate: 'AO'
             })}]}}]}
         });
-        const res = await analyzeImageEssay(mockEvent({ imageBase64: exactly4MB, mimeType: 'image/jpeg' }));
+        const res = await analyzeImageEssay(mockEvent({ imageBase64: payload, mimeType: 'image/jpeg' }));
         expect(res.statusCode).toBe(200);
     });
 
-    it('returns HTTP 413 for oversized payloads', async () => {
-        const overLimit = makeBase64(MAX_DECODED_BYTES + 1024);
-        const res = await analyzeImageEssay(mockEvent({ imageBase64: overLimit, mimeType: 'image/jpeg' }));
+    it('accepts exactly MAX_DECODED_BYTES', async () => {
+        const payload = Buffer.alloc(MAX_DECODED_BYTES).toString('base64');
+        callGeminiWithRetry.mockResolvedValue({
+            ok: true, status: 200,
+            data: { candidates: [{ content: { parts: [{ text: JSON.stringify({
+                transcription: 'T', glow: 'G', grow: 'GR',
+                alternativeApproaches: 'A', goldenTip: 'GT', aoEstimate: 'AO'
+            })}]}}]}
+        });
+        const res = await analyzeImageEssay(mockEvent({ imageBase64: payload, mimeType: 'image/jpeg' }));
+        expect(res.statusCode).toBe(200);
+    });
+
+    it('returns HTTP 413 for oversized payloads (MAX_DECODED_BYTES + 1)', async () => {
+        const payload = Buffer.alloc(MAX_DECODED_BYTES + 1).toString('base64');
+        const res = await analyzeImageEssay(mockEvent({ imageBase64: payload, mimeType: 'image/jpeg' }));
         verifyError(res, 'imageBase64', 413);
         const body = JSON.parse(res.body);
         expect(body.error.code).toBe('PAYLOAD_TOO_LARGE');

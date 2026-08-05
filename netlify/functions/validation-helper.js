@@ -25,7 +25,12 @@ function estimateBase64Bytes(value) {
  * @returns {boolean} True if valid base64 format.
  */
 function isValidBase64(value) {
-    return /^[A-Za-z0-9+/]*={0,2}$/.test(value.replace(/\s/g, ''));
+    const clean = value.replace(/[\r\n\t\s]+/g, '');
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(clean)) return false;
+    if (clean.length % 4 !== 0) return false;
+    const buf = Buffer.from(clean, 'base64');
+    const reencoded = buf.toString('base64');
+    return clean === reencoded;
 }
 
 /**

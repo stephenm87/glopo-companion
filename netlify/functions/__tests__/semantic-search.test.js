@@ -13,6 +13,24 @@ describe('semantic-search.js', () => {
         process.env.GEMINI_API_KEY = 'test-key';
     });
 
+    it('falls back to lexical if GEMINI_API_KEY is missing', async () => {
+        delete process.env.GEMINI_API_KEY;
+        const res = await handler({ httpMethod: 'POST', body: JSON.stringify({ query: 'globalization' }) });
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.searchMode).toBe('lexical');
+        expect(body.fallbackReason).toBe('EMBEDDING_NOT_CONFIGURED');
+    });
+
+    it('falls back to lexical if GEMINI_API_KEY is blank', async () => {
+        process.env.GEMINI_API_KEY = '   ';
+        const res = await handler({ httpMethod: 'POST', body: JSON.stringify({ query: 'globalization' }) });
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.searchMode).toBe('lexical');
+        expect(body.fallbackReason).toBe('EMBEDDING_NOT_CONFIGURED');
+    });
+
     // ── Semantic mode ─────────────────────────────────────────────────────────
     it('returns ranked case summaries with semantic mode metadata', async () => {
         callGeminiWithRetry.mockImplementation(async (key, body) => {

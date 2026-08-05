@@ -137,8 +137,18 @@ exports.handler = async (event) => {
         const { query, topK } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
 
-        if (!apiKey) {
-            return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured.' }) };
+        if (!apiKey || apiKey.trim() === '') {
+            const results = lexicalRank(query, topK);
+            return {
+                statusCode: 200,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    results,
+                    searchMode: 'lexical',
+                    degraded: true,
+                    fallbackReason: 'EMBEDDING_NOT_CONFIGURED'
+                })
+            };
         }
 
         // ── Attempt embedding-based semantic ranking ──────────────────────────

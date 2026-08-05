@@ -3390,7 +3390,9 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const SUPPORTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+        // MIME POLICY WARNING:
+        // This array manually mirrors the authoritative policy enforced by the backend in validation-helper.js.
+        const SUPPORTED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
         if (!SUPPORTED_FILE_TYPES.includes(file.type)) {
             setImageError('Please upload an image (JPG, PNG, or WebP) or PDF file.');
             return;
