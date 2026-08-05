@@ -70,7 +70,7 @@ describe('compare-research.js', () => {
             }
         });
 
-        const event = { httpMethod: 'POST', body: JSON.stringify({ caseA: 'A', caseB: 'B' }) };
+        const event = { httpMethod: 'POST', body: JSON.stringify({ caseA: 'CaseA', caseB: 'CaseB' }) };
         const res = await handler(event);
         expect(res.statusCode).toBe(200);
         const body = JSON.parse(res.body);
@@ -93,7 +93,7 @@ describe('compare-research.js', () => {
             }
         });
 
-        const event = { httpMethod: 'POST', body: JSON.stringify({ caseA: 'A', caseB: 'B' }) };
+        const event = { httpMethod: 'POST', body: JSON.stringify({ caseA: 'CaseA', caseB: 'CaseB' }) };
         const res = await handler(event);
         expect(res.statusCode).toBe(200);
     });

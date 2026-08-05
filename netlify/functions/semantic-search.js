@@ -1,5 +1,4 @@
-// Semantic Case Study Search — Gemini Embeddings API
-// Replaces Vertex AI textembedding-gecko with gemini gemini-embedding-2
+// Semantic Case Study Search — Gemini Embeddings API with deterministic lexical fallback
 // Uses the same GEMINI_API_KEY already configured for all other functions.
 const { callGeminiWithRetry } = require('./gemini-retry');
 const { z } = require('zod');
@@ -34,6 +33,73 @@ const CASE_SUMMARIES = [
     { name: "Trump Tariff Shock & Global Trade (2025)", summary: "Trump tariffs US trade war protectionism WTO globalization interdependence economic sovereignty China EU retaliation 2025" },
 ];
 
+// ── Precomputed token sets for lexical fallback (cached at module load) ────────
+function tokenize(text) {
+    return text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').split(/\s+/).filter(w => w.length > 1);
+}
+
+/** IB-specific high-value terms receive bonus weighting. */
+const IB_TERMS = new Set([
+    'sovereignty', 'power', 'legitimacy', 'interdependence',
+    'realism', 'liberalism', 'constructivism', 'marxism', 'feminism',
+    'humanitarian', 'intervention', 'security', 'conflict', 'sanctions',
+    'globalisation', 'globalization', 'multilateral', 'bilateral',
+    'human', 'rights', 'democracy', 'authoritarian', 'regime'
+]);
+
+const CACHED_CASE_TOKENS = CASE_SUMMARIES.map(c => ({
+    name: c.name,
+    tokens: tokenize(c.summary),
+    tokenSet: new Set(tokenize(c.summary))
+}));
+
+/**
+ * Deterministic lexical ranking.
+ * Scores combine:
+ *   - Jaccard overlap between query tokens and case tokens
+ *   - Bonus for IB-specific term matches
+ *   - Bonus for consecutive bigram phrase matches
+ */
+function lexicalRank(queryText, topK) {
+    const qTokens = tokenize(queryText);
+    if (qTokens.length === 0) return CACHED_CASE_TOKENS.slice(0, topK).map(c => ({ name: c.name, score: 0 }));
+
+    const qSet = new Set(qTokens);
+
+    // Build query bigrams for phrase matching
+    const qBigrams = new Set();
+    for (let i = 0; i < qTokens.length - 1; i++) {
+        qBigrams.add(qTokens[i] + ' ' + qTokens[i + 1]);
+    }
+
+    const scored = CACHED_CASE_TOKENS.map(c => {
+        // Jaccard overlap
+        const intersection = [...qSet].filter(t => c.tokenSet.has(t)).length;
+        const union = new Set([...qSet, ...c.tokenSet]).size;
+        const jaccard = union > 0 ? intersection / union : 0;
+
+        // IB-term bonus: count how many matched tokens are IB-specific
+        let ibBonus = 0;
+        for (const t of qSet) {
+            if (c.tokenSet.has(t) && IB_TERMS.has(t)) ibBonus += 0.05;
+        }
+
+        // Bigram phrase bonus
+        let phraseBonus = 0;
+        for (let i = 0; i < c.tokens.length - 1; i++) {
+            const bigram = c.tokens[i] + ' ' + c.tokens[i + 1];
+            if (qBigrams.has(bigram)) phraseBonus += 0.08;
+        }
+
+        return { name: c.name, score: Math.min(jaccard + ibBonus + phraseBonus, 1.0) };
+    });
+
+    return scored
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK);
+}
+
+// ── Embedding-based semantic search ───────────────────────────────────────────
 function cosineSimilarity(a, b) {
     const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
     const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
@@ -50,12 +116,12 @@ async function getEmbedding(text, apiKey) {
         { url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${apiKey}` }
     );
     if (!res.ok) {
-        throw new Error(`Gemini API error ${res.status}: ${res.error}`);
+        throw new Error(`Embedding API error ${res.status}: ${res.error}`);
     }
-    const data = res.data;
-    return data.embedding.values;
+    return res.data.embedding.values;
 }
 
+// ── Handler ───────────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
@@ -68,30 +134,52 @@ exports.handler = async (event) => {
         } catch (err) {
             return formatValidationError(err);
         }
-        const { query, topK = 3 } = parsedInput;
+        const { query, topK } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
 
         if (!apiKey) {
             return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured.' }) };
         }
 
-        // Embed the query and all cases in parallel
-        const [queryEmbedding, ...caseEmbeddings] = await Promise.all([
-            getEmbedding(query, apiKey),
-            ...CASE_SUMMARIES.map(c => getEmbedding(c.summary, apiKey))
-        ]);
+        // ── Attempt embedding-based semantic ranking ──────────────────────────
+        try {
+            const [queryEmbedding, ...caseEmbeddings] = await Promise.all([
+                getEmbedding(query, apiKey),
+                ...CASE_SUMMARIES.map(c => getEmbedding(c.summary, apiKey))
+            ]);
 
-        // Rank by cosine similarity
-        const scored = CASE_SUMMARIES
-            .map((c, i) => ({ name: c.name, score: cosineSimilarity(queryEmbedding, caseEmbeddings[i]) }))
-            .sort((a, b) => b.score - a.score)
-            .slice(0, topK);
+            const scored = CASE_SUMMARIES
+                .map((c, i) => ({ name: c.name, score: cosineSimilarity(queryEmbedding, caseEmbeddings[i]) }))
+                .sort((a, b) => b.score - a.score)
+                .slice(0, topK);
 
-        return {
-            statusCode: 200,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ results: scored })
-        };
+            return {
+                statusCode: 200,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    results: scored,
+                    searchMode: 'semantic',
+                    degraded: false,
+                    fallbackReason: null
+                })
+            };
+        } catch (embeddingError) {
+            console.warn('[semantic-search] Embedding failed, falling back to lexical:', embeddingError.message);
+
+            // ── Deterministic lexical fallback ────────────────────────────────
+            const results = lexicalRank(query, topK);
+
+            return {
+                statusCode: 200,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    results,
+                    searchMode: 'lexical',
+                    degraded: true,
+                    fallbackReason: 'EMBEDDING_PROVIDER_UNAVAILABLE'
+                })
+            };
+        }
 
     } catch (error) {
         console.error('Semantic search error:', error);
@@ -101,3 +189,7 @@ exports.handler = async (event) => {
         };
     }
 };
+
+// Export internals for testing
+exports._lexicalRank = lexicalRank;
+exports._CASE_SUMMARIES = CASE_SUMMARIES;

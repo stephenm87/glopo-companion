@@ -1567,7 +1567,7 @@ const CaseLibrary = () => {
         // 1. Semantic search (Gemini embeddings)
         try {
             const semRes = await fetch('/.netlify/functions/semantic-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: caseQuery, topK: 5 }) });
-            if (semRes.ok) { const d = await semRes.json(); if (!d.error && d.results?.length) { setCaseResults(enrich(d.results.map((r, i) => ({ rank: i + 1, name: r.name, relevance: `Semantic match (score: ${r.score.toFixed(2)})`, angle: angleFor(r.name) })))); setCaseLoading(false); return; } }
+            if (semRes.ok) { const d = await semRes.json(); if (!d.error && d.results?.length) { const modeLabel = d.degraded ? '⚠️ Lexical fallback' : 'Semantic match'; setCaseResults(enrich(d.results.map((r, i) => ({ rank: i + 1, name: r.name, relevance: `${modeLabel} (score: ${r.score.toFixed(2)})`, angle: angleFor(r.name) })))); setCaseLoading(false); return; } }
         } catch { }
         // 2. AI case finder (Gemini)
         try {
@@ -2883,7 +2883,7 @@ Return ONLY the JSON. No markdown, no backticks, no commentary.`;
                             const match = CASE_POOL.find(c => c.name === r.name);
                             return {
                                 rank: i + 1, name: r.name, concepts: match?.concepts || '', url: match?.url || '',
-                                relevance: `Semantic match (score: ${r.score.toFixed(2)}) — high confidence thematic alignment.`,
+                                relevance: semData.degraded ? `⚠️ Lexical fallback (score: ${r.score.toFixed(2)}) — AI ranking unavailable.` : `Semantic match (score: ${r.score.toFixed(2)}) — high confidence thematic alignment.`,
                                 angle: angleFor(r.name)
                             };
                         });
@@ -3390,9 +3390,9 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const SUPPORTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];
+        const SUPPORTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
         if (!SUPPORTED_FILE_TYPES.includes(file.type)) {
-            setImageError('Please upload an image (JPG, PNG, WEBP, HEIC) or PDF file.');
+            setImageError('Please upload an image (JPG, PNG, or WebP) or PDF file.');
             return;
         }
         setImageError(null);
@@ -3437,6 +3437,13 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                 mimeType = file.type;
             }
 
+            // Guard: reject files over 4 MB decoded (Netlify 6 MB request limit)
+            const estimatedBytes = Math.floor((base64.length * 3) / 4);
+            if (estimatedBytes > 4 * 1024 * 1024) {
+                setImageError('File is too large (over 4 MB). Please use a smaller image or compress it first.');
+                return;
+            }
+
             setImageLoading(true);
             try {
                 // Route through Netlify function (API key stays server-side)
@@ -3453,7 +3460,10 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                 });
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
-                    throw new Error(errData.error || `Server error ${res.status}`);
+                    if (res.status === 413) {
+                        throw new Error('File is too large for the server (over 4 MB). Please compress your image or PDF.');
+                    }
+                    throw new Error(errData.error?.message || errData.error || `Server error ${res.status}`);
                 }
                 const data = await res.json();
                 setImageResult(data.analysis || 'No feedback returned.');

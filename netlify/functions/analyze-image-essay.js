@@ -2,13 +2,25 @@
 // Uses native fetch (no SDK) to avoid missing package issues on Netlify Functions
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
 const { z } = require('zod');
-const { formatValidationError } = require('./validation-helper');
+const {
+    ALLOWED_MIME_TYPES,
+    MAX_DECODED_BYTES,
+    estimateBase64Bytes,
+    isValidBase64,
+    formatValidationError
+} = require('./validation-helper');
 
 const inputSchema = z.object({
-  imageBase64: z.string().min(10).max(14000000),
-  mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
-  questionText: z.string().max(500).optional().default(''),
-  marks: z.number().min(1).max(25).optional().default(15)
+    imageBase64: z.string()
+        .min(10)
+        .refine(isValidBase64, { message: 'imageBase64 contains invalid characters.' })
+        .refine(
+            (val) => estimateBase64Bytes(val) <= MAX_DECODED_BYTES,
+            { message: `Decoded image exceeds ${MAX_DECODED_BYTES} bytes (4 MB).` }
+        ),
+    mimeType: z.enum(ALLOWED_MIME_TYPES),
+    questionText: z.string().max(500).optional().default(''),
+    marks: z.number().min(1).max(25).optional().default(15)
 });
 
 exports.handler = async (event) => {
@@ -28,15 +40,6 @@ exports.handler = async (event) => {
 
         if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
             return { statusCode: 500, body: JSON.stringify({ error: 'Gemini API Key not configured.' }) };
-        }
-
-        if (!imageBase64 || !mimeType) {
-            return { statusCode: 400, body: JSON.stringify({ error: 'File data missing.' }) };
-        }
-
-        const SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];
-        if (!SUPPORTED_TYPES.includes(mimeType)) {
-            return { statusCode: 400, body: JSON.stringify({ error: `Unsupported file type: ${mimeType}. Please upload an image or PDF.` }) };
         }
 
         const IB_RUBRIC = `IB GLOBAL POLITICS 2026 — ASSESSMENT CRITERIA:
@@ -61,50 +64,47 @@ Return a JSON object with these EXACT string keys:
 "grow": [2-3 actionable improvements with examples of what better looks like]
 "alternativeApproaches": [2 alternative theoretical lenses or case studies for this question]
 "goldenTip": [One precise, actionable tip most likely to raise the mark band]
-"aoEstimate": [AO1: Band X | AO2: Band X | AO3: Band X | AO4: Band X] | AO2: [Band 1/2/3] | AO3: [Band 1/2/3] | AO4: [Band 1/2/3]`;
+"aoEstimate": [AO1: Band X | AO2: Band X | AO3: Band X | AO4: Band X]`;
 
         const body = {
-        generationConfig: {
-            responseMimeType: 'application/json',
-            thinkingConfig: { thinkingBudget: 0 },
-            responseSchema: {
-                type: 'OBJECT',
-                properties: {
-                    transcription: { type: 'STRING' },
-                    glow: { type: 'STRING' },
-                    grow: { type: 'STRING' },
-                    alternativeApproaches: { type: 'STRING' },
-                    goldenTip: { type: 'STRING' },
-                    aoEstimate: { type: 'STRING' }
-                },
-                required: ['transcription', 'glow', 'grow', 'alternativeApproaches', 'goldenTip', 'aoEstimate']
-            }
-        },
-        
+            generationConfig: {
+                responseMimeType: 'application/json',
+                thinkingConfig: { thinkingBudget: 0 },
+                responseSchema: {
+                    type: 'OBJECT',
+                    properties: {
+                        transcription: { type: 'STRING' },
+                        glow: { type: 'STRING' },
+                        grow: { type: 'STRING' },
+                        alternativeApproaches: { type: 'STRING' },
+                        goldenTip: { type: 'STRING' },
+                        aoEstimate: { type: 'STRING' }
+                    },
+                    required: ['transcription', 'glow', 'grow', 'alternativeApproaches', 'goldenTip', 'aoEstimate']
+                }
+            },
             contents: [{
                 parts: [
                     { text: prompt },
                     { inline_data: { mime_type: mimeType, data: imageBase64 } }
                 ]
             }]
-        
-    };
+        };
 
-    const res = await callGeminiWithRetry(apiKey, body);
+        const res = await callGeminiWithRetry(apiKey, body);
 
-    if (!res.ok) {
-        throw new Error(`Gemini API error ${res.status}: ${res.error}`);
-    }
+        if (!res.ok) {
+            throw new Error(`Gemini API error ${res.status}: ${res.error}`);
+        }
 
-    const raw = extractGeminiText(res.data, '{}');
-    let text = '';
-    try {
-        const parsed = JSON.parse(raw);
-        text = `## 📝 What I Read (Transcription)\n${parsed.transcription}\n\n## 🟢 GLOW — Strengths\n${parsed.glow}\n\n## 🔴 GROW — Improvements\n${parsed.grow}\n\n## 🔀 Alternative Approaches\n${parsed.alternativeApproaches}\n\n## ⭐ Examiner's Golden Tip\n${parsed.goldenTip}\n\n## 📊 AO Estimate\n${parsed.aoEstimate}`;
-    } catch (err) {
-        throw new Error('Validation error: ' + err.message);
-    }
-
+        const raw = extractGeminiText(res.data, '{}');
+        let text = '';
+        try {
+            const parsed = JSON.parse(raw);
+            text = `## 📝 What I Read (Transcription)\n${parsed.transcription}\n\n## 🟢 GLOW — Strengths\n${parsed.glow}\n\n## 🔴 GROW — Improvements\n${parsed.grow}\n\n## 🔀 Alternative Approaches\n${parsed.alternativeApproaches}\n\n## ⭐ Examiner's Golden Tip\n${parsed.goldenTip}\n\n## 📊 AO Estimate\n${parsed.aoEstimate}`;
+        } catch (err) {
+            throw new Error('Validation error: ' + err.message);
+        }
 
         return {
             statusCode: 200,
