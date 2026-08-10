@@ -1,12 +1,14 @@
 // PEEL / Intro Paragraph Review — returns structured JSON feedback (server-side Gemini)
 // Supports a customPrompt for non-PEEL review modes (e.g. intro review)
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { protectEndpoint } = require('./security');
 const { z } = require('zod');
 const { formatValidationError } = require('./validation-helper');
 
 const inputSchema = z.object({
   paragraph: z.string().min(10).max(3000),
-  customPrompt: z.string().max(1000).optional()
+  mode: z.enum(['peel', 'intro']).optional().default('peel'),
+  customPrompt: z.string().max(6000).optional()
 });
 
 const peelSchema = z.object({
@@ -17,10 +19,15 @@ const peelSchema = z.object({
     label: z.string(),
     original: z.string(),
     fix: z.string()
-  }))
+  })),
+  score: z.string().optional(),
+  strengths: z.array(z.string()).max(4).optional()
 });
 
 exports.handler = async (event) => {
+    const security = await protectEndpoint(event, { maxRequests: 15 });
+    if (security.response) return security.response;
+
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
     try {
@@ -30,12 +37,18 @@ exports.handler = async (event) => {
         } catch (err) {
             return formatValidationError(err);
         }
-        const { paragraph, customPrompt } = parsedInput;
+        const { paragraph, mode, customPrompt } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) return { statusCode: 500, body: JSON.stringify({ error: 'GEMINI_API_KEY not configured on server' }) };
 
-        // If a custom prompt is provided (e.g. from intro review), use it directly
-        const prompt = customPrompt || `You are an IB Global Politics senior examiner reviewing a student's PEEL paragraph.
+        const introPrompt = `You are reviewing a student's IB Global Politics essay introduction for formative practice. Do not present the result as an official IB grade.
+
+Student introduction:
+"${paragraph}"
+
+Return an improved 80–120 word introduction that preserves the student's position and voice. Identify 2–4 concrete strengths and 3–5 specific changes. Label changes with AO1, AO2, AO3, or AO4. Include a formative score label such as "Developing", "Secure", or "Advanced" and a concise bandJump description. Evaluate hook specificity, contextual concept definition, analytical tension, case integration, thesis strength, and roadmap clarity.`;
+
+        const prompt = customPrompt || (mode === 'intro' ? introPrompt : `You are an IB Global Politics senior examiner reviewing a student's PEEL paragraph.
 
 Student paragraph:
 "${paragraph}"
@@ -53,7 +66,7 @@ Return a JSON object with these exact fields:
 
 Rules:
 - "improved" must be a complete standalone paragraph
-- Each "changes" item must quote actual student words in "original"`;
+- Each "changes" item must quote actual student words in "original"`);
 
         const body = {
             contents: [{ parts: [{ text: prompt }] }],
@@ -77,7 +90,9 @@ Rules:
                                 },
                                 required: ['ao', 'label', 'original', 'fix']
                             }
-                        }
+                        },
+                        score: { type: 'STRING' },
+                        strengths: { type: 'ARRAY', items: { type: 'STRING' } }
                     },
                     required: ['improved', 'bandJump', 'changes']
                 }
@@ -109,4 +124,3 @@ Rules:
         return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
     }
 };
-

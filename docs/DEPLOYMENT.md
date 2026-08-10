@@ -6,7 +6,7 @@ The application is deployed on Netlify. Production URL: `https://glopocompanion.
 ## Build Settings
 - **Base directory:** Not set (Root)
 - **Build command:** `npm run build`
-- **Publish directory:** `build/`
+- **Publish directory:** `dist/`
 - **Node version:** 22.x
 
 ## Functions

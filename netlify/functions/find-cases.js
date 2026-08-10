@@ -1,6 +1,7 @@
 // Case Finder — Gemini-powered IB case study matcher (server-side)
 // Updated: JSON output mode for reliable parsing + 5 new 2025-2026 cases
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { protectEndpoint } = require('./security');
 const { z } = require('zod');
 const { formatValidationError } = require('./validation-helper');
 
@@ -40,6 +41,9 @@ const CASE_POOL = [
 ];
 
 exports.handler = async (event) => {
+    const security = await protectEndpoint(event, { maxRequests: 20 });
+    if (security.response) return security.response;
+
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }

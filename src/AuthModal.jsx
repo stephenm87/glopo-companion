@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 
-const ALLOWED_DOMAIN = 'saschina.org';
-
 function getDisplayName(user) {
     if (!user) return null;
     const emailPart = user.email.split('@')[0];
@@ -61,9 +59,8 @@ export function AuthModal({ onClose }) {
     const handleSend = async () => {
         const trimmed = email.trim();
         if (!trimmed) { setError('Please enter your email.'); return; }
-        const domain = trimmed.split('@')[1]?.toLowerCase();
-        if (domain !== ALLOWED_DOMAIN) {
-            setError(`Please use your SAS school email (@${ALLOWED_DOMAIN})`);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+            setError('Please enter a valid email address.');
             return;
         }
         setError('');
@@ -104,12 +101,12 @@ export function AuthModal({ onClose }) {
                                 <span className="text-2xl">📚</span>
                             </div>
                             <h2 className="text-xl font-black text-white mb-1">Sign in to Companion</h2>
-                            <p className="text-sm text-gray-500">Enter your SAS email — a magic link will be sent to your inbox.</p>
+                            <p className="text-sm text-gray-500">Enter your email — a magic link will be sent to your inbox.</p>
                         </div>
                         <input
                             type="email"
                             className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-gray-600 outline-none focus:border-blue-500 transition-colors mb-3 box-border"
-                            placeholder="yourname@saschina.org"
+                            placeholder="you@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }}

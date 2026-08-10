@@ -2,22 +2,24 @@
     "name": "glopo-companion",
     "version": "1.0.0",
     "description": "IB Global Politics Study Suite",
-    "main": "src/App.js",
     "scripts": {
-        "start": "react-scripts start",
-        "build": "react-scripts build",
-        "test": "react-scripts test",
-        "eject": "react-scripts eject"
+        "dev": "vite",
+        "start": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "test": "npm run test:functions && npm run test:security && npm run test:unit",
+        "test:functions": "jest netlify/functions/__tests__/compare-research.test.js netlify/functions/__tests__/gemini-retry.test.js netlify/functions/__tests__/semantic-search.test.js netlify/functions/__tests__/validation.test.js --runInBand --env=node",
+        "test:security": "node --test netlify/functions/__tests__/*.node.test.js",
+        "test:unit": "node --test src/__tests__/*.node.test.mjs"
     },
     "dependencies": {
-        "@google/generative-ai": "^0.24.1",
-        "@supabase/supabase-js": "^2.103.2",
+        "@supabase/supabase-js": "2.112.0",
         "clsx": "^2.0.0",
         "lucide-react": "^0.263.1",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
-        "react-scripts": "5.0.1",
         "tailwind-merge": "^1.14.0",
+        "tippy.js": "6.3.7",
         "zod": "^4.4.3"
     },
     "browserslist": {
@@ -33,6 +35,11 @@
         ]
     },
     "devDependencies": {
-        "netlify-cli": "^23.15.1"
+        "@vitejs/plugin-react": "^6.0.5",
+        "autoprefixer": "10.5.4",
+        "jest": "30.2.0",
+        "postcss": "8.5.25",
+        "tailwindcss": "3.4.19",
+        "vite": "^8.2.0"
     }
 }

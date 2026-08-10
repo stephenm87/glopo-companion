@@ -1,6 +1,7 @@
 // analyze-essay.js — Deep Critique for Mock Exam Zone
 // Uses native fetch (no SDK) to call Gemini REST API + optional Cloud NL API
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { protectEndpoint } = require('./security');
 const { z } = require('zod');
 const { formatValidationError } = require('./validation-helper');
 
@@ -63,22 +64,20 @@ async function analyzeWithNlApi(text, apiKey) {
 function buildAoInsights(entitySummary, sentimentSummary) {
     if (!entitySummary && !sentimentSummary) return '';
 
-    const lines = ['\n\n---\n## 📊 AO Insights (Cloud NL Analysis)'];
+    const lines = ['\n\n---\n## 📊 Automated Writing Signals (not rubric scores)'];
 
     if (entitySummary) {
         const { counts, total, top } = entitySummary;
-        const density = total >= 8 ? '✅ High (Band 3 AO1)' : total >= 4 ? '⚠️ Moderate (Band 2)' : '❌ Low (Band 1–2)';
-        lines.push(`**AO1 — Entity Density:** ${density} · ${total} named entities detected.`);
+        const density = total >= 8 ? 'many' : total >= 4 ? 'some' : 'few';
+        lines.push(`**Named-entity signal:** ${total} entities detected (${density}). Entity count does not establish factual accuracy or an AO1 band.`);
         lines.push(`Top entities: ${top}`);
         lines.push(`Breakdown: ${counts.people} people · ${counts.orgs} organisations · ${counts.locations} locations · ${counts.events} events`);
     }
 
     if (sentimentSummary?.score !== null) {
         const { score, magnitude } = sentimentSummary;
-        const balanced = Math.abs(score) < 0.2 ? '✅ Balanced (AO3 Band 3)' : score > 0.2 ? '⚠️ Positively skewed — counter-argument may be weak' : '⚠️ Negatively skewed — consider adding a concession';
-        const depth = magnitude > 1.5 ? '✅ High argumentative depth' : '⚠️ Low argumentative depth — expand evaluative language';
-        lines.push(`\n**AO3 — Argumentative Balance:** ${balanced}`);
-        lines.push(`Sentiment score: ${score.toFixed(2)} · Magnitude: ${magnitude?.toFixed(2)} · ${depth}`);
+        lines.push('\n**Tone signal:** Sentiment is reported only as a writing diagnostic; it cannot measure argumentative balance, counter-argument quality, or AO3 achievement.');
+        lines.push(`Sentiment score: ${score.toFixed(2)} · Magnitude: ${magnitude?.toFixed(2)}`);
     }
 
     return lines.join('\n');
@@ -130,6 +129,9 @@ Always identify how the 4 core concepts (Power, Sovereignty, Legitimacy, Interde
 }
 
 exports.handler = async (event) => {
+    const security = await protectEndpoint(event, { maxRequests: 12 });
+    if (security.response) return security.response;
+
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
@@ -143,7 +145,7 @@ exports.handler = async (event) => {
         }
         const { essayText, questionText, marks } = parsedInput;
         const apiKey = process.env.GEMINI_API_KEY;
-        const nlApiKey = process.env.GOOGLE_NL_API_KEY || apiKey;
+        const nlApiKey = process.env.GOOGLE_NL_API_KEY;
 
         if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
             return { statusCode: 500, body: JSON.stringify({ error: 'Gemini API Key not configured.' }) };
@@ -168,7 +170,9 @@ Return a JSON object with these EXACT string keys:
         // Run Gemini + NL API in parallel
         let [geminiText, nlResult] = await Promise.all([
             callGemini(prompt, apiKey),
-            analyzeWithNlApi(essayText, nlApiKey)
+            nlApiKey
+                ? analyzeWithNlApi(essayText, nlApiKey)
+                : Promise.resolve({ entitySummary: null, sentimentSummary: null })
         ]);
 
         // Append NL API AO insights

@@ -1,6 +1,7 @@
 // Solution Research Bot — Gemini-powered step evaluation and research for P3 Q2
 // Supports per-step evaluation, research search, and tiered draft generation.
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { protectEndpoint } = require('./security');
 const { z } = require('zod');
 const { formatValidationError } = require('./validation-helper');
 
@@ -34,6 +35,9 @@ const draftSchema = z.object({
 });
 
 exports.handler = async (event) => {
+    const security = await protectEndpoint(event, { maxRequests: 15 });
+    if (security.response) return security.response;
+
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
     try {

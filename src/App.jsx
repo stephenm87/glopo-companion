@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 // Version: 1.0.3 - Restored React hooks import
 import { Shield, PenTool, Zap, AlertTriangle, CheckCircle, ChevronRight, RefreshCw, BookOpen, MessageSquare, FileText, Clock, Search } from 'lucide-react';
-import { paper1Exams, paper2Exams, paper3Exams } from './examBank';
 import { AuthBadge, AuthModal, useAuth } from './AuthModal';
 import { supabase } from './supabase';
+import { secureFetch } from './api';
+import { readStoredJson, writeStoredJson } from './localState.mjs';
+import tippy from 'tippy.js';
+import 'tippy.js/dist/tippy.css';
+import 'tippy.js/animations/shift-away.css';
 
 // --- Global Data Constants ---
 const GLOSSARY_TERMS = ["Power", "Sovereignty", "Legitimacy", "Interdependence", "Human rights", "Justice", "Liberty", "Equality", "Development", "Sustainability", "Peace", "Conflict", "Violence", "Non-violence", "Globalization", "Inequality", "Borders", "Security", "Environment", "Health", "Poverty", "Identity", "Technology"];
@@ -599,7 +603,7 @@ const SolutionResearch = () => {
     // AI call — routes through Netlify serverless function (API key stays server-side)
     const callAI = async (mode, stepNum, extraInputs) => {
         const payload = { mode, step: stepNum, inputs: extraInputs || { text: inputs[FIELDS[stepNum - 1]] } };
-        const res = await fetch('/.netlify/functions/solution-research', {
+        const res = await secureFetch('/.netlify/functions/solution-research', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload), signal: AbortSignal.timeout(25000)
         });
@@ -860,7 +864,7 @@ const PolicyEngine = () => {
     // ── Persist policy inputs ──
     useEffect(() => {
         try {
-            const s = JSON.parse(localStorage.getItem('glopo-policy-engine') || '{}');
+            const s = readStoredJson('glopo-policy-engine', {});
             if (s.actor)     setActor(s.actor);
             if (s.target)    setTarget(s.target);
             if (s.mechanism) setMechanism(s.mechanism);
@@ -869,7 +873,7 @@ const PolicyEngine = () => {
     }, []);
     useEffect(() => {
         const val = { actor, target, mechanism, issue };
-        localStorage.setItem('glopo-policy-engine', JSON.stringify(val));
+        writeStoredJson('glopo-policy-engine', val);
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (!user) return;
             supabase.from('user_data').upsert(
@@ -1149,7 +1153,7 @@ const CompareBuilder = () => {
     // ── Persist last comparison search ──
     useEffect(() => {
         try {
-            const s = JSON.parse(localStorage.getItem('glopo-compare-builder') || '{}');
+            const s = readStoredJson('glopo-compare-builder', {});
             if (s.searchA) setSearchA(s.searchA);
             if (s.searchB) setSearchB(s.searchB);
         } catch(e) {}
@@ -1157,7 +1161,7 @@ const CompareBuilder = () => {
     useEffect(() => {
         if (!searchA && !searchB) return;
         const val = { searchA, searchB };
-        localStorage.setItem('glopo-compare-builder', JSON.stringify(val));
+        writeStoredJson('glopo-compare-builder', val);
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (!user) return;
             supabase.from('user_data').upsert(
@@ -1171,7 +1175,7 @@ const CompareBuilder = () => {
         setLoading(true); setError(''); setArticlesA([]); setArticlesB([]); setAnalysis(null);
         let netlifyOk = false;
         try {
-            const res = await fetch('/.netlify/functions/compare-research', {
+            const res = await secureFetch('/.netlify/functions/compare-research', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ caseA: caseAName, caseB: caseBName })
@@ -1440,17 +1444,19 @@ const CommandTermDecoder = () => {
         if (!checkText.trim() || checkText.trim().length < 20) return;
         setChecking(true); setCheckResult(null);
         try {
-            const res = await fetch('/.netlify/functions/grammar-check', {
+            const res = await secureFetch('/.netlify/functions/command-term-check', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: checkText, mode: 'command-term' }),
+                body: JSON.stringify({ text: checkText }),
                 signal: AbortSignal.timeout(25000)
             }
             );
             const data = await res.json();
-            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            const jsonMatch = raw.match(/\{[\s\S]*?\}/);
-            if (jsonMatch) setCheckResult(JSON.parse(jsonMatch[0]));
-        } catch (e) { console.error(e); }
+            if (!res.ok) throw new Error(data.error || 'Command-term analysis failed');
+            setCheckResult(data);
+        } catch (e) {
+            console.error(e);
+            setCheckResult({ error: 'The skill checker is temporarily unavailable.' });
+        }
         setChecking(false);
     };
 
@@ -1533,7 +1539,9 @@ const CommandTermDecoder = () => {
                         className="px-6 py-2 rounded-xl font-bold text-sm bg-cyan-600 hover:bg-cyan-500 text-white transition-all disabled:opacity-40">
                         {checking ? 'Analysing...' : '\u{1F50D} Check Skill Level'}
                     </button>
-                    {checkResult && (
+                    {checkResult?.error ? (
+                        <p className="text-xs text-red-400" role="alert">{checkResult.error}</p>
+                    ) : checkResult && (
                         <div className="p-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 animate-in zoom-in-95 duration-300">
                             <p className="text-sm font-bold text-cyan-400 mb-1">Detected: {checkResult.detected_skill} ({checkResult.confidence} confidence)</p>
                             <p className="text-xs text-gray-300 mb-2">{checkResult.explanation}</p>
@@ -1566,12 +1574,12 @@ const CaseLibrary = () => {
         const enrich = (results) => results.map(r => { const m = SHARED_CASE_POOL.find(c => c.name === r.name); return { ...r, concepts: m?.concepts || '', url: m?.url || '' }; });
         // 1. Semantic search (Gemini embeddings)
         try {
-            const semRes = await fetch('/.netlify/functions/semantic-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: caseQuery, topK: 5 }) });
+            const semRes = await secureFetch('/.netlify/functions/semantic-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: caseQuery, topK: 5 }) });
             if (semRes.ok) { const d = await semRes.json(); if (!d.error && d.results?.length) { const modeLabel = d.degraded ? '⚠️ Lexical fallback' : 'Semantic match'; setCaseResults(enrich(d.results.map((r, i) => ({ rank: i + 1, name: r.name, relevance: `${modeLabel} (score: ${r.score.toFixed(2)})`, angle: angleFor(r.name) })))); setCaseLoading(false); return; } }
         } catch { }
         // 2. AI case finder (Gemini)
         try {
-            const fnRes = await fetch('/.netlify/functions/find-cases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: caseQuery }) });
+            const fnRes = await secureFetch('/.netlify/functions/find-cases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: caseQuery }) });
             if (fnRes.ok) { const d = await fnRes.json(); if (!d.error) { setCaseResults(enrich(d.results)); setCaseLoading(false); return; } }
         } catch { }
         // 3. Keyword fallback
@@ -2084,7 +2092,7 @@ const WritingStudio = () => {
         // ── Persist intro wizard data ──
         useEffect(() => {
             try {
-                const s = JSON.parse(localStorage.getItem('glopo-intro-wizard') || '{}');
+                const s = readStoredJson('glopo-intro-wizard', {});
                 if (s.data) setData(s.data);
                 if (s.studentIntro) setStudentIntro(s.studentIntro);
                 if (s.generatedIntro) setGeneratedIntro(s.generatedIntro);
@@ -2092,7 +2100,7 @@ const WritingStudio = () => {
         }, []);
         useEffect(() => {
             const val = { data, studentIntro, generatedIntro };
-            localStorage.setItem('glopo-intro-wizard', JSON.stringify(val));
+            writeStoredJson('glopo-intro-wizard', val);
             supabase.auth.getUser().then(({ data: { user } }) => {
                 if (!user) return;
                 supabase.from('user_data').upsert(
@@ -2112,7 +2120,7 @@ const WritingStudio = () => {
 
             // Strategy 1: Netlify serverless function
             try {
-                const response = await fetch("/.netlify/functions/generate-intro", {
+                const response = await secureFetch("/.netlify/functions/generate-intro", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data),
@@ -2123,7 +2131,7 @@ const WritingStudio = () => {
                     if (result.intro) introText = result.intro;
                 } else if (response.status === 429) {
                     await new Promise(r => setTimeout(r, 3000));
-                    const retry = await fetch("/.netlify/functions/generate-intro", {
+                    const retry = await secureFetch("/.netlify/functions/generate-intro", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(data),
@@ -2157,28 +2165,13 @@ const WritingStudio = () => {
             if (!studentIntro.trim() || studentIntro.trim().length < 30) return;
             setIntroReviewLoading(true); setIntroReview(null); setIntroReviewError('');
             try {
-                const introPrompt = `You are an IB Global Politics examiner (2026 syllabus). Review this student introduction paragraph and return ONLY valid JSON with this exact structure:
-{"score":"Band 1-7","bandJump":"Band X \u2192 Band Y","strengths":["specific strength 1","strength 2"],"improved":"your improved version of the intro (80-120 words, preserve student voice)","changes":[{"ao":"AO1","label":"Hook Specificity","original":"exact phrase being changed","fix":"what was improved and why this raises the band"}]}
-
-IB CRITERIA for changes: hook specificity (AO1), concept definition quality (AO1), analytical tension setup (AO2), case study integration (AO2), thesis strength (AO3), roadmap clarity (AO3). Label each change with the relevant AO.
-
-Student introduction:
-${studentIntro}
-
-Return ONLY the JSON. No markdown, no backticks, no commentary.`;
-
-                const isLocalDev = window.location.hostname === 'localhost';
                 let d = null;
-
-                if (!isLocalDev) {
-                    // Production: try Netlify function first
-                    const res = await fetch('/.netlify/functions/peel-review', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ paragraph: studentIntro, customPrompt: introPrompt, mode: 'intro' }),
-                        signal: AbortSignal.timeout(25000)
-                    });
-                    if (res.ok) d = await res.json();
-                }
+                const res = await secureFetch('/.netlify/functions/peel-review', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paragraph: studentIntro, mode: 'intro' }),
+                    signal: AbortSignal.timeout(25000)
+                });
+                if (res.ok) d = await res.json();
 
                 if (!d) {
                     throw new Error('Review service unavailable. Please try again.');
@@ -2398,16 +2391,16 @@ Return ONLY the JSON. No markdown, no backticks, no commentary.`;
         const [reviewError, setReviewError] = useState(null);
         const [grammarIssues, setGrammarIssues] = useState(null);
         const [grammarLoading, setGrammarLoading] = useState(false);
+        const [grammarError, setGrammarError] = useState(null);
         const [isSpeaking, setIsSpeaking] = useState(false);
 
         const getPeelFeedback = async () => {
             if (!reviewPara.trim()) return;
             setReviewLoading(true); setReviewResult(null); setReviewError(null);
 
-            // Strategy 1: Netlify function — skipped on localhost
-            const isLocalDev = window.location.hostname === 'localhost';
-            if (!isLocalDev) try {
-                const res = await fetch('/.netlify/functions/peel-review', {
+            // Netlify Dev proxies this function locally; production uses the same contract.
+            try {
+                const res = await secureFetch('/.netlify/functions/peel-review', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paragraph: reviewPara }),
                     signal: AbortSignal.timeout(25000)
@@ -2427,9 +2420,9 @@ Return ONLY the JSON. No markdown, no backticks, no commentary.`;
 
         const runGrammarCheck = async () => {
             if (!reviewPara.trim() || reviewPara.trim().length < 20) return;
-            setGrammarLoading(true); setGrammarIssues(null);
+            setGrammarLoading(true); setGrammarIssues(null); setGrammarError(null);
             try {
-                const res = await fetch('/.netlify/functions/grammar-check', {
+                const res = await secureFetch('/.netlify/functions/grammar-check', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: reviewPara })
                 });
@@ -2437,7 +2430,7 @@ Return ONLY the JSON. No markdown, no backticks, no commentary.`;
                 const d = await res.json();
                 setGrammarIssues(d.issues || []);
             } catch {
-                setGrammarIssues([]); // Show empty panel rather than leaving spinner
+                setGrammarError('Grammar checking is temporarily unavailable. Your paragraph was not assessed.');
             }
             setGrammarLoading(false);
         };
@@ -2607,6 +2600,8 @@ Return ONLY the JSON. No markdown, no backticks, no commentary.`;
                             ))}
                         </div>
                     )}
+
+                    {grammarError && <p className="text-xs text-red-400" role="alert">{grammarError}</p>}
 
                     {reviewError && (
                         <div className="p-3 bg-amber-900/20 border border-amber-500/30 rounded-xl text-[11px] text-amber-300">{reviewError}</div>
@@ -2872,7 +2867,7 @@ Return ONLY the JSON. No markdown, no backticks, no commentary.`;
 
             try {
                 // 1. Semantic search (Gemini embeddings — most accurate)
-                const semRes = await fetch('/.netlify/functions/semantic-search', {
+                const semRes = await secureFetch('/.netlify/functions/semantic-search', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query, topK: 3 })
                 });
@@ -2896,7 +2891,7 @@ Return ONLY the JSON. No markdown, no backticks, no commentary.`;
 
             try {
                 // 2. AI case finder (Gemini — works when deployed)
-                const fnRes = await fetch('/.netlify/functions/find-cases', {
+                const fnRes = await secureFetch('/.netlify/functions/find-cases', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query })
@@ -3283,17 +3278,15 @@ const WarRoom = () => {
 const SourceText = ({ text }) => {
     if (!text) return null;
 
-    // Auto-wrap glossary terms
     const glossaryTerms = ["Power", "Sovereignty", "Legitimacy", "Interdependence", "Human rights", "Justice", "Liberty", "Equality", "Development", "Sustainability", "Peace", "Conflict", "Violence", "Non-violence", "Globalization", "Inequality"];
-
-    const wrapTerms = (content) => {
-        let result = content;
-        glossaryTerms.forEach(term => {
-            const regex = new RegExp(`\\b(${term})\\b`, 'gi');
-            result = result.replace(regex, `<span class="glossary-term font-bold text-cyan-400 cursor-help border-b border-cyan-500/30">$1</span>`);
-        });
-        return result;
-    };
+    const glossaryLookup = new Set(glossaryTerms.map(term => term.toLowerCase()));
+    const escapedTerms = glossaryTerms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const glossaryPattern = new RegExp(`\\b(${escapedTerms.join('|')})\\b`, 'gi');
+    const highlightTerms = (content) => String(content).split(glossaryPattern).map((part, index) => (
+        glossaryLookup.has(part.toLowerCase())
+            ? <span key={index} className="glossary-term font-bold text-cyan-400 cursor-help border-b border-cyan-500/30">{part}</span>
+            : part
+    ));
 
     // Table renderer logic
     if (text.includes('|') && text.includes('---')) {
@@ -3311,7 +3304,7 @@ const SourceText = ({ text }) => {
                         <thead>
                             <tr className="bg-glopo-blue/20 text-blue-300 font-bold">
                                 {header.map((h, i) => (
-                                    <th key={i} className="p-3 border-b border-white/10" dangerouslySetInnerHTML={{ __html: wrapTerms(h) }} />
+                                    <th key={i} className="p-3 border-b border-white/10">{highlightTerms(h)}</th>
                                 ))}
                             </tr>
                         </thead>
@@ -3319,7 +3312,7 @@ const SourceText = ({ text }) => {
                             {rows.map((row, i) => (
                                 <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                     {row.map((cell, j) => (
-                                        <td key={j} className="p-3 text-gray-300" dangerouslySetInnerHTML={{ __html: wrapTerms(cell) }} />
+                                        <td key={j} className="p-3 text-gray-300">{highlightTerms(cell)}</td>
                                     ))}
                                 </tr>
                             ))}
@@ -3330,7 +3323,7 @@ const SourceText = ({ text }) => {
         }
     }
 
-    return <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-line" dangerouslySetInnerHTML={{ __html: wrapTerms(text) }} />;
+    return <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-line">{highlightTerms(text)}</p>;
 };
 
 // --- Mock Exam Zone Components (Extracted for Stability) ---
@@ -3367,6 +3360,8 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
     const [imageLoading, setImageLoading] = React.useState(false);
     const [imageResult, setImageResult] = React.useState(null);
     const [imageError, setImageError] = React.useState(null);
+    const [uploadConsent, setUploadConsent] = React.useState(false);
+    const [saveState, setSaveState] = React.useState('saved');
     const imageInputRef = React.useRef(null);
 
     // Sync parent → local when the lab first opens (e.g. restoring from localStorage)
@@ -3376,11 +3371,13 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
 
     const handleChange = (e) => {
         setLocalAnswer(e.target.value);
+        setSaveState('unsaved');
     };
 
     // Sync local → parent on blur so auto-save still works
     const handleBlur = () => {
         updateAnswer(key, localAnswer);
+        setSaveState('saved');
     };
 
     const wordCount = localAnswer.trim().length > 0
@@ -3390,6 +3387,10 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        if (!uploadConsent) {
+            setImageError('Confirm the student-work privacy notice before uploading.');
+            return;
+        }
         // MIME POLICY WARNING:
         // This array manually mirrors the authoritative policy enforced by the backend in validation-helper.js.
         const SUPPORTED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
@@ -3405,7 +3406,7 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
         const reader = new FileReader();
         reader.onload = async (evt) => {
             const dataUrl = evt.target.result;
-            setImagePreview(dataUrl);
+            setImagePreview({ url: dataUrl, mimeType: file.type, name: file.name, size: file.size });
 
             // Compress images before sending — large phone photos cause Vision timeouts
             // PDFs pass through unchanged
@@ -3449,16 +3450,17 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
             setImageLoading(true);
             try {
                 // Route through Netlify function (API key stays server-side)
-                const res = await fetch('/.netlify/functions/analyze-image-essay', {
+                const res = await secureFetch('/.netlify/functions/analyze-image-essay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         imageBase64: base64,
                         mimeType: mimeType,
                         questionText: q.text,
-                        marks: q.marks || 15
+                        marks: q.marks || 15,
+                        consentConfirmed: true
                     }),
-                    signal: AbortSignal.timeout(90000) // 90s for vision
+                    signal: AbortSignal.timeout(50000)
                 });
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
@@ -3468,7 +3470,7 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                     throw new Error(errData.error?.message || errData.error || `Server error ${res.status}`);
                 }
                 const data = await res.json();
-                setImageResult(data.analysis || 'No feedback returned.');
+                setImageResult(data.feedback || null);
 
 
 
@@ -3581,7 +3583,21 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
+                        <label className="flex items-start gap-2 text-[11px] leading-relaxed text-gray-300">
+                            <input
+                                type="checkbox"
+                                checked={uploadConsent}
+                                onChange={(event) => setUploadConsent(event.target.checked)}
+                                className="mt-0.5"
+                            />
+                            <span>
+                                I confirm this work may be securely sent to the configured AI provider for formative feedback. I have removed names or other unnecessary personal information. AI feedback is not an official IB grade.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <button
                             onClick={() => { updateAnswer(key, localAnswer); analyzeDraft(paperKey, q, localAnswer); }}
                             className="px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-[10px] font-black rounded-lg transition-all text-center"
@@ -3604,21 +3620,22 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                         <input
                             ref={imageInputRef}
                             type="file"
-                            accept="image/*,application/pdf"
+                            accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
                             style={{ display: 'none' }}
                             onChange={handleImageUpload}
                         />
                         <button
                             onClick={() => imageInputRef.current?.click()}
-                            className="px-3 py-2 text-[10px] font-black rounded-lg transition-all flex items-center justify-center gap-1.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30"
+                            disabled={!uploadConsent}
+                            className="px-3 py-2 text-[10px] font-black rounded-lg transition-all flex items-center justify-center gap-1.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
                             title="Upload a photo of your handwritten or printed essay for AI grading"
                         >
                             📎 SCAN ESSAY / PDF
                         </button>
                     </div>
                     {localAnswer.length > 0 && (
-                        <span className="text-[10px] text-emerald-500 font-bold flex items-center gap-1">
-                            <Shield size={10} /> Auto-saved
+                        <span className={`text-[10px] font-bold flex items-center gap-1 ${saveState === 'saved' ? 'text-emerald-500' : 'text-amber-400'}`} role="status">
+                            <Shield size={10} /> {saveState === 'saved' ? 'Saved locally' : 'Unsaved changes — leave the editor to save'}
                         </span>
                     )}
 
@@ -3638,13 +3655,20 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                             {/* Thumbnail Preview */}
                             {imagePreview && (
                                 <div className="flex items-start gap-3">
-                                    <img
-                                        src={imagePreview}
-                                        alt="Uploaded essay"
-                                        className="w-24 h-24 object-cover rounded-lg border border-amber-500/20 shrink-0"
-                                    />
+                                    {imagePreview.mimeType === 'application/pdf' ? (
+                                        <div className="w-24 h-24 rounded-lg border border-amber-500/20 bg-amber-500/10 shrink-0 flex flex-col items-center justify-center text-center p-2">
+                                            <span className="text-2xl" aria-hidden="true">PDF</span>
+                                            <span className="text-[9px] text-amber-200 break-all line-clamp-2">{imagePreview.name}</span>
+                                        </div>
+                                    ) : (
+                                        <img
+                                            src={imagePreview.url}
+                                            alt="Preview of uploaded essay"
+                                            className="w-24 h-24 object-cover rounded-lg border border-amber-500/20 shrink-0"
+                                        />
+                                    )}
                                     <p className="text-[9px] text-gray-500 leading-relaxed pt-1">
-                                        Gemini is reading your handwriting and applying IB 2026 exam criteria. This may take 15–45 seconds.
+                                        The configured AI model will transcribe the work and apply the repository’s formative criteria. Check the transcription before relying on feedback.
                                     </p>
                                 </div>
                             )}
@@ -3674,8 +3698,35 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
                                         <div className="text-[9px] font-black text-amber-400 uppercase tracking-tighter">Examiner Vision Feedback</div>
                                         <div className="h-px flex-1 bg-amber-500/20" />
                                     </div>
-                                    <div className="text-[11px] text-gray-300 leading-relaxed whitespace-pre-wrap bg-amber-500/5 p-4 rounded-xl border border-amber-500/10 shadow-inner overflow-auto max-h-[500px]">
-                                        {imageResult}
+                                    <div className="grid gap-3 text-[11px] text-gray-300 max-h-[650px] overflow-auto">
+                                        <section className="bg-white/5 p-4 rounded-xl border border-white/10">
+                                            <div className="flex items-center justify-between gap-2 mb-2">
+                                                <h6 className="font-black text-amber-300 uppercase">What the AI read</h6>
+                                                <span className="text-[9px] uppercase text-gray-500">Confidence: {imageResult.transcriptionConfidence}</span>
+                                            </div>
+                                            <p className="whitespace-pre-wrap leading-relaxed">{imageResult.transcription}</p>
+                                            {imageResult.uncertainPassages?.length > 0 && (
+                                                <div className="mt-3 text-amber-300">
+                                                    <strong>Check these uncertain passages:</strong> {imageResult.uncertainPassages.join(' · ')}
+                                                </div>
+                                            )}
+                                        </section>
+                                        {[
+                                            ['Strengths', imageResult.glow, 'text-emerald-300'],
+                                            ['Improvements', imageResult.grow, 'text-red-300'],
+                                            ['Alternative approaches', imageResult.alternativeApproaches, 'text-cyan-300'],
+                                            ['Formative AO estimate', imageResult.aoEstimate, 'text-purple-300']
+                                        ].map(([label, value, color]) => (
+                                            <section key={label} className="bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">
+                                                <h6 className={`font-black uppercase mb-1 ${color}`}>{label}</h6>
+                                                <p className="whitespace-pre-wrap leading-relaxed">{value}</p>
+                                            </section>
+                                        ))}
+                                        <section className="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20">
+                                            <h6 className="font-black uppercase mb-1 text-amber-300">Golden tip</h6>
+                                            <p>{imageResult.goldenTip}</p>
+                                        </section>
+                                        <p className="text-[10px] text-gray-500">Formative AI feedback only. Verify the transcription and discuss grading decisions with a teacher.</p>
                                     </div>
                                 </div>
                             )}
@@ -3759,13 +3810,13 @@ const PracticeLab = ({ paperKey, q, selectedExamIndex, userAnswers, updateAnswer
 };
 
 const ExamSelector = ({ exams, paperKey, selectedIndex, onChange, color }) => (
-    <div className="flex items-center gap-3 mb-4 p-3 bg-white/5 border border-white/10 rounded-xl">
+    <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 mb-4 p-3 min-w-0 bg-white/5 border border-white/10 rounded-xl">
         <FileText size={16} className={`text-${color}-400`} />
         <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Practice Mock Exam:</span>
         <select
             value={selectedIndex}
             onChange={(e) => onChange(parseInt(e.target.value))}
-            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-blue-500/50 transition-colors"
+            className="w-full min-w-0 sm:flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-blue-500/50 transition-colors"
         >
             {exams.map((exam, i) => (
                 <option key={exam.id} value={i} style={{ background: '#1a1a2e', color: '#fff' }}>
@@ -3854,6 +3905,8 @@ const CustomQuestionPanel = ({
 };
 
 const MockExamZone = () => {
+    const [examBank, setExamBank] = useState(null);
+    const [examBankError, setExamBankError] = useState('');
     const [subTab, setSubTab] = useState('paper1');
     const [timerSeconds, setTimerSeconds] = useState(0);
     const [timerRunning, setTimerRunning] = useState(false);
@@ -3871,10 +3924,26 @@ const MockExamZone = () => {
     const [activeLab, setActiveLab] = useState(null); // { paper, qNum }
     const [analysis, setAnalysis] = useState({}); // { paper-qNum: feedback }
 
+    // The exam bank is only needed in this station. Keep it out of the initial
+    // Writing Studio bundle and load it when the Mock Exam Zone is mounted.
+    useEffect(() => {
+        let active = true;
+        import('./examBank')
+            .then((module) => {
+                if (active) setExamBank(module);
+            })
+            .catch(() => {
+                if (active) setExamBankError('The mock exam bank could not be loaded. Refresh and try again.');
+            });
+        return () => {
+            active = false;
+        };
+    }, []);
+
     // Persistence Logic — load from localStorage, then try to restore from cloud
     useEffect(() => {
-        const saved = localStorage.getItem('glopo-practice-lab');
-        if (saved) setUserAnswers(JSON.parse(saved));
+        const saved = readStoredJson('glopo-practice-lab', {});
+        if (Object.keys(saved).length > 0) setUserAnswers(saved);
 
         // Pull from Supabase if signed in (overrides localStorage if cloud is populated)
         supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -3887,14 +3956,14 @@ const MockExamZone = () => {
                 .single();
             if (data?.value && Object.keys(data.value).length > 0) {
                 setUserAnswers(data.value);
-                localStorage.setItem('glopo-practice-lab', JSON.stringify(data.value));
+                writeStoredJson('glopo-practice-lab', data.value);
             }
         });
     }, []);
 
     useEffect(() => {
         if (Object.keys(userAnswers).length === 0) return;
-        localStorage.setItem('glopo-practice-lab', JSON.stringify(userAnswers));
+        writeStoredJson('glopo-practice-lab', userAnswers);
         // Cloud autosave — fire-and-forget
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (!user) return;
@@ -3999,10 +4068,9 @@ One precise, actionable tip that would most significantly raise this response's 
 
         let analysisText = null;
 
-        // Strategy 1: Try Netlify function — skipped on localhost (not available via npm start)
-        const isLocalDev = window.location.hostname === 'localhost';
-        if (!isLocalDev) try {
-            const response = await fetch("/.netlify/functions/analyze-essay", {
+        // Netlify Dev proxies this function locally; production uses the same contract.
+        try {
+            const response = await secureFetch("/.netlify/functions/analyze-essay", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ essayText: text, questionText: q.text, marks: q.marks || 15 }),
@@ -4015,7 +4083,7 @@ One precise, actionable tip that would most significantly raise this response's 
             } else if (response.status === 429) {
                 console.log("Rate limited on first attempt, retrying in 3s...");
                 await new Promise(r => setTimeout(r, 3000));
-                const retry = await fetch("/.netlify/functions/analyze-essay", {
+                const retry = await secureFetch("/.netlify/functions/analyze-essay", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ essayText: text, questionText: q.text, marks: q.marks || 15 }),
@@ -4168,6 +4236,24 @@ One precise, actionable tip that would most significantly raise this response's 
         activeLab,
         setActiveLab
     });
+
+    if (examBankError) {
+        return (
+            <Card className="border-red-500/30">
+                <p role="alert" className="text-sm text-red-300">{examBankError}</p>
+            </Card>
+        );
+    }
+
+    if (!examBank) {
+        return (
+            <Card className="border-blue-500/20">
+                <p role="status" className="text-sm text-gray-400">Loading mock exam bank...</p>
+            </Card>
+        );
+    }
+
+    const { paper1Exams, paper2Exams, paper3Exams } = examBank;
 
     const Paper1 = () => {
         const exam = paper1Exams[selectedExam.paper1];
@@ -4460,9 +4546,14 @@ const LoreLexicon = () => {
 // --- Glossary Provider ---
 const GlossaryProvider = () => {
     useEffect(() => {
+        let observer;
+        let cancelled = false;
+
         fetch('/glossary.json')
             .then(r => r.json())
             .then(data => {
+                if (cancelled) return;
+
                 // Normalize keys to lowercase for robust matching
                 const glossary = {};
                 Object.keys(data).forEach(key => {
@@ -4470,10 +4561,6 @@ const GlossaryProvider = () => {
                 });
 
                 const attachTooltips = () => {
-                    if (typeof window.tippy === 'undefined') {
-                        setTimeout(attachTooltips, 500);
-                        return;
-                    }
                     document.querySelectorAll('.glossary-term').forEach(el => {
                         if (el._tippy) return;
                         const termRaw = el.textContent.trim();
@@ -4493,21 +4580,42 @@ const GlossaryProvider = () => {
                             };
                             const colorStyle = colors[color] || colors.blue;
 
-                            const formattedDef = def.includes('\n')
-                                ? `<ul class="space-y-1 list-none mt-1">
-                                    ${def.split('\n').map(l => `<li class="text-[11px] leading-tight"><span class="opacity-40 mr-1">•</span>${l.replace(/^- /, '')}</li>`).join('')}
-                                   </ul>`
-                                : `<div class="text-white text-sm font-medium leading-relaxed">${def}</div>`;
+                            const content = document.createElement('div');
+                            content.className = `p-2 border rounded-lg ${colorStyle} backdrop-blur-md max-w-xs shadow-2xl`;
 
-                            window.tippy(el, {
-                                content: `<div class="p-2 border rounded-lg ${colorStyle} backdrop-blur-md max-w-xs shadow-2xl">
-                                    <div class="flex items-center justify-between gap-4 mb-1 border-b border-white/10 pb-1">
-                                        <span class="text-[9px] font-black uppercase tracking-widest opacity-70">IB Concept</span>
-                                        <span class="text-[8px] font-black uppercase tracking-tighter opacity-50">${themeData?.theme || 'General'}</span>
-                                    </div>
-                                    ${formattedDef}
-                                </div>`,
-                                allowHTML: true,
+                            const heading = document.createElement('div');
+                            heading.className = 'flex items-center justify-between gap-4 mb-1 border-b border-white/10 pb-1';
+                            const label = document.createElement('span');
+                            label.className = 'text-[9px] font-black uppercase tracking-widest opacity-70';
+                            label.textContent = 'IB Concept';
+                            const theme = document.createElement('span');
+                            theme.className = 'text-[8px] font-black uppercase tracking-tighter opacity-50';
+                            theme.textContent = themeData?.theme || 'General';
+                            heading.append(label, theme);
+                            content.appendChild(heading);
+
+                            if (def.includes('\n')) {
+                                const list = document.createElement('ul');
+                                list.className = 'space-y-1 list-none mt-1';
+                                def.split('\n').forEach(line => {
+                                    const item = document.createElement('li');
+                                    item.className = 'text-[11px] leading-tight';
+                                    const bullet = document.createElement('span');
+                                    bullet.className = 'opacity-40 mr-1';
+                                    bullet.textContent = '•';
+                                    item.append(bullet, document.createTextNode(line.replace(/^- /, '')));
+                                    list.appendChild(item);
+                                });
+                                content.appendChild(list);
+                            } else {
+                                const definition = document.createElement('div');
+                                definition.className = 'text-white text-sm font-medium leading-relaxed';
+                                definition.textContent = def;
+                                content.appendChild(definition);
+                            }
+
+                            tippy(el, {
+                                content,
                                 animation: 'shift-away',
                                 theme: 'glopo',
                                 placement: 'top',
@@ -4517,11 +4625,17 @@ const GlossaryProvider = () => {
                         }
                     });
                 };
-                const observer = new MutationObserver(attachTooltips);
+                observer = new MutationObserver(attachTooltips);
                 observer.observe(document.body, { childList: true, subtree: true });
                 attachTooltips();
             })
             .catch(() => { });
+
+        return () => {
+            cancelled = true;
+            observer?.disconnect();
+            document.querySelectorAll('.glossary-term').forEach(el => el._tippy?.destroy());
+        };
     }, []);
     return null;
 };
@@ -4842,9 +4956,10 @@ const SOURCE_LAB_ITEMS = [
 
 const FlashcardDrillStation = ({ onKnownChange }) => {
     const terms = Object.keys(FLASHCARD_DEFS);
-    const [idx, setIdx] = useState(0);
+    const [initialDrill] = useState(() => readStoredJson('glopo-flashcard-drill', {}));
+    const [idx, setIdx] = useState(Number.isInteger(initialDrill.idx) && initialDrill.idx >= 0 && initialDrill.idx <= terms.length ? initialDrill.idx : 0);
     const [flipped, setFlipped] = useState(false);
-    const [ratings, setRatings] = useState({});
+    const [ratings, setRatings] = useState(initialDrill.ratings && typeof initialDrill.ratings === 'object' ? initialDrill.ratings : {});
 
     const term = terms[idx];
     const rated = Object.keys(ratings);
@@ -4853,12 +4968,17 @@ const FlashcardDrillStation = ({ onKnownChange }) => {
     const reviewCount = Object.values(ratings).filter(r => r === 'review').length;
     const weakTerms = terms.filter(t => ratings[t] === 'review');
 
+    useEffect(() => {
+        writeStoredJson('glopo-flashcard-drill', { idx, ratings });
+        onKnownChange(knownCount);
+    }, [idx, ratings, knownCount, onKnownChange]);
+
     const rate = (r) => {
         const newRatings = { ...ratings, [term]: r };
         setRatings(newRatings);
         onKnownChange(Object.keys(newRatings).filter(t => newRatings[t] === 'know').length);
         setFlipped(false);
-        setIdx(prev => (prev < terms.length - 1 ? prev + 1 : prev));
+        setIdx(prev => (prev < terms.length ? prev + 1 : prev));
     };
 
     const reset = () => { setIdx(0); setFlipped(false); setRatings({}); onKnownChange(0); };
@@ -5183,7 +5303,11 @@ const CaseSpeedRoundStation = ({ onHighScore }) => {
     const [timeLeft, setTimeLeft] = useState(60);
     const [showFeedback, setShowFeedback] = useState(false);
     const [choices, setChoices] = useState([]);
-    const [highScore, setHighScore] = useState(0);
+    const [highScore, setHighScore] = useState(() => {
+        const saved = readStoredJson('glopo-speed-round', {});
+        return Number.isInteger(saved.highScore) && saved.highScore >= 0 ? saved.highScore : 0;
+    });
+    const [lastRoundWasHigh, setLastRoundWasHigh] = useState(false);
 
     const caseNames = [...new Set(GLOBAL_CASES.map(c => c.name))];
     const getChoices = (correct) => {
@@ -5208,6 +5332,17 @@ const CaseSpeedRoundStation = ({ onHighScore }) => {
         return () => clearInterval(t);
     }, [phase]);
 
+    useEffect(() => {
+        writeStoredJson('glopo-speed-round', { highScore });
+        onHighScore(highScore);
+    }, [highScore, onHighScore]);
+
+    useEffect(() => {
+        if (phase !== 'done' || score <= highScore) return;
+        setHighScore(score);
+        setLastRoundWasHigh(true);
+    }, [phase, score, highScore]);
+
     const start = () => {
         const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
         setQuestions(shuffled);
@@ -5217,6 +5352,7 @@ const CaseSpeedRoundStation = ({ onHighScore }) => {
         setTimeLeft(60);
         setSelected(null);
         setShowFeedback(false);
+        setLastRoundWasHigh(false);
         if (shuffled.length > 0) setChoices(getChoices(shuffled[0].answer));
     };
 
@@ -5239,8 +5375,7 @@ const CaseSpeedRoundStation = ({ onHighScore }) => {
     );
 
     if (phase === 'done') {
-        const newHigh = score > highScore;
-        if (newHigh) { setHighScore(score); onHighScore(score); }
+        const newHigh = lastRoundWasHigh;
         return (
             <div className="text-center py-12 animate-in zoom-in-95 duration-300">
                 <p className="text-5xl mb-4">{score >= 10 ? '\ud83c\udfc6' : score >= 5 ? '\ud83c\udfaf' : '\ud83d\udcaa'}</p>
@@ -5297,16 +5432,19 @@ const SourceLabStation = () => {
     const getAiScore = async () => {
         setScoring(true); setAiScore(null);
         try {
-            const studentAnalysis = `Origin: ${responses.origin}\nPurpose: ${responses.purpose}\nValue: ${responses.value}\nLimitation: ${responses.limitation}`;
-            const modelAnalysis = `Origin: ${src.modelOPVL.origin}\nPurpose: ${src.modelOPVL.purpose}\nValue: ${src.modelOPVL.value}\nLimitation: ${src.modelOPVL.limitation}`;
-            const res = await fetch('/.netlify/functions/grammar-check', {
+            const res = await secureFetch('/.netlify/functions/opvl-score', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: `Source: "${src.title}"\n\nSTUDENT ANALYSIS:\n${studentAnalysis}\n\nMODEL ANALYSIS:\n${modelAnalysis}`, mode: 'opvl-score' }),
+                body: JSON.stringify({
+                    sourceTitle: src.title,
+                    sourceExcerpt: src.excerpt,
+                    response: responses,
+                    modelResponse: src.modelOPVL
+                }),
                 signal: AbortSignal.timeout(25000)
             });
             const data = await res.json();
-            if (data && !data.error) setAiScore(data);
-            else console.error(data?.error || 'OPVL scoring failed');
+            if (!res.ok || data.error) throw new Error(data.error || 'OPVL scoring failed');
+            setAiScore(data);
         } catch (e) { console.error(e); }
         setScoring(false);
     };
@@ -5438,10 +5576,16 @@ const SourceLabStation = () => {
 };
 
 const OpsRoom = () => {
-    const [station, setStation] = useState('flashcard');
-    const [flashcardKnown, setFlashcardKnown] = useState(0);
-    const [theoryScore, setTheoryScore] = useState({ correct: 0, total: 0 });
-    const [speedHighScore, setSpeedHighScore] = useState(0);
+    const [initialProgress] = useState(() => readStoredJson('glopo-ops-room', {}));
+    const validStations = ['flashcard', 'theory', 'speed', 'source', 'bifurcation', 'warroom'];
+    const [station, setStation] = useState(validStations.includes(initialProgress.station) ? initialProgress.station : 'flashcard');
+    const [flashcardKnown, setFlashcardKnown] = useState(Number.isInteger(initialProgress.flashcardKnown) ? initialProgress.flashcardKnown : 0);
+    const [theoryScore, setTheoryScore] = useState(initialProgress.theoryScore || { correct: 0, total: 0 });
+    const [speedHighScore, setSpeedHighScore] = useState(Number.isInteger(initialProgress.speedHighScore) ? initialProgress.speedHighScore : 0);
+
+    useEffect(() => {
+        writeStoredJson('glopo-ops-room', { station, flashcardKnown, theoryScore, speedHighScore });
+    }, [station, flashcardKnown, theoryScore, speedHighScore]);
 
     const stations = [
         { id: 'flashcard', label: '\ud83c\udca3 Flashcard Drill', desc: '23 IB concepts \u2014 flip & rate' },
@@ -5504,7 +5648,24 @@ const OpsRoom = () => {
 
 export default function App() {
     const { user, showModal, openModal, closeModal } = useAuth();
-    const [activeTab, setActiveTab] = useState('writing');
+    const routeTab = () => {
+        const section = new URLSearchParams(window.location.search).get('section');
+        if (window.location.pathname === '/glossary') return 'glossary';
+        return ['writing', 'cases', 'glossary', 'exams', 'opsroom'].includes(section) ? section : 'writing';
+    };
+    const [activeTab, setActiveTab] = useState(routeTab);
+
+    useEffect(() => {
+        const syncRoute = () => setActiveTab(routeTab());
+        window.addEventListener('popstate', syncRoute);
+        return () => window.removeEventListener('popstate', syncRoute);
+    }, []);
+
+    const navigateToTab = (tabId) => {
+        const url = tabId === 'glossary' ? '/glossary' : `/app?section=${tabId}`;
+        window.history.pushState({}, '', url);
+        setActiveTab(tabId);
+    };
 
     return (
         <div className="min-h-screen bg-glopo-dark text-gray-100 p-4 md:p-8">
@@ -5533,7 +5694,7 @@ export default function App() {
                     </div>
                 </header>
 
-                <nav className="flex gap-2 mb-8 justify-start sm:justify-center overflow-x-auto pb-2 scrollbar-hide sm:flex-wrap">
+                <nav className="flex gap-2 mb-8 justify-start sm:justify-center overflow-x-auto pb-2 scrollbar-hide sm:flex-wrap" role="tablist" aria-label="Study suite sections">
                     {[
                         { id: 'writing', label: 'Writing Studio', icon: PenTool },
                         { id: 'cases', label: 'Case Library', icon: Shield },
@@ -5543,7 +5704,12 @@ export default function App() {
                     ].map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
+                            id={`tab-${tab.id}`}
+                            onClick={() => navigateToTab(tab.id)}
+                            role="tab"
+                            aria-selected={activeTab === tab.id}
+                            aria-controls="active-study-panel"
+                            tabIndex={activeTab === tab.id ? 0 : -1}
                             className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold transition-all shrink-0 text-sm sm:text-base ${activeTab === tab.id
                                 ? "bg-glopo-card text-white border-blue-500 border-2 shadow-lg shadow-blue-500/10"
                                 : "bg-transparent text-gray-500 border-transparent border-2 hover:bg-white/5"
@@ -5554,7 +5720,7 @@ export default function App() {
                     ))}
                 </nav>
 
-                <main className="min-h-[400px]">
+                <main id="active-study-panel" className="min-h-[400px]" role="tabpanel" aria-labelledby={`tab-${activeTab}`} tabIndex="0">
                     {activeTab === 'writing' && <WritingStudio />}
                     {activeTab === 'cases' && <CaseLibrary />}
                     {activeTab === 'glossary' && <LoreLexicon />}
@@ -5571,7 +5737,7 @@ export default function App() {
                     <div className="mb-8 p-4 bg-cyan-950/30 border border-cyan-500/20 rounded-xl inline-block max-w-lg">
                         <p className="text-cyan-300 text-xs font-bold tracking-widest uppercase mb-2">Non-Commercial Educational Tool</p>
                         <p className="text-white/60 text-xs leading-relaxed">
-                            This project is a 100% academic tool created by **Stephen Martinez (Project Lead & IB Global Politics Teacher)**
+                            This project is a 100% academic tool created by Stephen Martinez (Project Lead &amp; IB Global Politics Teacher)
                             to support scholars in the IB Global Politics 2026 Syllabus.
                             It is not a commercial product and provides free pedagogical resources.
                         </p>
