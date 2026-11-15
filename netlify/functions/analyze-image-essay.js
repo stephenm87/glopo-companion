@@ -1,12 +1,15 @@
 // analyze-image-essay.js — Essay Vision Analysis via Gemini
 // Uses native fetch (no SDK) to avoid missing package issues on Netlify Functions
-const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { callGeminiWithRetry, extractGeminiText, PRIMARY_MODEL } = require('./gemini-retry');
+const { protectEndpoint } = require('./security');
 const { z } = require('zod');
 const {
     ALLOWED_MIME_TYPES,
     MAX_DECODED_BYTES,
     estimateBase64Bytes,
     isValidBase64,
+    hasExpectedFileSignature,
+    inspectPdf,
     formatValidationError
 } = require('./validation-helper');
 
@@ -20,10 +23,35 @@ const inputSchema = z.object({
         ),
     mimeType: z.enum(ALLOWED_MIME_TYPES),
     questionText: z.string().max(500).optional().default(''),
-    marks: z.number().min(1).max(25).optional().default(15)
+    marks: z.number().min(1).max(25).optional().default(15),
+    consentConfirmed: z.literal(true)
+}).superRefine((value, ctx) => {
+    if (!hasExpectedFileSignature(value.imageBase64, value.mimeType)) {
+        ctx.addIssue({ code: 'custom', path: ['imageBase64'], message: 'File contents do not match the declared file type.' });
+        return;
+    }
+    if (value.mimeType === 'application/pdf') {
+        const pdf = inspectPdf(value.imageBase64);
+        if (pdf.encrypted) ctx.addIssue({ code: 'custom', path: ['imageBase64'], message: 'Encrypted PDFs are not supported.' });
+        if (pdf.pageCount > 25) ctx.addIssue({ code: 'custom', path: ['imageBase64'], message: 'PDFs are limited to 25 pages.' });
+    }
+});
+
+const outputSchema = z.object({
+    transcription: z.string(),
+    transcriptionConfidence: z.enum(['high', 'medium', 'low']).optional().default('medium'),
+    uncertainPassages: z.array(z.string()).max(10).optional().default([]),
+    glow: z.string(),
+    grow: z.string(),
+    alternativeApproaches: z.string(),
+    goldenTip: z.string(),
+    aoEstimate: z.string()
 });
 
 exports.handler = async (event) => {
+    const security = await protectEndpoint(event, { maxRequests: 8 });
+    if (security.response) return security.response;
+
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
@@ -60,6 +88,8 @@ ${IB_RUBRIC}
 REQUIRED OUTPUT FORMAT (JSON):
 Return a JSON object with these EXACT string keys:
 "transcription": [Transcribe the student's written response as accurately as possible.]
+"transcriptionConfidence": [high, medium, or low]
+"uncertainPassages": [A JSON array of short passages that were difficult to read; use an empty array if none.]
 "glow": [2-3 specific strengths citing AO bands]
 "grow": [2-3 actionable improvements with examples of what better looks like]
 "alternativeApproaches": [2 alternative theoretical lenses or case studies for this question]
@@ -74,13 +104,15 @@ Return a JSON object with these EXACT string keys:
                     type: 'OBJECT',
                     properties: {
                         transcription: { type: 'STRING' },
+                        transcriptionConfidence: { type: 'STRING', enum: ['high', 'medium', 'low'] },
+                        uncertainPassages: { type: 'ARRAY', items: { type: 'STRING' } },
                         glow: { type: 'STRING' },
                         grow: { type: 'STRING' },
                         alternativeApproaches: { type: 'STRING' },
                         goldenTip: { type: 'STRING' },
                         aoEstimate: { type: 'STRING' }
                     },
-                    required: ['transcription', 'glow', 'grow', 'alternativeApproaches', 'goldenTip', 'aoEstimate']
+                    required: ['transcription', 'transcriptionConfidence', 'uncertainPassages', 'glow', 'grow', 'alternativeApproaches', 'goldenTip', 'aoEstimate']
                 }
             },
             contents: [{
@@ -91,17 +123,16 @@ Return a JSON object with these EXACT string keys:
             }]
         };
 
-        const res = await callGeminiWithRetry(apiKey, body);
+        const res = await callGeminiWithRetry(apiKey, body, { maxRetries: 1, timeout: 20000 });
 
         if (!res.ok) {
             throw new Error(`Gemini API error ${res.status}: ${res.error}`);
         }
 
         const raw = extractGeminiText(res.data, '{}');
-        let text = '';
+        let feedback;
         try {
-            const parsed = JSON.parse(raw);
-            text = `## 📝 What I Read (Transcription)\n${parsed.transcription}\n\n## 🟢 GLOW — Strengths\n${parsed.glow}\n\n## 🔴 GROW — Improvements\n${parsed.grow}\n\n## 🔀 Alternative Approaches\n${parsed.alternativeApproaches}\n\n## ⭐ Examiner's Golden Tip\n${parsed.goldenTip}\n\n## 📊 AO Estimate\n${parsed.aoEstimate}`;
+            feedback = outputSchema.parse(JSON.parse(raw));
         } catch (err) {
             throw new Error('Validation error: ' + err.message);
         }
@@ -109,7 +140,15 @@ Return a JSON object with these EXACT string keys:
         return {
             statusCode: 200,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ analysis: text })
+            body: JSON.stringify({
+                feedback,
+                meta: {
+                    model: PRIMARY_MODEL,
+                    formativeOnly: true,
+                    rubricVersion: 'repository-rubric-2026',
+                    processedAt: new Date().toISOString()
+                }
+            })
         };
 
     } catch (error) {

@@ -1,8 +1,15 @@
+jest.mock('../security', () => ({
+    protectEndpoint: jest.fn().mockResolvedValue({ user: { id: 'test-user', email: 'user@example.com' } })
+}));
+
 const analyzeEssay = require('../analyze-essay').handler;
 const analyzeImageEssay = require('../analyze-image-essay').handler;
 const compareResearch = require('../compare-research').handler;
+const commandTermCheck = require('../command-term-check').handler;
 const findCases = require('../find-cases').handler;
 const generateIntro = require('../generate-intro').handler;
+const grammarCheck = require('../grammar-check').handler;
+const opvlScore = require('../opvl-score').handler;
 const peelReview = require('../peel-review').handler;
 const semanticSearch = require('../semantic-search').handler;
 const solutionResearch = require('../solution-research').handler;
@@ -42,6 +49,18 @@ function makeBase64(decodedBytes) {
     // Each 3 decoded bytes = 4 base64 chars
     const groups = Math.ceil(decodedBytes / 3);
     return 'A'.repeat(groups * 4);
+}
+
+function makeFileBase64(mimeType, decodedBytes = 1000) {
+    const bytes = Buffer.alloc(decodedBytes);
+    if (mimeType === 'image/jpeg') Buffer.from([0xff, 0xd8, 0xff, 0xe0]).copy(bytes);
+    if (mimeType === 'image/png') Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(bytes);
+    if (mimeType === 'image/webp') {
+        Buffer.from('RIFF').copy(bytes, 0);
+        Buffer.from('WEBP').copy(bytes, 8);
+    }
+    if (mimeType === 'application/pdf') Buffer.from('%PDF-1.4\n1 0 obj <</Type /Page>>').copy(bytes);
+    return bytes.toString('base64');
 }
 
 beforeEach(() => {
@@ -99,7 +118,7 @@ describe('isValidBase64', () => {
 // Image & MIME type validation
 // ────────────────────────────────────────────────────────────────────────────────
 describe('Image validation (analyze-image-essay)', () => {
-    const validBase64 = makeBase64(1000); // ~1 KB
+    const validBase64 = makeFileBase64('image/jpeg'); // ~1 KB
 
     const verifyError = (res, expectedField, expectedCode = 400) => {
         expect(res.statusCode).toBe(expectedCode);
@@ -117,7 +136,7 @@ describe('Image validation (analyze-image-essay)', () => {
                 alternativeApproaches: 'A', goldenTip: 'GT', aoEstimate: 'AO'
             })}]}}]}
         });
-        const res = await analyzeImageEssay(mockEvent({ imageBase64: validBase64, mimeType: 'image/jpeg' }));
+        const res = await analyzeImageEssay(mockEvent({ imageBase64: validBase64, mimeType: 'image/jpeg', consentConfirmed: true }));
         expect(res.statusCode).toBe(200);
     });
 
@@ -129,7 +148,7 @@ describe('Image validation (analyze-image-essay)', () => {
                 alternativeApproaches: 'A', goldenTip: 'GT', aoEstimate: 'AO'
             })}]}}]}
         });
-        const res = await analyzeImageEssay(mockEvent({ imageBase64: validBase64, mimeType: 'image/png' }));
+        const res = await analyzeImageEssay(mockEvent({ imageBase64: makeFileBase64('image/png'), mimeType: 'image/png', consentConfirmed: true }));
         expect(res.statusCode).toBe(200);
     });
 
@@ -141,7 +160,7 @@ describe('Image validation (analyze-image-essay)', () => {
                 alternativeApproaches: 'A', goldenTip: 'GT', aoEstimate: 'AO'
             })}]}}]}
         });
-        const res = await analyzeImageEssay(mockEvent({ imageBase64: validBase64, mimeType: 'image/webp' }));
+        const res = await analyzeImageEssay(mockEvent({ imageBase64: makeFileBase64('image/webp'), mimeType: 'image/webp', consentConfirmed: true }));
         expect(res.statusCode).toBe(200);
     });
 
@@ -153,7 +172,7 @@ describe('Image validation (analyze-image-essay)', () => {
                 alternativeApproaches: 'A', goldenTip: 'GT', aoEstimate: 'AO'
             })}]}}]}
         });
-        const res = await analyzeImageEssay(mockEvent({ imageBase64: validBase64, mimeType: 'application/pdf' }));
+        const res = await analyzeImageEssay(mockEvent({ imageBase64: makeFileBase64('application/pdf'), mimeType: 'application/pdf', consentConfirmed: true }));
         expect(res.statusCode).toBe(200);
     });
 
@@ -172,8 +191,22 @@ describe('Image validation (analyze-image-essay)', () => {
         verifyError(res, 'imageBase64');
     });
 
+    it('rejects a file whose bytes do not match the claimed MIME type', async () => {
+        const res = await analyzeImageEssay(mockEvent({
+            imageBase64: makeFileBase64('image/png'),
+            mimeType: 'image/jpeg',
+            consentConfirmed: true
+        }));
+        verifyError(res, 'imageBase64');
+    });
+
+    it('requires explicit consent before processing student work', async () => {
+        const res = await analyzeImageEssay(mockEvent({ imageBase64: validBase64, mimeType: 'image/jpeg' }));
+        verifyError(res, 'consentConfirmed');
+    });
+
     it('accepts exactly MAX_DECODED_BYTES - 1', async () => {
-        const payload = Buffer.alloc(MAX_DECODED_BYTES - 1).toString('base64');
+        const payload = makeFileBase64('image/jpeg', MAX_DECODED_BYTES - 1);
         callGeminiWithRetry.mockResolvedValue({
             ok: true, status: 200,
             data: { candidates: [{ content: { parts: [{ text: JSON.stringify({
@@ -181,12 +214,12 @@ describe('Image validation (analyze-image-essay)', () => {
                 alternativeApproaches: 'A', goldenTip: 'GT', aoEstimate: 'AO'
             })}]}}]}
         });
-        const res = await analyzeImageEssay(mockEvent({ imageBase64: payload, mimeType: 'image/jpeg' }));
+        const res = await analyzeImageEssay(mockEvent({ imageBase64: payload, mimeType: 'image/jpeg', consentConfirmed: true }));
         expect(res.statusCode).toBe(200);
     });
 
     it('accepts exactly MAX_DECODED_BYTES', async () => {
-        const payload = Buffer.alloc(MAX_DECODED_BYTES).toString('base64');
+        const payload = makeFileBase64('image/jpeg', MAX_DECODED_BYTES);
         callGeminiWithRetry.mockResolvedValue({
             ok: true, status: 200,
             data: { candidates: [{ content: { parts: [{ text: JSON.stringify({
@@ -194,7 +227,7 @@ describe('Image validation (analyze-image-essay)', () => {
                 alternativeApproaches: 'A', goldenTip: 'GT', aoEstimate: 'AO'
             })}]}}]}
         });
-        const res = await analyzeImageEssay(mockEvent({ imageBase64: payload, mimeType: 'image/jpeg' }));
+        const res = await analyzeImageEssay(mockEvent({ imageBase64: payload, mimeType: 'image/jpeg', consentConfirmed: true }));
         expect(res.statusCode).toBe(200);
     });
 
@@ -238,6 +271,23 @@ describe('Endpoint input validation', () => {
     it('validates analyze-essay essayText too long', async () => {
         const res = await analyzeEssay(mockEvent({ essayText: 'a'.repeat(20001) }));
         verifyError(res, 'essayText');
+    });
+
+    it('validates grammar-check text too long', async () => {
+        const res = await grammarCheck(mockEvent({ text: 'a'.repeat(20001) }));
+        verifyError(res, 'text');
+        expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('validates command-term text too short', async () => {
+        const res = await commandTermCheck(mockEvent({ text: 'too short' }));
+        verifyError(res, 'text');
+    });
+
+    it('validates OPVL component input', async () => {
+        const res = await opvlScore(mockEvent({ sourceTitle: 'Test source', response: {}, modelResponse: {} }));
+        expect(res.statusCode).toBe(400);
+        expect(callGeminiWithRetry).not.toHaveBeenCalled();
     });
 
     it('validates compare-research caseA missing', async () => {
@@ -312,6 +362,20 @@ describe('Successful response shape', () => {
         expect(body).toHaveProperty('intro');
     });
 
+    it('grammar-check returns structured issues without the public LanguageTool endpoint', async () => {
+        delete process.env.LANGUAGETOOL_API_URL;
+        callGeminiWithRetry.mockResolvedValue({
+            ok: true, status: 200,
+            data: { candidates: [{ content: { parts: [{ text: JSON.stringify({
+                issues: [{ message: 'Use a more precise verb.', shortMessage: 'Word choice', category: 'Style', suggestions: ['demonstrates'] }]
+            }) }] } }] }
+        });
+        const res = await grammarCheck(mockEvent({ text: 'This sufficiently long paragraph has one imprecise phrase for checking.' }));
+        expect(res.statusCode).toBe(200);
+        expect(JSON.parse(res.body)).toEqual(expect.objectContaining({ total: 1, issues: expect.any(Array), grouped: expect.any(Object) }));
+        expect(global.fetch).not.toHaveBeenCalled();
+    });
+
     it('peel-review returns { feedback: object }', async () => {
         callGeminiWithRetry.mockResolvedValue({
             ok: true, status: 200,
@@ -327,6 +391,46 @@ describe('Successful response shape', () => {
         const body = JSON.parse(res.body);
         expect(body).toHaveProperty('improved');
         expect(body).toHaveProperty('bandJump');
+    });
+
+    it('command-term-check returns the UI contract', async () => {
+        callGeminiWithRetry.mockResolvedValue({
+            ok: true, status: 200,
+            data: { candidates: [{ content: { parts: [{ text: JSON.stringify({
+                detected_skill: 'Analyse', confidence: 'high', explanation: 'Uses causal links.', upgrade_tip: 'Evaluate limitations.'
+            }) }] } }] }
+        });
+        const res = await commandTermCheck(mockEvent({ text: 'This paragraph analyses how power changes institutional outcomes through clear causal reasoning.' }));
+        expect(res.statusCode).toBe(200);
+        expect(JSON.parse(res.body)).toEqual(expect.objectContaining({ detected_skill: 'Analyse', confidence: 'high' }));
+    });
+
+    it('opvl-score returns the UI scoring contract', async () => {
+        callGeminiWithRetry.mockResolvedValue({
+            ok: true, status: 200,
+            data: { candidates: [{ content: { parts: [{ text: JSON.stringify({
+                overall_band: '5',
+                scores: { origin: 3, purpose: 3, value: 2, limitation: 2 },
+                strengths: ['Specific provenance'], improvements: ['Connect value to the question'], examiner_tip: 'Use source-specific evidence.'
+            }) }] } }] }
+        });
+        const components = { origin: 'Named author and date', purpose: 'Persuade an audience', value: 'Shows a perspective', limitation: 'Omits alternatives' };
+        const res = await opvlScore(mockEvent({ sourceTitle: 'Test source', response: components, modelResponse: components }));
+        expect(res.statusCode).toBe(200);
+        expect(JSON.parse(res.body)).toEqual(expect.objectContaining({ overall_band: '5', scores: expect.any(Object) }));
+    });
+
+    it('intro mode returns strengths and formative score when provided', async () => {
+        callGeminiWithRetry.mockResolvedValue({
+            ok: true, status: 200,
+            data: { candidates: [{ content: { parts: [{ text: JSON.stringify({
+                improved: 'A stronger introduction.', bandJump: 'Developing → Secure', score: 'Secure', strengths: ['Clear thesis'],
+                changes: [{ ao: 'AO2', label: 'Tension', original: 'power matters', fix: 'Added competing perspectives.' }]
+            }) }] } }] }
+        });
+        const res = await peelReview(mockEvent({ paragraph: 'This introduction discusses power and sovereignty with a clear thesis statement.', mode: 'intro' }));
+        expect(res.statusCode).toBe(200);
+        expect(JSON.parse(res.body)).toEqual(expect.objectContaining({ score: 'Secure', strengths: ['Clear thesis'] }));
     });
 });
 
@@ -346,8 +450,8 @@ describe('Gemini provider failure', () => {
     });
 
     it('analyze-image-essay returns 500 on provider failure', async () => {
-        const validBase64 = makeBase64(1000);
-        const res = await analyzeImageEssay(mockEvent({ imageBase64: validBase64, mimeType: 'image/jpeg' }));
+        const validBase64 = makeFileBase64('image/jpeg');
+        const res = await analyzeImageEssay(mockEvent({ imageBase64: validBase64, mimeType: 'image/jpeg', consentConfirmed: true }));
         expect(res.statusCode).toBe(500);
     });
 
@@ -366,6 +470,13 @@ describe('Gemini provider failure', () => {
     it('peel-review returns 500 on provider failure', async () => {
         const res = await peelReview(mockEvent({ paragraph: 'Valid paragraph text that meets minimum length.' }));
         expect(res.statusCode).toBe(500);
+    });
+
+    it('grammar-check reports provider failure instead of zero issues', async () => {
+        delete process.env.LANGUAGETOOL_API_URL;
+        const res = await grammarCheck(mockEvent({ text: 'This sufficiently long paragraph is ready for grammar analysis.' }));
+        expect(res.statusCode).toBe(502);
+        expect(JSON.parse(res.body)).toHaveProperty('error');
     });
 
     it('solution-research returns 500 on provider failure', async () => {

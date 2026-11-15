@@ -11,7 +11,7 @@ An IB Global Politics study companion web application that provides advanced ess
 - **Cloud Autosave:** Enabled by Supabase Magic Link authentication.
 
 ## Stack
-- Framework: Create React App (react-scripts 5.0.1)
+- Framework: React 18 with Vite 8
 - UI: React 18 + Tailwind CSS
 - Runtime: Node.js 22.x
 - Backend: Netlify Functions (`netlify/functions/`)

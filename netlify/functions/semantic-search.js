@@ -1,6 +1,7 @@
 // Semantic Case Study Search — Gemini Embeddings API with deterministic lexical fallback
 // Uses the same GEMINI_API_KEY already configured for all other functions.
 const { callGeminiWithRetry } = require('./gemini-retry');
+const { protectEndpoint } = require('./security');
 const { z } = require('zod');
 const { formatValidationError } = require('./validation-helper');
 
@@ -121,8 +122,24 @@ async function getEmbedding(text, apiKey) {
     return res.data.embedding.values;
 }
 
+let caseEmbeddingsPromise = null;
+
+function getCaseEmbeddings(apiKey) {
+    if (!caseEmbeddingsPromise) {
+        caseEmbeddingsPromise = Promise.all(CASE_SUMMARIES.map(c => getEmbedding(c.summary, apiKey)))
+            .catch(error => {
+                caseEmbeddingsPromise = null;
+                throw error;
+            });
+    }
+    return caseEmbeddingsPromise;
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
+    const security = await protectEndpoint(event, { maxRequests: 30 });
+    if (security.response) return security.response;
+
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
@@ -153,9 +170,9 @@ exports.handler = async (event) => {
 
         // ── Attempt embedding-based semantic ranking ──────────────────────────
         try {
-            const [queryEmbedding, ...caseEmbeddings] = await Promise.all([
+            const [queryEmbedding, caseEmbeddings] = await Promise.all([
                 getEmbedding(query, apiKey),
-                ...CASE_SUMMARIES.map(c => getEmbedding(c.summary, apiKey))
+                getCaseEmbeddings(apiKey)
             ]);
 
             const scored = CASE_SUMMARIES
@@ -203,3 +220,4 @@ exports.handler = async (event) => {
 // Export internals for testing
 exports._lexicalRank = lexicalRank;
 exports._CASE_SUMMARIES = CASE_SUMMARIES;
+exports._resetEmbeddingCache = () => { caseEmbeddingsPromise = null; };

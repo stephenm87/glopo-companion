@@ -1,3 +1,7 @@
+jest.mock('../security', () => ({
+    protectEndpoint: jest.fn().mockResolvedValue({ user: { id: 'test-user', email: 'user@example.com' } })
+}));
+
 const { handler } = require('../compare-research');
 const { callGeminiWithRetry } = require('../gemini-retry');
 

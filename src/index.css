@@ -5,6 +5,13 @@
 @layer base {
   body {
     @apply bg-[#0a0a0c] text-gray-100;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: 'Outfit', sans-serif;
   }
 }
 
@@ -33,4 +40,31 @@
 
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
+}
+
+.tippy-box {
+  background: #1e293b;
+  color: #e2e8f0;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  padding: 4px 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.tippy-box .tippy-arrow {
+  color: #1e293b;
+}
+
+.glossary-term {
+  border-bottom: 1px dashed rgba(59, 130, 246, 0.5);
+  cursor: help;
+  transition: border-color 0.2s;
+}
+
+.glossary-term:hover {
+  border-bottom-color: #3b82f6;
+  color: #93c5fd;
 }

@@ -1,4 +1,8 @@
-const { handler, _lexicalRank, _CASE_SUMMARIES } = require('../semantic-search');
+jest.mock('../security', () => ({
+    protectEndpoint: jest.fn().mockResolvedValue({ user: { id: 'test-user', email: 'user@example.com' } })
+}));
+
+const { handler, _lexicalRank, _CASE_SUMMARIES, _resetEmbeddingCache } = require('../semantic-search');
 const { callGeminiWithRetry } = require('../gemini-retry');
 
 jest.mock('../gemini-retry', () => ({
@@ -10,6 +14,7 @@ jest.mock('../gemini-retry', () => ({
 describe('semantic-search.js', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        _resetEmbeddingCache();
         process.env.GEMINI_API_KEY = 'test-key';
     });
 
@@ -51,6 +56,18 @@ describe('semantic-search.js', () => {
         expect(body.searchMode).toBe('semantic');
         expect(body.degraded).toBe(false);
         expect(body.fallbackReason).toBeNull();
+    });
+
+    it('reuses case embeddings across warm requests', async () => {
+        callGeminiWithRetry.mockResolvedValue({
+            ok: true, status: 200, data: { embedding: { values: [0.1, 0.2, 0.3] } }
+        });
+
+        await handler({ httpMethod: 'POST', body: JSON.stringify({ query: 'first query', topK: 3 }) });
+        const afterFirst = callGeminiWithRetry.mock.calls.length;
+        await handler({ httpMethod: 'POST', body: JSON.stringify({ query: 'second query', topK: 3 }) });
+
+        expect(callGeminiWithRetry.mock.calls.length).toBe(afterFirst + 1);
     });
 
     // ── Lexical fallback on embedding failure ─────────────────────────────────

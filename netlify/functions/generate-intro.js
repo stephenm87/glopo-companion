@@ -1,6 +1,7 @@
 // generate-intro.js — Intro Builder Netlify function
 // Uses native fetch (no SDK) to avoid missing package issues on Netlify Functions
 const { callGeminiWithRetry, extractGeminiText } = require('./gemini-retry');
+const { protectEndpoint } = require('./security');
 const { z } = require('zod');
 const { formatValidationError } = require('./validation-helper');
 
@@ -13,6 +14,9 @@ const inputSchema = z.object({
 });
 
 exports.handler = async (event) => {
+    const security = await protectEndpoint(event, { maxRequests: 12 });
+    if (security.response) return security.response;
+
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
